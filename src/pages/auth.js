@@ -129,7 +129,7 @@
     // ─────────────────────────────────────────────────────────────────────────
     var _serverRole;
     try {
-        var verifyRes = await fetch('/api/verify-session', {
+      var verifyRes = await fetch('https://hardware-pos-backend.onrender.com/api/verify-session', {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + _token,
