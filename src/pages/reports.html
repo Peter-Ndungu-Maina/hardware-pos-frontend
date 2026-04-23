@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+      <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="reports.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Business Sales Intelligence | Elite Hardware</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+   
+</head>
+<body class="antialiased">
+
+    <div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+            
+<div class="flex justify-between items-end mb-8 no-print">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Financial Intelligence</h1>
+                    <p id="accessLevelLabel" class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Management Access</p>
+                </div>
+                <button onclick="generatePDF()" class="bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-700 transition">📄 Export PDF</button>
+                <button onclick="exportCSV()" style="background:var(--green,#00e5a0);color:#000;padding:10px 20px;border-radius:12px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border:none;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">⬇ Export CSV</button>
+            </div>
+
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8 no-print items-end">
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Filter by Date</label>
+                    <input type="date" id="dateFilter" onchange="fetchFilteredData('day')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Monthly View</label>
+                    <input type="month" id="monthFilter" onchange="fetchFilteredData('month')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Annual View</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="annualFilter" placeholder="YYYY" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchFilteredData('annual')" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Date Range</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="rangeFrom" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <span class="text-slate-400 text-[10px] font-black">TO</span>
+                        <input type="date" id="rangeTo" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchFilteredData('range')" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Method</label>
+                    <select id="methodFilter" onchange="fetchFilteredData('method')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <option value="">All Methods</option>
+                        <option value="Cash">Cash</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                        <option value="Credit">Credit</option>
+                    </select>
+                </div>
+                <div class="flex justify-end">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition">Reset</button>
+                </div>
+            </div>
+
+            <!-- ── KRA RECONCILIATION PANEL ───────────────────────────── -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-8 no-print" id="reconcilePanel">
+                <div class="flex flex-wrap items-end justify-between gap-4 mb-5">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">eTIMS / KRA Reconciliation</p>
+                        <h2 class="text-lg font-black text-slate-800">Cross-check POS vs DigiTax</h2>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-end">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">From</label>
+                            <input type="date" id="reconcileFrom" class="bg-slate-50 border rounded-xl p-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">To</label>
+                            <input type="date" id="reconcileTo" class="bg-slate-50 border rounded-xl p-2.5 text-sm font-bold focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <button onclick="runReconcile()" id="reconcileBtn"
+                            class="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide hover:bg-slate-800 transition shadow-sm">
+                            🔍 Run Check
+                        </button>
+                    </div>
+                </div>
+                <div id="reconcileResult" class="hidden">
+                    <div id="reconcileStatusBanner" class="rounded-2xl p-4 mb-5 flex items-center gap-3">
+                        <span id="reconcileStatusIcon" class="text-2xl"></span>
+                        <div>
+                            <div id="reconcileStatusTitle" class="font-black text-sm uppercase tracking-wide"></div>
+                            <div id="reconcileStatusSub" class="text-xs font-medium mt-0.5 opacity-80"></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">📦 Your POS (Supabase)</p>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Total Revenue</span><span id="recPosTotal" class="font-black text-slate-800"></span></div>
+                                <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Invoices</span><span id="recPosCount" class="font-black text-slate-800"></span></div>
+                                <div class="flex justify-between text-xs border-t border-slate-200 pt-2 mt-2"><span class="text-emerald-600 font-bold">Sent to KRA</span><span id="recPosSubmitted" class="font-black text-emerald-600"></span></div>
+                                <div class="flex justify-between text-xs"><span class="text-red-500 font-bold">Pending KRA</span><span id="recPosPending" class="font-black text-red-500"></span></div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">🏛️ DigiTax / KRA</p>
+                            <div id="recDtContent" class="space-y-2"></div>
+                        </div>
+                        <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">⚖️ Variance</p>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Amount Diff</span><span id="recVarAmount" class="font-black"></span></div>
+                                <div class="flex justify-between text-xs"><span class="text-slate-500 font-bold">Invoice Count Diff</span><span id="recVarCount" class="font-black"></span></div>
+                                <div id="recVarNote" class="mt-3 text-[10px] font-bold leading-relaxed rounded-xl p-2.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="reconcileErrorNote" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs font-bold text-amber-700"></div>
+                </div>
+                <div id="reconcileLoading" class="hidden text-center py-8 text-slate-400 text-sm font-bold">⏳ Fetching data from DigiTax...</div>
+            </div>
+
+            <div id="pdf-area">
+                <div id="pdf-header" class="hidden text-center pb-6 border-b-2 border-slate-100 mb-6">
+                    <h2 class="text-2xl font-black text-slate-900">ELITE HARDWARE - SALES REPORT</h2>
+                    <p class="text-xs font-bold text-slate-400" id="genDateLabel"></p>
+                </div>
+
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-blue-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Gross Revenue</p>
+                        <h2 id="totalRev" class="text-xl font-black text-slate-800">Ksh 0</h2>
+                    </div>
+                    <div id="profitCard" class="bg-white p-6 rounded-3xl border-t-4 border-emerald-500 shadow-sm" style="display: none;">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Gross Profit</p>
+                        <h2 id="totalProf" class="text-xl font-black text-emerald-600">Ksh 0</h2>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-sky-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">M-Pesa Banked</p>
+                        <h2 id="totalMpesa" class="text-xl font-black text-sky-600">Ksh 0</h2>
+                    </div>
+                     <div class="bg-white p-6 rounded-3xl border-t-4 border-sky-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Cash Banked</p>
+                        <h2 id="totalCash" class="text-xl font-black text-sky-600">Ksh 0</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-red-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Owed</p>
+                        <h2 id="totalCredit" class="text-xl font-black text-red-600">Ksh 0</h2>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-auto">
+                    <table class="w-full text-left" id="reportTable">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                <th class="p-4">Date</th>
+                                <th class="p-4">Customer</th>
+                                <th class="p-4">Items</th>
+                                <th class="p-4">Payment Method</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Served By</th>
+                                <th class="p-4 text-right">Total</th>
+                                <th id="profitHeader" class="p-4 text-right text-emerald-600" style="display: none;">Profit</th>
+                                <th class="p-4 text-center no-print">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportTableBody" class="text-sm divide-y divide-slate-100">
+                            <tr><td colspan="9" class="p-20 text-center text-slate-400 font-medium italic">Loading intelligence data...</td></tr>
+                        </tbody>
+                    </table>
+                  <div id="paginationControls" class="p-4 border-t border-slate-100"></div>
+                </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+// Security check deferred to ensure EliteAuth is set by auth.js
+        let userRole, isAdmin, isManager;
+
+// --- Pagination State ---
+let filteredSales = []; // Stores the currently filtered dataset
+let currentPage = 1;
+const rowsPerPage = 10; // Adjust this number as needed
+
+async function fetchFilteredData(type) {
+    const dateInput   = document.getElementById('dateFilter');
+    const monthInput  = document.getElementById('monthFilter');
+    const annualInput = document.getElementById('annualFilter');
+    const rangeFrom   = document.getElementById('rangeFrom');
+    const rangeTo     = document.getElementById('rangeTo');
+    const methodVal   = document.getElementById('methodFilter').value;
+
+    // Clear other filter inputs when a specific type is triggered
+    if (type === 'day')    { monthInput.value = ''; annualInput.value = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+    if (type === 'month')  { dateInput.value  = ''; annualInput.value = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+    if (type === 'annual') { dateInput.value  = ''; monthInput.value  = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+    if (type === 'range')  { dateInput.value  = ''; monthInput.value  = ''; annualInput.value = ''; }
+
+    let params = new URLSearchParams({ role: userRole });
+    if (type === 'annual') {
+        const year = annualInput.value;
+        if (!year) return alert('Please enter a year.');
+        params.append('year', year);
+    } else if (type === 'range') {
+        const from = rangeFrom.value, to = rangeTo.value;
+        if (!from || !to) return alert('Please select both From and To dates.');
+        params.append('from', from);
+        params.append('to', to);
+    } else if (dateInput.value) {
+        params.append('date', dateInput.value);
+    } else if (monthInput.value) {
+        const [year, month] = monthInput.value.split('-');
+        params.append('month', month);
+        params.append('year', year);
+    }
+
+    try {
+        const res = await apiFetch(`${API_BASE}/reports/sales?${params.toString()}`);
+        let data = await res.json();
+
+        // 1. Apply Logic Filters
+        if (methodVal && methodVal !== "") {
+            data = data.filter(sale => {
+                const isCreditOrigin = sale.is_credit_sale === true
+                    || sale.payment_status === 'Credit'
+                    || sale.payment_status === 'Partial';
+
+                if (methodVal === 'Credit') {
+                    // Show ALL sales that originated as credit regardless of current status
+                    return isCreditOrigin;
+                }
+
+                // For Cash/Mpesa: only show sales that were NEVER credit
+                if (isCreditOrigin) return false;
+                return (sale.payments || []).some(p => p.payment_method === methodVal);
+            });
+        }
+
+        // ── NEW: GROUP MULTI-ITEM CARTS INTO SINGLE ROWS ──
+        const groupedSales = [];
+        const seenTx = new Map();
+
+        data.forEach(sale => {
+            const key = sale.receipt_number || sale.invoice_number || ('solo_' + sale.id);
+            if (seenTx.has(key)) {
+                const tx = groupedSales[seenTx.get(key)];
+                // Aggregate financials
+                tx.total_amount = (Number(tx.total_amount) || 0) + (Number(sale.total_amount) || 0);
+                tx.amount_paid = (Number(tx.amount_paid) || 0) + (Number(sale.amount_paid) || 0);
+                if (tx.profit !== null && sale.profit !== null) {
+                    tx.profit = (Number(tx.profit) || 0) + (Number(sale.profit) || 0);
+                }
+                tx.quantity_sold = (Number(tx.quantity_sold) || 0) + (Number(sale.quantity_sold) || 0);
+                
+                // Combine item names
+                tx._items.push({ name: sale.item_name, qty: sale.quantity_sold });
+                
+                // Combine payments arrays to preserve M-Pesa/Cash splits for the KPI cards
+                if (sale.payments && sale.payments.length > 0) {
+                    if (!tx.payments) tx.payments = [];
+                    tx.payments.push(...sale.payments);
+                }
+                
+                // If any part of the cart is voided, flag the whole group
+                if (sale.is_voided) tx.is_voided = true;
+            } else {
+                const tx = { ...sale, _items: [{ name: sale.item_name, qty: sale.quantity_sold }] };
+                seenTx.set(key, groupedSales.length);
+                groupedSales.push(tx);
+            }
+        });
+
+        // Format the combined item strings for HTML and CSV
+        groupedSales.forEach(tx => {
+            tx.item_name_display = tx._items.map(i => `${i.name} <span class="text-slate-400 font-black">x${i.qty}</span>`).join('<br>');
+            tx.item_name_csv = tx._items.map(i => `${i.name}`).join(' + ');
+        });
+
+        // 2. Update Global State
+        filteredSales = groupedSales;
+        currentPage = 1; // Reset to page 1 on new search
+        
+        // 3. Render
+        updateDashboardCards(filteredSales);
+        renderReport();
+    } catch (err) { 
+        console.error("Filter Error:", err);
+    }
+}
+
+function updateDashboardCards(data) {
+    let total = 0, profit = 0, mpesa = 0, cash = 0, credit = 0;
+    
+    data.forEach(sale => {
+        const sTotal = Number(sale.total_amount) || 0;
+        total += sTotal;
+        if (isAdmin) profit += Number(sale.profit) || 0;
+
+        (sale.payments || []).forEach(p => {
+            const amt = Number(p.amount) || 0;
+            if (p.payment_method === 'M-Pesa') mpesa += amt;
+            else if (p.payment_method === 'Cash') cash += amt;
+        });
+        
+        if (sale.payment_status === 'Credit' || sale.payment_status === 'Partial') {
+            credit += (sTotal - (Number(sale.amount_paid) || 0));
+        }
+    });
+
+    if(document.getElementById('totalRev')) document.getElementById('totalRev').innerText = `Ksh ${total.toLocaleString()}`;
+    if(document.getElementById('totalMpesa')) document.getElementById('totalMpesa').innerText = `Ksh ${mpesa.toLocaleString()}`;
+    if(document.getElementById('totalCash')) document.getElementById('totalCash').innerText = `Ksh ${cash.toLocaleString()}`;
+    if(document.getElementById('totalCredit')) document.getElementById('totalCredit').innerText = `Ksh ${credit.toLocaleString()}`;
+    if(document.getElementById('totalProf') && isAdmin) document.getElementById('totalProf').innerText = `Ksh ${profit.toLocaleString()}`;
+}
+
+function renderReport() {
+    const tableBody = document.getElementById('reportTableBody');
+    
+    if (!filteredSales || filteredSales.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="9" class="p-20 text-center text-slate-400">No records found.</td></tr>`;
+        updatePaginationControls();
+        return;
+    }
+
+    // Calculate Slice for Pagination
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const paginatedData = filteredSales.slice(startIndex, startIndex + rowsPerPage);
+
+    tableBody.innerHTML = paginatedData.map(sale => {
+        const status = sale.payment_status || 'Paid';
+        const isCreditOrigin = sale.is_credit_sale === true
+            || status === 'Credit'
+            || status === 'Partial';
+        const isFullySettled = isCreditOrigin && status === 'Paid';
+
+        let methodTagsHTML = '';
+        if (isCreditOrigin) {
+            // Credit sales always show Credit label only
+            const label = isFullySettled ? 'Credit (Settled)' : (status === 'Partial' ? 'Credit (Partial)' : 'Credit');
+            methodTagsHTML = `<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border bg-amber-100 text-amber-700 border-amber-200">${label}</span>`;
+        } else {
+            let methods = [...new Set((sale.payments || []).map(p => p.payment_method))];
+            if (methods.length === 0) methods = ['Cash'];
+            methodTagsHTML = methods.map(m => {
+                let color = m === 'Cash' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-blue-100 text-blue-700 border-blue-200';
+                return `<span class="text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${color}">${m}</span>`;
+            }).join(' ');
+        }
+
+        return `
+            <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                <td class="p-4 text-slate-500 font-medium">${new Date(sale.sale_date).toLocaleDateString()}</td>
+                <td class="p-4 font-black text-slate-800 uppercase text-xs">${sale.customer_name || 'Walk-in'}</td>
+                <td class="p-4 text-xs font-bold leading-relaxed">${sale.item_name_display || `${sale.item_name} <span class="text-slate-400 font-black">x${sale.quantity_sold}</span>`}</td>
+                <td class="p-4 flex gap-1 items-center">${methodTagsHTML}</td>
+                <td class="p-4"><span class="method-tag tag-${status.toLowerCase().replace(/[^a-z]/g, '')}">${status}</span></td>
+                <td class="p-4 text-slate-400 font-bold text-[10px] uppercase">${sale.sold_by || 'Staff'}</td>
+                <td class="p-4 font-black text-right">Ksh ${(Number(sale.total_amount)).toLocaleString()}</td>
+                ${isAdmin ? `<td class="p-4 font-black text-emerald-600 text-right">Ksh ${(Number(sale.profit)).toLocaleString()}</td>` : ''}
+                <td class="p-4 text-center no-print">
+                    ${sale.is_voided
+                        ? `<span class="text-[9px] font-black uppercase text-red-400 bg-red-50 px-2 py-1 rounded-lg border border-red-200">VOIDED</span>`
+                        : `<div class="flex gap-1 justify-center">
+                            <button onclick="openEditModal(this)" data-id="${sale.id}" data-name="${sale.customer_name || ''}" data-phone="${sale.customer_phone || ''}" class="bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1 rounded-lg text-[9px] font-black uppercase hover:bg-blue-600 hover:text-white transition">Edit</button>
+                           </div>`
+                    }
+                </td>
+            </tr>`;
+    }).join('');
+
+    updatePaginationControls();
+}
+
+function updatePaginationControls() {
+    const totalPages = Math.ceil(filteredSales.length / rowsPerPage);
+    const container = document.getElementById('paginationControls');
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const startRec = ((currentPage - 1) * rowsPerPage) + 1;
+    const endRec   = Math.min(currentPage * rowsPerPage, filteredSales.length);
+    container.innerHTML = `
+        <div class="flex items-center justify-between w-full mt-4 no-print">
+            <p class="text-[10px] font-black text-slate-400 uppercase">
+                Showing ${startRec}–${endRec} of ${filteredSales.length} records &nbsp;·&nbsp; Page ${currentPage} of ${totalPages}
+            </p>
+            <div class="flex gap-2">
+                <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="px-4 py-2 bg-slate-100 rounded-xl font-bold text-xs disabled:opacity-30">Previous</button>
+                <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs disabled:opacity-30">Next</button>
+            </div>
+        </div>
+    `;
+}
+
+function changePage(page) {
+    currentPage = page;
+    renderReport();
+    document.querySelector('main').scrollTo(0, 0); // Scroll back to top
+}
+        function clearFilters() {
+            document.getElementById('dateFilter').value   = '';
+            document.getElementById('monthFilter').value  = '';
+            document.getElementById('annualFilter').value = '';
+            document.getElementById('rangeFrom').value    = '';
+            document.getElementById('rangeTo').value      = '';
+            document.getElementById('methodFilter').value = '';
+            fetchFilteredData();
+        }
+
+        function generatePDF() {
+            const element = document.getElementById('pdf-area');
+            const header = document.getElementById('pdf-header');
+            header.classList.remove('hidden');
+            html2pdf().set({
+                margin: 0.3,
+                filename: `Sales_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+            }).from(element).save().then(() => header.classList.add('hidden'));
+        }
+
+        function exportCSV() {
+            if (!filteredSales || !filteredSales.length) {
+                alert('No data to export. Apply a filter first.');
+                return;
+            }
+            const headers = ['Date','Customer','Item','Qty','Payment Method','Status','Served By','Total (KES)'];
+            if (isAdmin) headers.push('Profit (KES)');
+
+            const rows = filteredSales.map(sale => {
+                const methods = sale.is_credit_sale || sale.payment_status === 'Credit' || sale.payment_status === 'Partial'
+                    ? ['Credit']
+                    : [...new Set((sale.payments || []).map(p => p.payment_method))];
+                const row = [
+                new Date(sale.sale_date).toLocaleDateString('en-KE'),
+                sale.customer_name || 'Walk-in',
+                sale.item_name_csv || sale.item_name,  // <-- Updated this line
+                sale.quantity_sold,
+                methods.join(' + '),
+                sale.payment_status || 'Paid',
+                sale.sold_by || 'Staff',
+                Number(sale.total_amount || 0).toFixed(2),
+            ];
+                if (isAdmin) row.push(Number(sale.profit || 0).toFixed(2));
+                return row;
+            });
+
+            const dateFilter  = document.getElementById('dateFilter').value;
+            const monthFilter = document.getElementById('monthFilter').value;
+            const period      = dateFilter || monthFilter || new Date().toISOString().split('T')[0];
+
+            const csvContent = [
+                ['Elite Hardware Pro — Sales Report'],
+                [`Period: ${period}`],
+                [`Generated: ${new Date().toLocaleString('en-KE')}`],
+                [],
+                headers,
+                ...rows
+            ].map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `Sales_Report_${period}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+// ── KRA RECONCILIATION ────────────────────────────────────────────────────────
+async function runReconcile() {
+    const from = document.getElementById('reconcileFrom').value;
+    const to   = document.getElementById('reconcileTo').value;
+    if (!from || !to) return alert('Please select both a start and end date.');
+    if (from > to)    return alert('Start date must be before end date.');
+
+    const btn     = document.getElementById('reconcileBtn');
+    const loading = document.getElementById('reconcileLoading');
+    const result  = document.getElementById('reconcileResult');
+    const errNote = document.getElementById('reconcileErrorNote');
+
+    btn.disabled    = true;
+    btn.textContent = '⏳ Checking...';
+    loading.classList.remove('hidden');
+    result.classList.add('hidden');
+    errNote.classList.add('hidden');
+
+    try {
+        const res  = await apiFetch(`${API_BASE}/digitax/reconcile?start_date=${from}&end_date=${to}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Server error');
+
+        const fmt = v => v !== null && v !== undefined
+            ? `KES ${parseFloat(v).toLocaleString('en-KE', { minimumFractionDigits: 2 })}`
+            : '—';
+
+        // POS column
+        document.getElementById('recPosTotal').textContent     = fmt(data.pos.total);
+        document.getElementById('recPosCount').textContent     = data.pos.count.toLocaleString();
+        document.getElementById('recPosSubmitted').textContent = data.pos.submitted.toLocaleString();
+        document.getElementById('recPosPending').textContent   = data.pos.pending_kra.toLocaleString();
+
+        // DigiTax column — handle empty/unavailable separately
+        const dtBox = document.getElementById('recDtContent');
+        if (data.digitax_returned_empty) {
+            dtBox.innerHTML = `
+                <p style="font-size:11px;color:#b45309;font-weight:700;line-height:1.6;">⚠ No sales found in DigiTax for this period.</p>
+                <p style="font-size:10px;color:#64748b;font-weight:500;margin-top:4px;line-height:1.5;">
+                    Invoices may still be processing. Verify directly on your
+                    <a href="https://digitax.tech/dashboard/" target="_blank" style="color:#2563eb;text-decoration:underline;">DigiTax Dashboard</a>.
+                </p>`;
+        } else if (data.digitax) {
+            const completed = data.digitax.completed ?? 0;
+            const pending   = data.digitax.pending   ?? 0;
+            const failed    = data.digitax.failed    ?? 0;
+            dtBox.innerHTML = `
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                    <span style="color:#64748b;font-weight:700;">Total Revenue</span>
+                    <span style="font-weight:900;">${fmt(data.digitax.total)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;">
+                    <span style="color:#64748b;font-weight:700;">Invoices</span>
+                    <span style="font-weight:900;">${data.digitax.count !== null ? data.digitax.count.toLocaleString() : '—'}</span>
+                </div>
+                <div style="border-top:1px solid rgba(0,0,0,0.07);padding-top:8px;display:flex;flex-direction:column;gap:5px;">
+                    <div style="display:flex;justify-content:space-between;font-size:11px;">
+                        <span style="color:#059669;font-weight:700;">✓ Completed (KRA)</span>
+                        <span style="font-weight:900;color:#059669;">${completed.toLocaleString()}</span>
+                    </div>
+                    ${pending > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;">
+                        <span style="color:#b45309;font-weight:700;">⏳ Pending</span>
+                        <span style="font-weight:900;color:#b45309;">${pending.toLocaleString()}</span>
+                    </div>` : ''}
+                    ${failed > 0 ? `<div style="display:flex;justify-content:space-between;font-size:11px;">
+                        <span style="color:#dc2626;font-weight:700;">✕ Failed</span>
+                        <span style="font-weight:900;color:#dc2626;">${failed.toLocaleString()}</span>
+                    </div>` : ''}
+                </div>`;
+        } else {
+            dtBox.innerHTML = `<p style="font-size:11px;color:#b45309;font-weight:700;">Could not fetch from DigiTax — check API key or connectivity.</p>`;
+        }
+
+        // Variance column
+        const varAmt   = data.variance.amount;
+        const varCount = data.variance.count;
+        const varAmtEl = document.getElementById('recVarAmount');
+        const varCntEl = document.getElementById('recVarCount');
+        const varNote  = document.getElementById('recVarNote');
+
+        if (data.digitax_returned_empty) {
+            varAmtEl.textContent = '—';
+            varCntEl.textContent = '—';
+            varAmtEl.style.color = '#64748b';
+            varCntEl.style.color = '#64748b';
+        } else {
+            if (varAmt !== null) {
+                varAmtEl.textContent = (varAmt === 0 ? '✓ ' : (varAmt > 0 ? '▲ ' : '▼ ')) + fmt(Math.abs(varAmt));
+                varAmtEl.style.color = varAmt === 0 ? '#059669' : '#dc2626';
+            } else { varAmtEl.textContent = '—'; varAmtEl.style.color = ''; }
+            if (varCount !== null) {
+                varCntEl.textContent = (varCount === 0 ? '✓ ' : (varCount > 0 ? '+' : '')) + varCount;
+                varCntEl.style.color = varCount === 0 ? '#059669' : '#dc2626';
+            } else { varCntEl.textContent = '—'; }
+        }
+
+        // Pending invoices note
+        if (data.pos.pending_kra > 0) {
+            varNote.textContent         = `⚠ ${data.pos.pending_kra} invoice(s) have no KRA receipt number yet.`;
+            varNote.style.background    = 'rgba(245,158,11,0.1)';
+            varNote.style.color         = '#b45309';
+        } else {
+            varNote.textContent         = '✓ All POS invoices have been transmitted to KRA.';
+            varNote.style.background    = 'rgba(0,229,160,0.1)';
+            varNote.style.color         = '#059669';
+        }
+
+        // Status banner
+        const banner      = document.getElementById('reconcileStatusBanner');
+        const statusIcon  = document.getElementById('reconcileStatusIcon');
+        const statusTitle = document.getElementById('reconcileStatusTitle');
+        const statusSub   = document.getElementById('reconcileStatusSub');
+
+        const statusConfig = {
+            matched:          { bg: 'rgba(0,229,160,0.12)',   border: '#00e5a0', color: '#059669', icon: '✅', title: 'Fully Matched',            sub: 'Your POS records exactly match what KRA received via DigiTax.' },
+            minor_variance:   { bg: 'rgba(245,158,11,0.12)',  border: '#f59e0b', color: '#b45309', icon: '⚠️', title: 'Minor Variance',            sub: 'Small difference detected — may be timing or rounding. Review pending invoices.' },
+            mismatch:         { bg: 'rgba(255,77,109,0.12)',  border: '#ff4d6d', color: '#dc2626', icon: '🚨', title: 'Mismatch Detected',          sub: 'Significant gap between POS and KRA records. Check pending invoices and DigiTax logs.' },
+            kra_verified:     { bg: 'rgba(0,229,160,0.12)',   border: '#00e5a0', color: '#059669', icon: '✅', title: 'All Invoices Sent to KRA',   sub: 'Every POS invoice has a KRA receipt number. No records returned by DigiTax yet — invoices may still be processing.' },
+            pending_invoices: { bg: 'rgba(245,158,11,0.12)',  border: '#f59e0b', color: '#b45309', icon: '⚠️', title: 'Pending Invoices Detected',  sub: 'Some invoices have not received a KRA receipt number yet. Check your DigiTax logs for transmission errors.' },
+            unknown:          { bg: 'rgba(100,116,139,0.12)', border: '#64748b', color: '#64748b', icon: '❓', title: 'DigiTax Unavailable',         sub: 'Could not fetch KRA data. POS figures shown — check API key or DigiTax status.' },
+        };
+        const cfg = statusConfig[data.variance.status] || statusConfig.unknown;
+        banner.style.cssText      = `background:${cfg.bg};border:1px solid ${cfg.border};border-radius:12px;padding:16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;`;
+        statusIcon.textContent    = cfg.icon;
+        statusTitle.textContent   = cfg.title;
+        statusTitle.style.color   = cfg.color;
+        statusSub.textContent     = cfg.sub;
+
+        if (data.error) {
+            errNote.textContent = '⚠ DigiTax note: ' + data.error;
+            errNote.classList.remove('hidden');
+        }
+
+        loading.classList.add('hidden');
+        result.classList.remove('hidden');
+
+    } catch (err) {
+        loading.classList.add('hidden');
+        alert('Reconciliation error: ' + err.message);
+    } finally {
+        btn.disabled    = false;
+        btn.textContent = '🔍 Run Check';
+    }
+}
+
+// Pre-fill reconcile dates to today on load
+(function() {
+    const today = new Date().toISOString().split('T')[0];
+    const f = document.getElementById('reconcileFrom');
+    const t = document.getElementById('reconcileTo');
+    if (f) f.value = today;
+    if (t) t.value = today;
+})();
+
+// Initial load — security check + data fetch
+        document.addEventListener('eliteAuthReady', function() {
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+    const _rb0 = document.getElementById('voidSubmitBtn');
+    if (_rb0) { _rb0.disabled=true; _rb0.style.opacity='0.35'; _rb0.style.cursor='not-allowed'; _rb0.title='POS is read-only — subscription expired'; }
+    const _rb1 = document.getElementById('editSubmitBtn');
+    if (_rb1) { _rb1.disabled=true; _rb1.style.opacity='0.35'; _rb1.style.cursor='not-allowed'; _rb1.title='POS is read-only — subscription expired'; }
+
+        // Intercept void/edit open so even if modal opens, submit is blocked
+        document.querySelectorAll('button').forEach(b => {
+            if (/void|edit.*sale/i.test(b.textContent)) {
+                b.disabled=true; b.style.opacity='0.35'; b.style.cursor='not-allowed';
+            }
+        });
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+            userRole  = window.EliteAuth?.role?.toLowerCase();
+            isAdmin   = userRole === 'admin';
+            isManager = userRole === 'manager' || isAdmin;
+            if (!isManager) {
+                window.location.replace('/');
+                return;
+            }
+            document.getElementById('accessLevelLabel').innerText = `${userRole} Access Level`;
+            if (isAdmin) {
+                document.getElementById('profitCard').style.display = 'block';
+                document.getElementById('profitHeader').style.display = 'table-cell';
+            }
+            fetchFilteredData();
+        });
+</script>
+
+<!-- ── VOID MODAL ──────────────────────────────────────────── -->
+<div id="voidModal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);display:none;">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-xl">🚫</div>
+            <div>
+                <h3 class="text-lg font-black text-slate-800 tracking-tight">Void Transaction</h3>
+                <p id="voidSaleLabel" class="text-xs font-bold text-slate-400 uppercase mt-0.5"></p>
+            </div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-5">
+            <p class="text-xs font-bold text-red-700 uppercase tracking-widest mb-1">⚠️ Warning</p>
+            <p class="text-xs text-red-600 font-medium">This will restore stock and reverse any outstanding debt. This action cannot be undone.</p>
+        </div>
+        <div class="mb-5">
+            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2">Void Reason <span class="text-red-500">*</span></label>
+            <select id="voidReasonSelect" onchange="toggleCustomReason()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-red-400 mb-2">
+                <option value="">— Select a reason —</option>
+                <option value="Wrong item sold">Wrong item sold</option>
+                <option value="Customer returned item">Customer returned item</option>
+                <option value="Data entry error">Data entry error</option>
+                <option value="Duplicate transaction">Duplicate transaction</option>
+                <option value="Other">Other (specify below)</option>
+            </select>
+            <input type="text" id="voidReasonCustom" placeholder="Describe reason..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-red-400 hidden">
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeVoidModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase hover:bg-slate-200 transition">Cancel</button>
+            <button onclick="submitVoid()" id="voidSubmitBtn" class="flex-1 py-3 bg-red-600 text-white rounded-2xl font-black text-xs uppercase hover:bg-red-700 transition shadow-lg">Void Transaction</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── EDIT MODAL ──────────────────────────────────────────── -->
+<div id="editModal" class="fixed inset-0 z-[300] hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.85);backdrop-filter:blur(4px);display:none;">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-xl">✏️</div>
+            <div>
+                <h3 class="text-lg font-black text-slate-800 tracking-tight">Edit Transaction</h3>
+                <p class="text-xs font-bold text-slate-400 uppercase mt-0.5">Customer details & payment method only</p>
+            </div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-2xl p-3 mb-5">
+            <p class="text-xs text-blue-700 font-bold">Items, quantities and prices cannot be changed — void and re-enter to correct those.</p>
+        </div>
+        <div class="space-y-4 mb-6">
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Customer Name</label>
+                <input type="text" id="editCustomerName" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-blue-400">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Customer Phone</label>
+                <input type="text" id="editCustomerPhone" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-blue-400">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Payment Method</label>
+                <select id="editPaymentMethod" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-blue-400">
+                    <option value="">— No change —</option>
+                    <option value="Cash">Cash</option>
+                    <option value="M-Pesa">M-Pesa</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1">Edit Notes</label>
+                <input type="text" id="editNotes" placeholder="Reason for edit..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 ring-blue-400">
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeEditModal()" class="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase hover:bg-slate-200 transition">Cancel</button>
+            <button onclick="submitEdit()" id="editSubmitBtn" class="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase hover:bg-blue-700 transition shadow-lg">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── VOID / EDIT — API scope fallbacks ──────────────────────
+const _API_BASE = window.API_BASE || window.API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+const _apiFetch = window.apiFetch;  // always use auth.js verified token
+
+// ── VOID MODAL ─────────────────────────────────────────────
+let currentVoidId = null;
+
+function openVoidModal(btn) {
+    currentVoidId = btn.dataset.id;
+    const itemName = btn.dataset.item || '';
+    const customerName = btn.dataset.customer || 'Walk-in';
+    document.getElementById('voidSaleLabel').innerText = `${itemName} — ${customerName}`;
+    document.getElementById('voidReasonSelect').value = '';
+    document.getElementById('voidReasonCustom').value = '';
+    document.getElementById('voidReasonCustom').classList.add('hidden');
+    document.getElementById('voidModal').style.display = 'flex';
+}
+
+function closeVoidModal() {
+    document.getElementById('voidModal').style.display = 'none';
+    currentVoidId = null;
+}
+
+function toggleCustomReason() {
+    const sel = document.getElementById('voidReasonSelect').value;
+    const custom = document.getElementById('voidReasonCustom');
+    custom.classList.toggle('hidden', sel !== 'Other');
+    if (sel !== 'Other') custom.value = '';
+}
+
+async function submitVoid() {
+    if (!currentVoidId) return;
+    const sel = document.getElementById('voidReasonSelect').value;
+    const custom = document.getElementById('voidReasonCustom').value.trim();
+    const reason = sel === 'Other' ? custom : sel;
+
+    if (!reason) return alert('Please select or enter a void reason.');
+    if (sel === 'Other' && reason.length < 3) return alert('Please describe the reason (min 3 characters).');
+
+    if (!confirm(`Void this transaction? Stock will be restored and this cannot be undone.`)) return;
+
+    const btn = document.getElementById('voidSubmitBtn');
+    btn.innerText = 'Processing...';
+    btn.disabled = true;
+
+    try {
+        const res = await _apiFetch(`${_API_BASE}/sales/${currentVoidId}/void`, {
+            method: 'POST',
+            body: JSON.stringify({ reason })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        closeVoidModal();
+        alert('✅ Transaction voided. Stock has been restored.');
+        fetchFilteredData();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.innerText = 'Void Transaction';
+        btn.disabled = false;
+    }
+}
+
+// ── EDIT MODAL ─────────────────────────────────────────────
+let currentEditId = null;
+
+async function openEditModal(btn) {
+    currentEditId = btn.dataset.id;
+    // Pre-fill from data attributes instantly — no extra API call needed
+    document.getElementById('editCustomerName').value = btn.dataset.name || '';
+    document.getElementById('editCustomerPhone').value = btn.dataset.phone || '';
+    document.getElementById('editPaymentMethod').value = '';
+    document.getElementById('editNotes').value = '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentEditId = null;
+}
+
+async function submitEdit() {
+    if (!currentEditId) return;
+    const customerName   = document.getElementById('editCustomerName').value.trim();
+    const customerPhone  = document.getElementById('editCustomerPhone').value.trim();
+    const paymentMethod  = document.getElementById('editPaymentMethod').value;
+    const editNotes      = document.getElementById('editNotes').value.trim();
+
+    if (!editNotes) return alert('Please enter a note explaining the reason for this edit.');
+
+    const btn = document.getElementById('editSubmitBtn');
+    btn.innerText = 'Saving...';
+    btn.disabled = true;
+
+    try {
+        const res = await _apiFetch(`${_API_BASE}/sales/${currentEditId}/edit`, {
+            method: 'PATCH',
+            body: JSON.stringify({ customerName, customerPhone, paymentMethod: paymentMethod || undefined, editNotes })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        closeEditModal();
+        alert('✅ Transaction updated.');
+        fetchFilteredData();
+    } catch (err) {
+        alert('Error: ' + err.message);
+    } finally {
+        btn.innerText = 'Save Changes';
+        btn.disabled = false;
+    }
+}
+
+// Close modals on backdrop click
+document.getElementById('voidModal').addEventListener('click', function(e) {
+    if (e.target === this) closeVoidModal();
+});
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+</body>
+</html>

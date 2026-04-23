@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="billing.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Billing & Subscription | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* ── Elite POS Design Tokens (mirrors index.html) ─────────────────── */
+        :root {
+            --bg:       #090a0f;
+            --surface:  #14171f;
+            --surface2: #1e222d;
+            --border:   rgba(255,255,255,0.08);
+            --green:    #10b981; --green-dim: rgba(16,185,129,0.12);
+            --red:      #ef4444; --red-dim:   rgba(239,68,68,0.12);
+            --blue:     #3b82f6; --blue-dim:  rgba(59,130,246,0.12);
+            --amber:    #f59e0b; --amber-dim: rgba(245,158,11,0.12);
+            --purple:   #8b5cf6; --purple-dim:rgba(139,92,246,0.12);
+            --text:     #f8fafc;
+            --muted:    #94a3b8;
+            --mono:     'Space Mono', monospace;
+            --sans:     'DM Sans', sans-serif;
+        }
+        body.light {
+            --bg:       #cbd5e1;
+            --surface:  #e2e8f0;
+            --surface2: #f1f5f9;
+            --border:   rgba(15,23,42,0.15);
+            --green:    #059669; --green-dim: rgba(5,150,105,0.10);
+            --red:      #dc2626; --red-dim:   rgba(220,38,38,0.10);
+            --blue:     #2563eb; --blue-dim:  rgba(37,99,235,0.10);
+            --amber:    #d97706; --amber-dim: rgba(217,119,6,0.10);
+            --purple:   #7c3aed; --purple-dim:rgba(124,58,237,0.10);
+            --text:     #0f172a;
+            --muted:    #475569;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: var(--sans);
+            background: radial-gradient(circle at 50% 0%, #1a1e29 0%, var(--bg) 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        body.light { background: var(--bg) !important; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--surface2); border-radius: 4px; }
+
+        /* ── Layout ──────────────────────────────────────────────────── */
+        .page-wrap  { display: flex; min-height: 100vh; }
+        main        { flex: 1; padding: 28px 32px; height: 100vh; overflow-y: auto; }
+        @media (max-width: 768px) { main { padding: 16px; } }
+
+        /* ── Typography helpers ──────────────────────────────────────── */
+        .section-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--muted); font-family: var(--mono);
+        }
+        .section-title {
+            font-size: 22px; font-weight: 800; color: var(--text);
+        }
+        .card-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--muted); font-family: var(--mono);
+            margin-bottom: 6px;
+        }
+        .divider-label {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--text); font-family: var(--mono);
+            border-bottom: 1px solid var(--border); padding-bottom: 10px;
+            margin-bottom: 18px;
+        }
+
+        /* ── Cards ───────────────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px 24px;
+        }
+        .card-sm {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+
+        /* ── KPI strip ───────────────────────────────────────────────── */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .kpi-box  {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 18px 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+        .kpi-val  { font-size: 18px; font-weight: 900; color: var(--text); font-family: var(--mono); margin-top: 4px; }
+
+        /* ── Status strip ────────────────────────────────────────────── */
+        .status-strip {
+            display: none; border-radius: 14px; padding: 16px 20px;
+            border: 1px solid; margin-bottom: 24px;
+            display: none; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 12px;
+        }
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .chip {
+            padding: 4px 12px; border-radius: 20px; font-size: 10px;
+            font-weight: 700; font-family: var(--mono); text-transform: uppercase;
+            border: 1px solid;
+        }
+
+        /* ── Plan cards ──────────────────────────────────────────────── */
+        .plan-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 28px; }
+        .plan-card  {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 14px; padding: 22px; display: flex; flex-direction: column;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            position: relative; overflow: hidden;
+        }
+        .plan-card.active-plan {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.25);
+        }
+        .plan-badge {
+            position: absolute; top: 0; right: 0;
+            background: var(--blue-dim); color: var(--blue);
+            border-bottom-left-radius: 10px;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .8px; padding: 5px 10px;
+            font-family: var(--mono);
+        }
+        .plan-name  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-family: var(--mono); margin-bottom: 10px; }
+        .plan-price { font-size: 24px; font-weight: 900; color: var(--text); font-family: var(--mono); margin-bottom: 2px; }
+        .plan-cycle { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+        .plan-saving { font-size: 10px; font-weight: 700; color: var(--green); margin-bottom: 16px; }
+        .plan-features { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; flex: 1; }
+        .plan-features li { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+        .plan-features li::before { content: '✓'; color: var(--green); font-weight: 900; font-size: 11px; }
+
+        /* ── Buttons ─────────────────────────────────────────────────── */
+        .btn {
+            padding: 11px 18px; border-radius: 10px; font-size: 11px;
+            font-weight: 900; text-transform: uppercase; letter-spacing: .8px;
+            cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s;
+            font-family: var(--mono);
+        }
+        .btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; }
+        .btn-primary  { background: var(--green); color: #000; }
+        .btn-blue     { background: var(--blue);  color: #fff; }
+        .btn-ghost    { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+        .btn-danger   { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+        .btn-sm       { padding: 7px 14px; font-size: 10px; }
+        .btn-full     { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+        /* ── Form inputs ─────────────────────────────────────────────── */
+        .form-label {
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--muted); display: block;
+            margin-bottom: 6px; font-family: var(--mono);
+        }
+        input[type="text"], input[type="number"], input[type="tel"] {
+            width: 100%; padding: 11px 14px; border-radius: 10px;
+            background: var(--surface2); border: 1px solid var(--border);
+            color: var(--text); font-weight: 700; font-size: 13px;
+            outline: none; font-family: var(--sans);
+            transition: border-color 0.15s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus { border-color: var(--blue); }
+        input[readonly] { opacity: .7; cursor: default; }
+
+        /* ── STK status box ──────────────────────────────────────────── */
+        .stk-status {
+            padding: 12px 16px; border-radius: 10px; font-size: 11px;
+            font-weight: 700; text-align: center; border: 1px solid;
+            font-family: var(--mono); display: none;
+        }
+        .stk-pending  { background: var(--blue-dim);  color: var(--blue);  border-color: rgba(59,130,246,0.3);  }
+        .stk-success  { background: var(--green-dim); color: var(--green); border-color: rgba(16,185,129,0.3);  }
+        .stk-fail     { background: var(--red-dim);   color: var(--red);   border-color: rgba(239,68,68,0.3);   }
+        .stk-warning  { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3);  }
+
+        /* ── Payment history rows ────────────────────────────────────── */
+        .pay-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px; border-bottom: 1px solid var(--border);
+            transition: background 0.12s;
+        }
+        .pay-row:last-child { border-bottom: none; }
+        .pay-row:hover { background: var(--surface2); }
+        .pay-amount  { font-size: 14px; font-weight: 900; color: var(--text); font-family: var(--mono); }
+        .pay-meta    { font-size: 10px; color: var(--muted); margin-top: 3px; }
+        .pay-code    { font-size: 10px; font-family: var(--mono); color: var(--muted); margin-top: 2px; }
+        .pay-date    { font-size: 11px; color: var(--muted); text-align: right; }
+        .auto-badge  {
+            font-size: 9px; background: var(--surface2); color: var(--muted);
+            border: 1px solid var(--border); border-radius: 4px;
+            padding: 1px 6px; font-family: var(--mono); text-transform: uppercase;
+        }
+
+        /* ── Paybill instructions box ─────────────────────────────────── */
+        .paybill-box {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 10px; padding: 16px;
+        }
+        .paybill-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid var(--border);
+        }
+        .paybill-row:last-child { border-bottom: none; }
+        .paybill-key  { font-size: 12px; color: var(--muted); }
+        .paybill-val  { font-size: 13px; font-weight: 900; color: var(--text); font-family: var(--mono); }
+        .copy-btn { font-size: 10px; font-weight: 700; color: var(--blue); cursor: pointer; background: none; border: none; font-family: var(--mono); text-transform: uppercase; }
+
+        /* ── Quick select grid ───────────────────────────────────────── */
+        .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .quick-btn  {
+            padding: 12px 10px; text-align: center; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface2);
+            color: var(--text); cursor: pointer; transition: border-color 0.15s, background 0.15s;
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+        }
+        .quick-btn:hover { border-color: var(--blue); background: var(--blue-dim); }
+        .quick-val  { font-size: 13px; font-weight: 900; font-family: var(--mono); }
+        .quick-lbl  { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-family: var(--mono); }
+
+        /* ── Pay context box ─────────────────────────────────────────── */
+        .pay-context {
+            display: none; background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.25);
+            border-radius: 10px; padding: 14px 16px; margin-bottom: 18px;
+        }
+        .pay-context-plan   { font-size: 13px; font-weight: 900; color: var(--text); }
+        .pay-context-cycle  { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+
+        /* ── Grid helpers ────────────────────────────────────────────── */
+        .layout-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+        @media (max-width: 1100px) { .layout-grid { grid-template-columns: 1fr; } }
+        .flex-col-gap { display: flex; flex-direction: column; gap: 20px; }
+
+        /* ── Transitions ─────────────────────────────────────────────── */
+        body, *, *::before, *::after { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease; }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+    <div id="sidebarMount"></div>
+    <main>
+        <div style="max-width:1100px;margin:0 auto;">
+
+            <!-- ── Page header ─────────────────────────────────────────── -->
+            <header style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:14px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+                <div>
+                    <div class="section-label" style="margin-bottom:4px;">Elite Hardware Systems</div>
+                    <div class="section-title">Billing &amp; Subscription</div>
+                    <p style="font-size:12px;color:var(--muted);margin-top:6px;">Manage licensing, renewals and payment history.</p>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="forceRefresh()" id="refreshBtn" class="btn btn-ghost btn-sm">↻ Force Sync</button>
+                </div>
+            </header>
+
+            <!-- ── Status strip ────────────────────────────────────────── -->
+            <div id="statusStrip" class="status-strip" style="display:none;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div id="statusDot" class="status-dot"></div>
+                    <div>
+                        <div id="statusTitle" style="font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;font-family:var(--mono);"></div>
+                        <div id="statusMsg"   style="font-size:11px;color:var(--muted);margin-top:3px;"></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span id="statusDaysChip" class="chip"></span>
+                    <span id="statusPlanChip" class="chip" style="background:var(--surface2);color:var(--muted);border-color:var(--border);"></span>
+                </div>
+            </div>
+
+            <!-- ── KPI boxes ────────────────────────────────────────────── -->
+            <div class="kpi-grid">
+                <div class="kpi-box">
+                    <div class="card-label">Current Plan</div>
+                    <div class="kpi-val" id="kpiPlan">—</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="card-label" id="kpiExpiryLabel">Paid Until</div>
+                    <div class="kpi-val" id="kpiExpiry">—</div>
+                </div>
+                <!-- Lifetime only: SLA annual service fee tracker -->
+                <div class="kpi-box" id="kpiSlaBox" style="display:none;border-left:3px solid var(--amber);">
+                    <div class="card-label" style="color:var(--amber);">SLA Fee Renewal</div>
+                    <div class="kpi-val" id="kpiSlaExpiry" style="color:var(--amber);">—</div>
+                    <div id="kpiSlaDays" style="font-size:10px;font-weight:700;font-family:var(--mono);color:var(--muted);margin-top:4px;"></div>
+                </div>
+                <div class="kpi-box">
+                    <div class="card-label">Status</div>
+                    <div id="kpiStatus" style="margin-top:6px;">—</div>
+                </div>
+                <div class="kpi-box">
+                    <div class="card-label">Last Sync</div>
+                    <div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:6px;font-family:var(--mono);" id="kpiChecked">—</div>
+                </div>
+            </div>
+
+            <!-- ── Main two-column layout ───────────────────────────────── -->
+            <div class="layout-grid">
+
+                <!-- LEFT column -->
+                <div class="flex-col-gap">
+
+                    <!-- Plan cards -->
+                    <div>
+                        <div class="divider-label">Available Licensing Plans</div>
+                        <div class="plan-cards" id="planCards">
+
+                            <div class="plan-card" id="card-monthly">
+                                <div class="plan-name">Monthly Subscription</div>
+                                <div class="plan-price">$23 <span style="font-size:13px;color:var(--muted);">/ mo</span></div>
+                                <div class="plan-cycle">KES 3,000 · Billed monthly</div>
+                                <ul class="plan-features" style="margin-top:14px;">
+                                    <li>Full POS access</li>
+                                    <li>Offline mode</li>
+                                    <li>Comprehensive reporting</li>
+                                </ul>
+                                <button class="btn btn-ghost btn-full" onclick="openPayModal('monthly',3000,1)">Select Monthly</button>
+                            </div>
+
+                            <div class="plan-card" id="card-annual">
+                                <div class="plan-badge">Standard</div>
+                                <div class="plan-name" style="color:var(--blue);">Annual Subscription</div>
+                                <div class="plan-price">$279 <span style="font-size:13px;color:var(--muted);">/ yr</span></div>
+                                <div class="plan-cycle">KES 36,000 · Billed annually</div>
+                                <div class="plan-saving">= $23 / mo · save 0%</div>
+                                <ul class="plan-features">
+                                    <li>All Monthly features</li>
+                                    <li>Priority support queue</li>
+                                    <li>12 months uninterrupted</li>
+                                </ul>
+                                <button class="btn btn-blue btn-full" onclick="openPayModal('annual',36000,12)">Select Annual</button>
+                            </div>
+
+                            <div class="plan-card" id="card-lifetime">
+                                <div class="plan-name">Perpetual Licence</div>
+                                <div class="plan-price">$930</div>
+                                <div class="plan-cycle">KES 120,000 · One-time payment</div>
+                                <div style="font-size:10px;color:var(--muted);margin-bottom:16px;">+ $233 / yr SLA fee (KES 30,000)</div>
+                                <ul class="plan-features">
+                                    <li>Perpetual software usage</li>
+                                    <li>Major &amp; minor updates</li>
+                                    <li>Premium technical support</li>
+                                </ul>
+                                <!-- SLA due-date reminder — populated by renderStatus() -->
+                                <div id="cardSlaBanner" style="display:none;margin:10px 0;padding:8px 12px;border-radius:8px;background:var(--amber-dim);border:1px solid rgba(245,158,11,0.3);font-size:10px;font-weight:700;font-family:var(--mono);color:var(--amber);"></div>
+                                <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto;">
+                                    <button class="btn btn-full" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);" onclick="openPayModal('lifetime',120000,null)">Purchase Licence</button>
+                                    <button class="btn btn-ghost btn-full btn-sm" onclick="openPayModal('annual_service',30000,null)">Pay Annual SLA Fee</button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Payment history -->
+                    <div>
+                        <div class="divider-label">Transaction History</div>
+                        <div class="card" style="padding:0;overflow:hidden;">
+                            <div id="paymentHistory" style="min-height:80px;display:flex;align-items:center;justify-content:center;">
+                                <span style="font-size:11px;color:var(--muted);font-family:var(--mono);">Loading history…</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT column -->
+                <div class="flex-col-gap">
+
+                    <!-- Payment processing -->
+                    <div class="card">
+                        <div class="divider-label">Payment Processing</div>
+
+                        <div id="payModalContext" class="pay-context">
+                            <div class="section-label" style="margin-bottom:5px;">Queued for Payment</div>
+                            <div class="pay-context-plan"  id="payModalPlanLabel"></div>
+                            <div class="pay-context-cycle" id="payModalAmountLabel"></div>
+                        </div>
+
+                        <div class="flex-col-gap" style="gap:14px;">
+                            <div>
+                                <label class="form-label">M-Pesa Mobile Number</label>
+                                <input type="tel" id="billingPhone" placeholder="e.g. 07XXXXXXXX" maxlength="13">
+                            </div>
+                            <div>
+                                <label class="form-label">Amount (KES)</label>
+                                <input type="number" id="billingAmount" placeholder="0.00">
+                            </div>
+                            <button id="stkBtn" onclick="sendBillingStk()" class="btn btn-primary btn-full">Initiate STK Push</button>
+                            <div id="stkStatus" class="stk-status"></div>
+                            <input type="text" id="mpesaCodeInput" placeholder="System Generated M-Pesa Code" style="display:none;font-family:var(--mono);text-transform:uppercase;" readonly>
+                        </div>
+
+
+                        <!-- Paybill instructions -->
+                        <div class="paybill-box" style="margin-bottom:18px;">
+                            <div class="section-label" style="margin-bottom:12px;">Lipa na M-Pesa Instructions</div>
+                            <div style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-bottom:12px;padding:7px 10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">💱 Prices shown in USD · Payments processed in KES @ ~129 KES/USD</div>
+                                <div class="paybill-row">
+                                <span class="paybill-key">Business No.</span>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span class="paybill-val" id="paybillNo">600980</span>
+                                    <button class="copy-btn" onclick="copyText('paybillNo')">Copy</button>
+                                </div>
+                            </div>
+                            <div class="paybill-row">
+                                <span class="paybill-key">Account No.</span>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <span class="paybill-val" id="accountRef" style="font-size:11px;">ELITE_HARDWARE_MAIN</span>
+                                    <button class="copy-btn" onclick="copyText('accountRef')">Copy</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Quick entry -->
+                    <div class="card">
+                        <div class="divider-label">Quick Entry</div>
+                        <div class="quick-grid">
+                            <button onclick="quickSelect(3000,'monthly',1)" class="quick-btn">
+                                <span class="quick-val">$23</span>
+                                <span class="quick-lbl">Monthly</span>
+                            </button>
+                            <button onclick="quickSelect(36000,'annual',12)" class="quick-btn">
+                                <span class="quick-val">$279</span>
+                                <span class="quick-lbl">Annual</span>
+                            </button>
+                            <button onclick="quickSelect(120000,'lifetime',null)" class="quick-btn">
+                                <span class="quick-val">$930</span>
+                                <span class="quick-lbl">Lifetime</span>
+                            </button>
+                            <button onclick="quickSelect(30000,'annual_service',null)" class="quick-btn">
+                                <span class="quick-val">$233</span>
+                                <span class="quick-lbl">SLA Fee</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+const API_BASE = window.API_BASE || (location.hostname === 'localhost' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let _subData     = null;
+let _stkInterval = null;
+let _stkCountdown = null;
+let _selectedPlan = { type: null, amount: null, months: null };
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('eliteAuthReady', async function () {
+    await loadSubscriptionStatus();
+    await loadPaymentHistory();
+});
+
+// ── Load subscription status ──────────────────────────────────────────────────
+async function loadSubscriptionStatus() {
+    try {
+        const res  = await apiFetch(`${API_BASE}/subscription/status`);
+        const data = await res.json();
+        if (!data.success) return;
+        _subData = data;
+        renderStatus(data);
+    } catch(e) {
+        console.error('[Billing] status error:', e);
+    }
+}
+
+function renderStatus(d) {
+    // KPI boxes
+    const planLabels = { monthly:'Monthly · $23/mo', annual:'Annual · $279/yr', lifetime:'Perpetual · $930', annual_service:'SLA Fee · $233/yr' };
+    const isLifetime = d.plan === 'lifetime';
+
+    document.getElementById('kpiPlan').textContent = planLabels[d.plan] || d.plan;
+
+    // Paid Until — for lifetime show software licence (perpetual), not SLA date
+    const expiryLabel = document.getElementById('kpiExpiryLabel');
+    if (expiryLabel) expiryLabel.textContent = isLifetime ? 'Licence' : 'Paid Until';
+    document.getElementById('kpiExpiry').textContent = isLifetime
+        ? 'Perpetual'
+        : (d.paid_until || '—');
+
+    document.getElementById('kpiChecked').textContent = d.lastChecked
+        ? new Date(d.lastChecked).toLocaleTimeString()
+        : '—';
+
+    // SLA fee KPI box — only show for lifetime clients
+    const slaBox = document.getElementById('kpiSlaBox');
+    if (slaBox) {
+        if (isLifetime) {
+            slaBox.style.display = 'block';
+            const slaDate = d.annual_service_paid_until;
+            document.getElementById('kpiSlaExpiry').textContent = slaDate || 'Not paid yet';
+            const slaDaysEl = document.getElementById('kpiSlaDays');
+            if (slaDate) {
+                const slaDays = Math.ceil((new Date(slaDate) - new Date()) / 86400000);
+                if (slaDays < 0) {
+                    slaDaysEl.textContent = `Overdue by ${Math.abs(slaDays)} days`;
+                    slaDaysEl.style.color = 'var(--red)';
+                    slaBox.style.borderLeftColor = 'var(--red)';
+                    slaBox.querySelector('.card-label').style.color = 'var(--red)';
+                    document.getElementById('kpiSlaExpiry').style.color = 'var(--red)';
+                } else if (slaDays <= 30) {
+                    slaDaysEl.textContent = `Due in ${slaDays} days — renew soon`;
+                    slaDaysEl.style.color = 'var(--amber)';
+                } else {
+                    slaDaysEl.textContent = `${slaDays} days remaining`;
+                    slaDaysEl.style.color = 'var(--green)';
+                    slaBox.style.borderLeftColor = 'var(--green)';
+                    slaBox.querySelector('.card-label').style.color = 'var(--green)';
+                    document.getElementById('kpiSlaExpiry').style.color = 'var(--green)';
+                }
+            } else {
+                slaDaysEl.textContent = '⚠ Pay SLA fee to maintain access';
+                slaDaysEl.style.color = 'var(--amber)';
+            }
+        } else {
+            slaBox.style.display = 'none';
+        }
+    }
+
+    // Lifetime plan card SLA banner
+    const cardBanner = document.getElementById('cardSlaBanner');
+    if (cardBanner) {
+        if (isLifetime && d.annual_service_paid_until) {
+            const slaDays = Math.ceil((new Date(d.annual_service_paid_until) - new Date()) / 86400000);
+            cardBanner.style.display = 'block';
+            if (slaDays < 0) {
+                cardBanner.style.background = 'var(--red-dim)';
+                cardBanner.style.borderColor = 'rgba(239,68,68,0.3)';
+                cardBanner.style.color = 'var(--red)';
+                cardBanner.textContent = `⚠ SLA overdue by ${Math.abs(slaDays)} days — POS is read-only`;
+            } else if (slaDays <= 30) {
+                cardBanner.textContent = `⚠ SLA renews ${d.annual_service_paid_until} — ${slaDays} days left`;
+            } else {
+                cardBanner.textContent = `✓ SLA active until ${d.annual_service_paid_until}`;
+                cardBanner.style.background = 'var(--green-dim)';
+                cardBanner.style.borderColor = 'rgba(16,185,129,0.3)';
+                cardBanner.style.color = 'var(--green)';
+            }
+        } else if (isLifetime && !d.annual_service_paid_until) {
+            cardBanner.style.display = 'block';
+            cardBanner.textContent = '⚠ No SLA fee paid yet — pay to maintain full access';
+        } else {
+            cardBanner.style.display = 'none';
+        }
+    }
+
+    // Status badge (KPI)
+    const statusEl = document.getElementById('kpiStatus');
+    if (d.readOnly) {
+        statusEl.innerHTML = '<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:var(--red-dim);color:var(--red);border:1px solid rgba(239,68,68,0.3);font-size:10px;font-weight:900;font-family:var(--mono);">EXPIRED</span>';
+    } else if (d.gracePeriod) {
+        statusEl.innerHTML = '<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.3);font-size:10px;font-weight:900;font-family:var(--mono);">GRACE PERIOD</span>';
+    } else {
+        statusEl.innerHTML = '<span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;background:var(--green-dim);color:var(--green);border:1px solid rgba(16,185,129,0.3);font-size:10px;font-weight:900;font-family:var(--mono);">ACTIVE</span>';
+    }
+
+    // Status strip elements
+    const strip    = document.getElementById('statusStrip');
+    const dot      = document.getElementById('statusDot');
+    const stitle   = document.getElementById('statusTitle');
+    const smsg     = document.getElementById('statusMsg');
+    const dayschip = document.getElementById('statusDaysChip');
+    const planchip = document.getElementById('statusPlanChip');
+
+    strip.style.display = 'flex';
+
+    // isLifetime declared above
+    const days       = (() => {
+        const exp = isLifetime ? d.annual_service_paid_until : d.paid_until;
+        if (!exp) return null;
+        const diff = Math.ceil((new Date(exp) - new Date()) / 86400000);
+        return diff;
+    })();
+
+    // Apply tailwind classes dynamically for enterprise look
+    if (d.readOnly) {
+        strip.style.cssText = 'display:flex;background:var(--red-dim);border-color:rgba(239,68,68,0.35);';
+        dot.style.background = 'var(--red)'; dot.style.boxShadow = '0 0 6px var(--red)';
+        stitle.style.color = 'var(--red)';
+        stitle.textContent = 'System Locked: Read-Only Mode';
+        smsg.style.color = 'rgba(239,68,68,0.8)';
+        smsg.textContent = isLifetime
+            ? 'Annual SLA fee has lapsed. Settle invoice to restore functionality.'
+            : 'Subscription expired. Payment required to resume operations.';
+        dayschip.style.cssText = 'color:var(--red);border-color:rgba(239,68,68,0.4);background:var(--red-dim);';
+        dayschip.textContent = days !== null ? `Overdue by ${Math.abs(days)} days` : 'Overdue';
+    } else if (d.gracePeriod) {
+        strip.style.cssText = 'display:flex;background:var(--amber-dim);border-color:rgba(245,158,11,0.35);';
+        dot.style.background = 'var(--amber)'; dot.style.boxShadow = '0 0 6px var(--amber)';
+        stitle.style.color = 'var(--amber)';
+        stitle.textContent = 'Action Required: Grace Period';
+        smsg.style.color = 'rgba(245,158,11,0.85)';
+        smsg.textContent = `Licence expires in ${Math.max(0, days ?? 0)} days. Please arrange renewal.`;
+        dayschip.style.cssText = 'color:var(--amber);border-color:rgba(245,158,11,0.4);background:var(--amber-dim);';
+        dayschip.textContent = `${Math.max(0, days ?? 0)} days remaining`;
+    } else {
+        strip.style.cssText = 'display:flex;background:var(--green-dim);border-color:rgba(16,185,129,0.35);';
+        dot.style.background = 'var(--green)'; dot.style.boxShadow = '0 0 6px rgba(16,185,129,0.5)';
+        stitle.style.color = 'var(--green)';
+        stitle.textContent = 'System Status: Optimal';
+        smsg.style.color = 'rgba(16,185,129,0.8)';
+        smsg.textContent = isLifetime
+            ? (d.annual_service_paid_until
+                ? (days !== null && days <= 30
+                    ? `SLA fee due ${d.annual_service_paid_until} — renew now to avoid read-only mode.`
+                    : `SLA (KES 30,000) active until ${d.annual_service_paid_until}. Perpetual licence.`)
+                : 'Lifetime licence active. Pay annual SLA fee (KES 30,000) to maintain full access.')
+            : (days !== null && days <= 30
+                ? `Upcoming renewal on ${d.paid_until}.`
+                : `Next billing cycle: ${d.paid_until}`);
+        dayschip.style.cssText = 'color:var(--green);border-color:rgba(16,185,129,0.4);background:var(--green-dim);';
+        dayschip.textContent = days !== null ? `${days} days valid` : 'Active';
+    }
+
+    planchip.textContent = d.plan?.toUpperCase();
+
+    // Highlight active plan card using clean borders
+    ['monthly','annual','lifetime'].forEach(p => {
+        const c = document.getElementById(`card-${p}`);
+        if (c) {
+            if (d.plan === p) {
+                c.classList.add('active-plan');
+                c.classList.remove('active-plan');
+            } else {
+                
+                
+            }
+        }
+    });
+}
+
+// ── Payment history ───────────────────────────────────────────────────────────
+async function loadPaymentHistory() {
+    const el = document.getElementById('paymentHistory');
+    try {
+        const res  = await apiFetch(`${API_BASE}/subscription/payments`);
+        const data = await res.json();
+        if (!data.success || !data.data?.length) {
+            el.innerHTML = '<div style="padding:32px;text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono);">No payment records found.</div>';
+            return;
+        }
+        el.innerHTML = data.data.map(p => {
+            const typeLabels = { monthly:'Monthly', annual:'Annual (12mo)', lifetime:'Licence Purchase', annual_service:'SLA Fee', unknown:'Manual Adjustment' };
+            const isAuto  = (p.payment_method || '').includes('auto');
+            const dateStr = new Date(p.paid_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+            return `<div class="pay-row">
+                <div>
+                    <div class="pay-amount" style="display:flex;align-items:center;gap:8px;">
+                        KES ${parseFloat(p.amount_kes).toLocaleString()}
+                        ${isAuto ? '<span class="auto-badge">AUTO</span>' : ''}
+                    </div>
+                    <div class="pay-meta">${typeLabels[p.plan_type] || p.plan_type} &bull; ${p.payment_method}</div>
+                    ${p.mpesa_code ? `<div class="pay-code">${p.mpesa_code}</div>` : ''}
+                </div>
+                <div>
+                    <div class="pay-date">${dateStr}</div>
+                    <div style="font-size:9px;color:var(--muted);text-align:right;text-transform:uppercase;font-family:var(--mono);margin-top:3px;">${p.status || 'Completed'}</div>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        el.innerHTML = '<div style="padding:32px;text-align:center;font-size:11px;color:var(--red);font-family:var(--mono);">System error: Unable to retrieve records.</div>';
+    }
+}
+
+// ── Plan selection helpers ────────────────────────────────────────────────────
+function openPayModal(type, amount, months) {
+    quickSelect(amount, type, months);
+}
+
+function quickSelect(amount, type, months) {
+    _selectedPlan = { type, amount, months };
+    document.getElementById('billingAmount').value = amount;
+
+    const usdMap = { monthly: 23, annual: 279, lifetime: 930, annual_service: 233 };
+    const usd = usdMap[type] || Math.round(amount / 129);
+    const labels = {
+        monthly:        `Monthly Licensing — $${usd} (KES ${amount.toLocaleString()})`,
+        annual:         `Annual Licensing — $${usd} (KES ${amount.toLocaleString()})`,
+        lifetime:       `Perpetual Licence — $${usd} (KES ${amount.toLocaleString()})`,
+        annual_service: `Annual SLA Fee — $${usd} (KES ${amount.toLocaleString()})`,
+    };
+    document.getElementById('payModalPlanLabel').textContent  = labels[type] || type;
+    document.getElementById('payModalAmountLabel').textContent = months ? `Billing Cycle: ${months} month(s)` : 'Non-recurring payment';
+    
+    const contextBox = document.getElementById('payModalContext');
+    contextBox.style.display = 'block';
+
+    // Scroll to pay panel
+    document.getElementById('stkBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── STK Push ──────────────────────────────────────────────────────────────────
+let _stkCheckoutId = null;
+let _stkPollCount  = 0;
+
+async function sendBillingStk() {
+    const phone  = document.getElementById('billingPhone').value.trim();
+    const amount = parseFloat(document.getElementById('billingAmount').value);
+
+    if (!phone)     return alert('Please enter a valid M-Pesa mobile number.');
+    if (!amount)    return alert('Amount is required.');
+    if (!_selectedPlan.type) return alert('Please select a licensing plan from the options above.');
+
+    const btn    = document.getElementById('stkBtn');
+    const status = document.getElementById('stkStatus');
+
+    clearStkState();
+    btn.disabled   = true;
+    btn.textContent = '⏳ Processing...';
+    
+    status.style.display = 'block';
+    status.className = 'stk-status stk-pending'; status.style.display = 'block';
+    status.textContent       = `Initiating request to ${phone}...`;
+
+    try {
+        const res  = await apiFetch(`${API_BASE}/mpesa/stk-push`, {
+            method: 'POST',
+            body: JSON.stringify({
+                phone, amount,
+                accountRef: `ELITE_HW_${_selectedPlan.type.toUpperCase()}`,
+                context:    { billingPlan: _selectedPlan.type }
+            })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            showStkResult({ status:'failed', resultDesc: data.message });
+            return;
+        }
+
+        _stkCheckoutId = data.checkoutRequestId;
+        btn.textContent = '⌛ Awaiting PIN Entry...';
+
+        // Countdown
+        let secondsLeft = 60;
+        _stkCountdown = setInterval(() => {
+            if (!_stkInterval) { clearInterval(_stkCountdown); return; }
+            status.textContent = `Awaiting customer PIN input on device (${secondsLeft}s)...`;
+            secondsLeft--;
+        }, 1000);
+
+        // Poll payment status
+        _stkPollCount = 0;
+        _stkInterval  = setInterval(async () => {
+            try {
+                const pr  = await apiFetch(`${API_BASE}/mpesa/status/${_stkCheckoutId}`);
+                const pd  = await pr.json();
+                if (pd.status !== 'pending') { showStkResult(pd); return; }
+                _stkPollCount++;
+                if (_stkPollCount >= 18) {
+                    try {
+                        const qr = await apiFetch(`${API_BASE}/mpesa/query/${_stkCheckoutId}`);
+                        const qd = await qr.json();
+                        if (qd.success && qd.status !== 'pending') showStkResult(qd);
+                    } catch(e) {}
+                }
+            } catch(e) {}
+        }, 3000);
+
+        // Hard timeout
+        setTimeout(() => {
+            if (_stkInterval) showStkResult({ status: 'timeout' });
+        }, 60000);
+
+    } catch(e) {
+        status.className = 'stk-status stk-fail'; status.style.display = 'block';
+        status.textContent = 'System Error: ' + e.message;
+        btn.disabled = false;
+        btn.textContent = 'Initiate STK Push';
+    }
+}
+
+function showStkResult(pd) {
+    clearStkState();
+    const btn    = document.getElementById('stkBtn');
+    const status = document.getElementById('stkStatus');
+    status.style.display = 'block';
+
+    if (pd.status === 'confirmed') {
+        status.className = 'stk-status stk-success'; status.style.display = 'block';
+        status.textContent = `Transaction Successful. Receipt Code: ${pd.mpesaCode}`;
+        
+        const mpesaInput = document.getElementById('mpesaCodeInput');
+        mpesaInput.value = pd.mpesaCode || '';
+        mpesaInput.style.display = 'block';
+        
+        btn.textContent = '✓ Payment Reconciled';
+        btn.className = 'btn btn-ghost btn-full'; btn.style.cursor = 'default';
+        setTimeout(async () => {
+            await loadSubscriptionStatus();
+            await loadPaymentHistory();
+        }, 3000);
+    } else if (pd.status === 'cancelled') {
+        status.className = 'stk-status stk-warning'; status.style.display = 'block';
+        status.textContent = 'Transaction aborted by user. Please retry or process manually.';
+        _resetStkBtn(btn, 5000);
+    } else if (pd.status === 'timeout') {
+        status.className = 'stk-status stk-warning'; status.style.display = 'block';
+        status.textContent = 'Request timed out. Please retry or utilize Paybill.';
+        _resetStkBtn(btn, 5000);
+    } else if (pd.status === 'insufficient_funds') {
+        status.className = 'stk-status stk-fail'; status.style.display = 'block';
+        status.textContent = 'Transaction failed: Insufficient funds in account.';
+        _resetStkBtn(btn, 5000);
+    } else {
+        status.className = 'stk-status stk-fail'; status.style.display = 'block';
+        status.textContent = `Error: ${pd.resultDesc || 'Payment processor rejected request'}.`;
+        _resetStkBtn(btn, 5000);
+    }
+}
+
+function _resetStkBtn(btn, delay) {
+    btn.textContent = 'Standby (5s)...'; btn.disabled = true;
+    setTimeout(() => { 
+        btn.disabled = false; 
+        btn.textContent = 'Initiate STK Push'; 
+        btn.className = 'btn btn-primary btn-full';
+    }, delay);
+}
+
+function clearStkState() {
+    clearInterval(_stkInterval);  _stkInterval  = null;
+    clearInterval(_stkCountdown); _stkCountdown = null;
+}
+
+// ── Manual payment confirmation ───────────────────────────────────────────────
+// ── Force refresh ─────────────────────────────────────────────────────────────
+async function forceRefresh() {
+    const btn = document.getElementById('refreshBtn');
+    const originalText = btn.innerHTML;
+    btn.textContent = '↻ Syncing...';
+    btn.disabled  = true;
+    try {
+        await apiFetch(`${API_BASE}/subscription/refresh`, { method: 'POST' });
+        await loadSubscriptionStatus();
+        await loadPaymentHistory();
+    } catch(e) {}
+    btn.innerHTML = originalText;
+    btn.disabled  = false;
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function copyText(elId) {
+    const text = document.getElementById(elId)?.textContent?.trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.currentTarget;
+        const orig = btn.textContent;
+        btn.textContent = 'Copied';
+        btn.style.color = 'var(--green)';
+        setTimeout(() => { 
+            btn.textContent = orig; 
+            btn.style.color = 'var(--blue)';
+        }, 1500);
+    });
+}
+</script>
+</body>
+</html>
+</body>
+</html>

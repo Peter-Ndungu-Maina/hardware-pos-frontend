@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+      <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="debts_repayment.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Debt Recovery Intelligence | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+</head>
+<body class="antialiased">
+
+    <div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+
+        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+            
+            <!-- Mobile header injected by sidebar.js -->
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 no-print gap-4">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Debt Recovery Audit</h1>
+                    <p id="accessLevelLabel" class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Management Access</p>
+                </div>
+               <div class="flex gap-2 no-print">
+    <button onclick="generatePDF()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-slate-800 transition">
+        📄 Export PDF
+    </button>
+    <button onclick="exportCSV()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-emerald-700 transition">
+        ⬇ Export CSV
+    </button>
+</div>
+            </div>
+
+           <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8 no-print items-end">
+                <div>
+                    <label for="dateFilter" class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Filter by Date</label>
+                    <input type="date" id="dateFilter" onchange="fetchDebtLogs()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Monthly View</label>
+                    <input type="month" id="monthFilter" onchange="fetchDebtLogs()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Annual View</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="annualFilter" placeholder="YYYY" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchDebtLogs()" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-2 xl:col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Date Range</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="rangeFrom" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <span class="text-slate-400 text-[10px] font-black">TO</span>
+                        <input type="date" id="rangeTo" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchDebtLogs()" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-2 xl:col-span-4">
+                    <label for="searchFilter" class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Search Customer, Phone or Staff</label>
+                    <input type="text" id="searchFilter" onkeyup="filterLocalTable()" placeholder="Type to search..." class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+
+                <div class="flex justify-end lg:col-span-1 xl:col-span-1">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition">Reset</button>
+                </div>
+            </div>
+
+            <div id="pdf-area">
+                <div id="pdf-header" class="hidden text-center pb-6 border-b-2 border-slate-100 mb-6">
+                    <h2 class="text-2xl font-black text-slate-900 uppercase">Elite Hardware - Debt Repayment Audit</h2>
+                    <p class="text-xs font-bold text-slate-400" id="genDateLabel"></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-slate-800 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Recovered</p>
+                        <h2 id="totalCollected" class="text-2xl font-black text-slate-800">KES 0</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-blue-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">M-Pesa Recoveries</p>
+                        <h2 id="totalMpesa" class="text-2xl font-black text-blue-600">KES 0</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-emerald-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Cash Recoveries</p>
+                        <h2 id="totalCash" class="text-2xl font-black text-emerald-600">KES 0</h2>
+                    </div>
+                </div>
+
+                      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-auto">
+                    <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Repayment History</h3>
+                        <span id="syncLabel" class="text-[10px] font-bold text-slate-400 uppercase"></span>
+                    </div>
+                    <table class="w-full text-left" id="debtTable">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                <th class="p-4">Date & Time</th>
+                                <th class="p-4">Customer Details</th>
+                                <th class="p-4">Method</th>
+                                <th class="p-4">M-Pesa Ref</th>
+                                <th class="p-4">Processed By</th>
+                                <th class="p-4 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="debtTableBody" class="text-sm divide-y divide-slate-100">
+                            <tr><td colspan="6" class="p-20 text-center text-slate-400 italic">Accessing audit logs...</td></tr>
+                        </tbody>
+                    </table>
+                <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(255,255,255,0.09);background:var(--surface,#252537);border-radius:0 0 12px 12px;">
+                    <span id="lbl_dr" style="font-size:10px;font-weight:700;color:#7a8394;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;"></span>
+                    <div style="display:flex;gap:8px;">
+                        <button id="prev_dr" onclick="pg_dr(-1)" style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>← Prev</button>
+                        <button id="next_dr" onclick="pg_dr(1)"  style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>Next →</button>
+                    </div>
+                </div>
+                </div>
+
+                <div class="mt-8 text-center hidden show-on-print">
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest">Official Debt Audit Report - Elite Hardware Intelligence</p>
+                    <p class="text-[9px] text-slate-400 mt-1">KRA PIN: A014661185V &nbsp;|&nbsp; eTIMS Compliant</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
+        const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+        
+        // Security & Initialization
+        document.addEventListener('eliteAuthReady', function() {
+            const userRole = window.EliteAuth?.role?.toLowerCase();
+            if (!userRole) { window.location.replace('/'); return; }
+
+            const isCashier = userRole === 'cashier';
+            const labelName = window.EliteAuth?.name || '';
+            document.getElementById('accessLevelLabel').innerText = isCashier
+                ? `${labelName} — Your Logs Only`
+                : `${userRole} Access Level`;
+
+            // Pre-fill search box from URL param set by debt_status "View History"
+           // Pre-fill search box from URL param set by debt_status "View History"
+            const urlParams = new URLSearchParams(window.location.search);
+            const phoneVal  = urlParams.get('phone');
+            const nameVal   = urlParams.get('name');
+            
+            // Smart pre-fill: Use phone if valid, otherwise fallback to name
+            let searchValue = '';
+            if (phoneVal && phoneVal !== 'No Phone') {
+                searchValue = phoneVal;
+            } else if (nameVal && nameVal !== 'Walk-In Customer') {
+                searchValue = nameVal;
+            }
+
+            if (searchValue) {
+                document.getElementById('searchFilter').value = searchValue;
+                document.getElementById('dateFilter').value   = '';
+            }
+
+            fetchDebtLogs();
+        });
+
+
+
+        async function fetchDebtLogs() {
+            const date     = document.getElementById('dateFilter').value;
+            const monthVal = document.getElementById('monthFilter')?.value  || '';
+            const annual   = document.getElementById('annualFilter')?.value || '';
+            const from     = document.getElementById('rangeFrom')?.value    || '';
+            const to       = document.getElementById('rangeTo')?.value      || '';
+            const body     = document.getElementById('debtTableBody');
+            const userRole = window.EliteAuth?.role?.toLowerCase();
+            const userName = window.EliteAuth?.name;
+
+            // phone/name params set by debt_status.html "View History" button
+            const urlParams  = new URLSearchParams(window.location.search);
+            const phoneParam = urlParams.get('phone');
+            const nameParam  = urlParams.get('name');
+            // Ignore the "No Phone" fallback string — use name filter instead
+            const usePhone   = phoneParam && phoneParam !== 'No Phone' ? phoneParam : null;
+
+            try {
+                let url = `${API_BASE}/reports/debt-logs`;
+                const params = [];
+                if (date)                               params.push(`date=${date}`);
+                else if (monthVal) {
+                    const [y, m] = monthVal.split('-');
+                    params.push(`month=${m}&year=${y}`);
+                } else if (annual)                      params.push(`year=${annual}`);
+                else if (from && to)                    params.push(`from=${from}&to=${to}`);
+                if (usePhone)                           params.push(`phone=${encodeURIComponent(usePhone)}`);
+                else if (nameParam)                     params.push(`customerName=${encodeURIComponent(nameParam)}`);
+                if (userRole === 'cashier' && userName) params.push(`processedBy=${encodeURIComponent(userName)}`);
+                if (params.length) url += '?' + params.join('&');
+
+                const res  = await apiFetch(url);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.error || "Failed to fetch");
+
+                // --- CONSOLIDATION LOGIC ---
+                const grouped = {};
+                data.forEach(log => {
+                    const phone = (log.customer_phone || '').trim();
+                    const name = (log.customer_name || 'Walk-in').trim();
+                    const customerKey = phone ? phone : name.toLowerCase();
+                    
+                    // Group by the exact timestamp and customer. 
+                    // Bulk payments (like C2B) use the exact same timestamp for all cleared items.
+                    const key = `${log.payment_date}_${customerKey}`;
+                    
+                    if (!grouped[key]) {
+                        grouped[key] = { 
+                            ...log, 
+                            amount_paid: parseFloat(log.amount_paid || 0) 
+                        };
+                    } else {
+                        // If same timestamp and customer, merge the paid amounts
+                        grouped[key].amount_paid += parseFloat(log.amount_paid || 0);
+                    }
+                });
+
+                // Convert back to array and sort newest first
+                const consolidatedData = Object.values(grouped).sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date));
+
+                _pg_dr_set(consolidatedData);
+
+            } catch (err) {
+                body.innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500 font-bold italic">Connection Error: ${err.message}</td></tr>`;
+            }
+        }
+        function renderLogs(logs) { _pg_dr_set(logs); }
+        function _dr_renderRows(logs) {
+            const body = document.getElementById('debtTableBody');
+            let total = 0, mpesa = 0, cash = 0;
+
+            if (!logs || logs.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="p-20 text-center text-slate-400 font-medium italic">No repayment records found.</td></tr>`;
+                resetCounters();
+                return;
+            }
+
+            body.innerHTML = logs.map(log => {
+                const amt = parseFloat(log.amount_paid) || 0;
+                const customer = log.customer_name || 'N/A';
+                const phone = log.customer_phone || '';
+                const staff = log.processed_by || 'Staff';
+                const mpesaRef = log.mpesa_id || '—';
+                
+                total += amt;
+                if(log.payment_method === 'M-Pesa') mpesa += amt;
+                else cash += amt;
+
+                const dateObj = new Date(log.payment_date);
+                const displayDate = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
+                        <td class="p-4 text-slate-500 font-mono text-[10px]" data-label="Date">${displayDate}</td>
+                        <td class="p-4" data-label="Customer">
+                            <div class="font-black text-slate-800 uppercase text-xs">${customer}</div>
+                            <div class="text-[10px] text-slate-400 font-bold">${phone}</div>
+                        </td>
+                        <td class="p-4" data-label="Method">
+                            <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${log.payment_method === 'M-Pesa' ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}">
+                                ${log.payment_method}
+                            </span>
+                        </td>
+                        <td class="p-4 font-mono text-xs text-blue-600 font-bold" data-label="M-Pesa Ref">${mpesaRef}</td>
+                        <td class="p-4 text-slate-500 font-bold text-[10px] uppercase" data-label="Staff">${staff}</td>
+                        <td class="p-4 text-right font-black text-slate-900" data-label="Amount">KES ${amt.toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('totalCollected').innerText = `KES ${total.toLocaleString()}`;
+            document.getElementById('totalMpesa').innerText = `KES ${mpesa.toLocaleString()}`;
+            document.getElementById('totalCash').innerText = `KES ${cash.toLocaleString()}`;
+            document.getElementById('syncLabel').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('genDateLabel').innerText = `Report Timestamp: ${new Date().toLocaleString()}`;
+        }
+
+        function filterLocalTable() {
+            const q = document.getElementById('searchFilter').value.toLowerCase().trim();
+            if (!q) {
+                _pg_dr_view = _pg_dr_all;
+            } else {
+                _pg_dr_view = _pg_dr_all.filter(log => {
+                    const name  = (log.customer_name  || '').toLowerCase();
+                    const phone = (log.customer_phone || '').toLowerCase();
+                    const staff = (log.processed_by   || '').toLowerCase();
+                    const ref   = (log.mpesa_id       || '').toLowerCase();
+                    return name.includes(q) || phone.includes(q) || staff.includes(q) || ref.includes(q);
+                });
+            }
+            _pg_dr_page = 1;
+            _pg_dr_draw();
+        }
+
+        function clearFilters() {
+            document.getElementById('dateFilter').value   = '';
+            document.getElementById('monthFilter').value  = '';
+            document.getElementById('annualFilter').value = '';
+            document.getElementById('rangeFrom').value    = '';
+            document.getElementById('rangeTo').value      = '';
+            document.getElementById('searchFilter').value = '';
+            window.history.replaceState({}, document.title, window.location.pathname);
+            fetchDebtLogs();
+        }
+
+        function resetCounters() {
+            document.getElementById('totalCollected').innerText = 'KES 0';
+            document.getElementById('totalMpesa').innerText = 'KES 0';
+            document.getElementById('totalCash').innerText = 'KES 0';
+        }
+
+        function generatePDF() {
+            const element = document.getElementById('pdf-area');
+            const header = document.getElementById('pdf-header');
+            header.classList.remove('hidden');
+            const dateVal = document.getElementById('dateFilter').value || 'Full_History';
+            
+            const opt = {
+                margin: 0.3,
+                filename: `Debt_Audit_${dateVal}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save().then(() => header.classList.add('hidden'));
+        }
+        function exportCSV() {
+    if (typeof _pg_dr_view === 'undefined' || !_pg_dr_view.length) return alert('No data to export.');
+    let csv = 'Date/Time,Customer,Phone,Method,M-Pesa Ref,Processed By,Amount\n';
+    _pg_dr_view.forEach(log => {
+        const date = new Date(log.payment_date).toLocaleString('en-KE');
+        const amt = parseFloat(log.amount_paid) || 0;
+        csv += `"${date}","${(log.customer_name || '').replace(/"/g, '""')}","${log.customer_phone || ''}","${log.payment_method || ''}","${log.mpesa_id || ''}","${log.processed_by || ''}","${amt}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Debt_Repayment_Audit_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+
+        function logout() { window.logout ? window.logout() : (localStorage.clear(), window.location.replace('/')); }
+    
+// ── Pagination [dr] ────────────────────────────────────────
+let _pg_dr_all  = [];   // full dataset from server
+let _pg_dr_view = [];   // active (filtered or full) dataset driving pagination
+let _pg_dr_page = 1;
+function _pg_dr_set(data) {
+    _pg_dr_all  = data;
+    _pg_dr_view = data;
+    _pg_dr_page = 1;
+    _pg_dr_draw();
+}
+function _pg_dr_draw() {
+    const total = _pg_dr_view.length;
+    const pages = Math.ceil(total / 10) || 1;
+    const slice = _pg_dr_view.slice((_pg_dr_page-1)*10, _pg_dr_page*10);
+    const lbl   = document.getElementById('lbl_dr');
+    const prev  = document.getElementById('prev_dr');
+    const nxt   = document.getElementById('next_dr');
+    if(lbl)  lbl.textContent  = 'Page '+_pg_dr_page+' of '+pages+' — '+total+' record(s)';
+    if(prev) prev.disabled    = _pg_dr_page <= 1;
+    if(nxt)  nxt.disabled     = _pg_dr_page >= pages;
+    _dr_renderRows(slice);
+}
+function pg_dr(dir) {
+    const pages = Math.ceil(_pg_dr_view.length / 10) || 1;
+    _pg_dr_page = Math.max(1, Math.min(pages, _pg_dr_page + dir));
+    _pg_dr_draw();
+}
+
+</script>
+</body>
+</html>

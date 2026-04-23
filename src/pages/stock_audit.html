@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="stock_audit.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Audit Logs | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+  
+</head>
+<body class="antialiased">
+
+   <div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+            
+<div class="max-w-6xl mx-auto">
+            <header class="mb-10 flex justify-between items-end">
+                <div>
+                    <h1 class="text-4xl font-black text-slate-900 tracking-tighter uppercase">Stock Audit Logs</h1>
+                    <p class="text-slate-500 font-bold mt-2">Historical "Jumps" from your Stock Batches.</p>
+                </div>
+                <div class="flex gap-4">
+                    <input type="text" id="auditSearch" placeholder="Search Item or DN..." 
+                        class="p-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-emerald-500">
+                </div>
+            </header>
+
+           <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+                        <tr>
+                            <th class="p-5">Timestamp</th>
+                            <th class="p-5">User</th>
+                            <th class="p-5">Item Name</th>
+                            <th class="p-5">DN / Reference</th>
+                            <th class="p-5 text-center">Action</th>
+                            <th class="p-5 text-right">Jump (Old ➔ New)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditLogBody" class="divide-y divide-slate-50 text-slate-700 font-bold text-xs">
+                    </tbody>
+                </table>
+                <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(255,255,255,0.09);background:var(--surface,#252537);border-radius:0 0 12px 12px;">
+                    <span id="lbl_sa" style="font-size:10px;font-weight:700;color:#7a8394;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;"></span>
+                    <div style="display:flex;gap:8px;">
+                        <button id="prev_sa" onclick="pg_sa(-1)" style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>← Prev</button>
+                        <button id="next_sa" onclick="pg_sa(1)"  style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>Next →</button>
+                    </div>
+                </div>
+                <div id="loadingState" class="p-20 text-center text-slate-400 font-black uppercase text-xs">
+                    Fetching batch history...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+
+async function loadAuditLogs() {
+            const searchTerm = document.getElementById('auditSearch').value.toLowerCase();
+            try {
+                const res = await apiFetch(`${API_URL}/inventory/audit-logs`);
+                let logs = await res.json();
+
+                if (searchTerm) {
+                    logs = logs.filter(log => 
+                        log.Inventory?.item_name?.toLowerCase().includes(searchTerm) || 
+                        log.delivery_number?.toLowerCase().includes(searchTerm)
+                    );
+                }
+                renderLogs(logs);
+            } catch (err) {
+                document.getElementById('auditLogBody').innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500 font-black">Error loading logs</td></tr>`;
+            }
+        }
+
+        function renderLogs(logs) { _pg_sa_set(logs); }
+        function _sa_renderRows(logs) {
+            const body = document.getElementById('auditLogBody');
+            document.getElementById('loadingState').classList.add('hidden');
+
+            if (!logs || logs.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="p-20 text-center text-slate-400 font-bold uppercase">No records found.</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = logs.map(log => {
+                const date = new Date(log.created_at).toLocaleString();
+                
+                // SNAPSHOT LOGIC
+                const oldStock = parseInt(log.stock_at_entry) || 0;
+                const addedQty = parseInt(log.batch_qty) || 0;
+                const newStock = oldStock + addedQty;
+
+                const isInitial = oldStock === 0;
+                const actionLabel = isInitial ? 'INITIAL REG' : 'RESTOCK FIFO';
+                const actionColor = isInitial ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500';
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-5">
+                            <div class="flex flex-col">
+                                <span class="text-slate-900 font-black text-[10px] uppercase">${date.split(',')[0]}</span>
+                                <span class="text-slate-400 text-[9px]">${date.split(',')[1]}</span>
+                            </div>
+                        </td>
+                        <td class="p-5">
+                            <span class="bg-slate-800 text-white px-2 py-1 rounded text-[9px] font-black uppercase">
+                                ${log.performed_by || 'ADMIN'}
+                            </span>
+                        </td>
+                        <td class="p-5">
+                            <p class="font-black text-slate-800 uppercase text-xs">${log.Inventory?.item_name || 'Deleted Item'}</p>
+                        </td>
+                        <td class="p-5">
+                            <span class="text-[10px] text-blue-600 font-black">${log.delivery_number || 'N/A'}</span>
+                        </td>
+                        <td class="p-5 text-center">
+                            <span class="${actionColor} px-2 py-1 rounded-[6px] text-[9px] font-black uppercase">
+                                ${actionLabel}
+                            </span>
+                        </td>
+                        <td class="p-5 text-right">
+                            <div class="flex flex-col items-end">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-300 line-through text-[11px] font-bold">${oldStock}</span>
+                                    <span class="text-slate-900 font-black text-sm tracking-tighter">${newStock}</span>
+                                </div>
+                                <div class="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[9px] font-black mt-1">
+                                    ↑ ${addedQty} ADDED
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        window.addEventListener('load', () => {
+            document.getElementById('auditSearch').addEventListener('input', loadAuditLogs);
+            loadAuditLogs();
+        });
+    
+// ── Pagination [sa] ────────────────────────────────────────
+let _pg_sa_all  = [];
+let _pg_sa_page = 1;
+function _pg_sa_set(data) {
+    _pg_sa_all  = data;
+    _pg_sa_page = 1;
+    _pg_sa_draw();
+}
+function _pg_sa_draw() {
+    const total = _pg_sa_all.length;
+    const pages = Math.ceil(total / 10) || 1;
+    const slice = _pg_sa_all.slice((_pg_sa_page-1)*10, _pg_sa_page*10);
+    const lbl   = document.getElementById('lbl_sa');
+    const prev  = document.getElementById('prev_sa');
+    const nxt   = document.getElementById('next_sa');
+    if(lbl)  lbl.textContent  = 'Page '+_pg_sa_page+' of '+pages+' — '+total+' record(s)';
+    if(prev) prev.disabled    = _pg_sa_page <= 1;
+    if(nxt)  nxt.disabled     = _pg_sa_page >= pages;
+    _sa_renderRows(slice);
+}
+function pg_sa(dir) {
+    const pages = Math.ceil(_pg_sa_all.length / 10) || 1;
+    _pg_sa_page = Math.max(1, Math.min(pages, _pg_sa_page + dir));
+    _pg_sa_draw();
+}
+
+</script>
+</body>
+</html>

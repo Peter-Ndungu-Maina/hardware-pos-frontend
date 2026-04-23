@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="expenses.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Expenses | Elite Hardware Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+</head>
+<body class="antialiased">
+
+<!-- ── Record Expense Modal ──────────────────────────────────────────────── -->
+<div id="expenseModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+        <h3 class="text-2xl font-black text-slate-800 mb-6 tracking-tighter">Record Expense</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Description</label>
+                <input id="expDesc" type="text" placeholder="e.g. Electricity Bill"
+                    class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 ring-emerald-500 font-bold transition-all">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</label>
+                <select id="expCat" class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold text-slate-700 transition-all">
+                    <option value="Utilities">Utilities</option>
+                    <option value="Rent">Rent</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Salaries">Salaries</option>
+                    <option value="Stock Purchase">Stock Purchase</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount (KES)</label>
+                <input id="expAmount" type="number" placeholder="0.00"
+                    class="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black text-emerald-600 text-xl transition-all focus:ring-2 ring-emerald-500">
+            </div>
+            <button onclick="submitExpense()" id="saveExpBtn"
+                class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-600 transition duration-200 uppercase tracking-widest text-sm mt-2">
+                Save Expense
+            </button>
+            <button onclick="closeModal()" class="w-full py-2 text-slate-400 text-sm font-bold hover:text-red-500 transition">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Page Shell ─────────────────────────────────────────────────────────── -->
+<div class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto overflow-x-hidden custom-scrollbar">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Financial Outflow</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">Expense Tracker</h1>
+            </div>
+            <div class="flex gap-3 flex-wrap no-print">
+                <button onclick="exportCSV()"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-50 transition">
+                    ⬇ Export CSV
+                </button>
+                <button onclick="openModal()"
+                    class="bg-emerald-500 text-black px-6 py-3 rounded-2xl font-black text-sm shadow-lg hover:bg-emerald-400 transition active:scale-95 uppercase tracking-wide">
+                    + Record Expense
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+
+            <!-- Filter Bar -->
+            <div class="p-6 bg-slate-50/50 border-b border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Filters</p>
+                <div class="flex flex-wrap gap-4 items-end">
+
+                    <!-- Specific Date -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Specific Date</label>
+                        <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                            <input type="date" id="dateFilter" onchange="loadExpenses('day')"
+                                class="text-xs font-bold outline-none cursor-pointer text-slate-700">
+                        </div>
+                    </div>
+
+                    <span class="text-slate-300 font-black text-[10px] italic self-center">OR</span>
+
+                    <!-- Month View -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Month View</label>
+                        <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                            <select id="monthFilter" class="text-xs font-bold outline-none bg-transparent text-slate-700">
+                                <option value="01">January</option><option value="02">February</option>
+                                <option value="03">March</option><option value="04">April</option>
+                                <option value="05">May</option><option value="06">June</option>
+                                <option value="07">July</option><option value="08">August</option>
+                                <option value="09">September</option><option value="10">October</option>
+                                <option value="11">November</option><option value="12">December</option>
+                            </select>
+                            <input type="number" id="yearFilter" class="w-16 text-xs font-bold outline-none border-l border-slate-200 pl-2 text-slate-700">
+                            <button onclick="loadExpenses('month')"
+                                class="bg-slate-900 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase hover:bg-emerald-500 hover:text-black transition ml-1">
+                                Go
+                            </button>
+                        </div>
+                    </div>
+
+                    <span class="text-slate-300 font-black text-[10px] italic self-center">OR</span>
+
+                    <!-- Annual View -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Annual View</label>
+                        <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                            <input type="number" id="annualFilter" placeholder="YYYY"
+                                class="w-20 text-xs font-bold outline-none bg-transparent text-slate-700">
+                            <button onclick="loadExpenses('annual')"
+                                class="bg-slate-900 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase hover:bg-emerald-500 hover:text-black transition">
+                                Go
+                            </button>
+                        </div>
+                    </div>
+
+                    <span class="text-slate-300 font-black text-[10px] italic self-center">OR</span>
+
+                    <!-- Date Range -->
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Date Range</label>
+                        <div class="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-slate-200">
+                            <input type="date" id="rangeFrom" class="text-xs font-bold outline-none cursor-pointer text-slate-700">
+                            <span class="text-slate-400 text-[9px] font-black">TO</span>
+                            <input type="date" id="rangeTo" class="text-xs font-bold outline-none cursor-pointer text-slate-700">
+                            <button onclick="loadExpenses('range')"
+                                class="bg-slate-900 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase hover:bg-emerald-500 hover:text-black transition ml-1">
+                                Go
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="resetFilters()"
+                        class="text-[9px] font-black text-slate-400 uppercase underline hover:text-red-500 self-end ml-auto transition">
+                        Reset All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left" style="min-width:560px;">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 bg-slate-50/30">
+                            <th class="p-6">Date</th>
+                            <th class="p-6">Description</th>
+                            <th class="p-6">Category</th>
+                            <th class="p-6">Recorded By</th>
+                            <th class="p-6 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenseTableBody" class="text-sm font-medium text-slate-700">
+                        <tr><td colspan="5" class="p-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">Loading…</td></tr>
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                <div class="no-print flex items-center justify-between px-6 py-3 border-t border-slate-100">
+                    <span id="lbl_ex" class="text-[10px] font-bold text-slate-400 uppercase tracking-wide font-mono"></span>
+                    <div class="flex gap-2">
+                        <button id="prev_ex" onclick="pg_ex(-1)" disabled
+                            class="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black disabled:opacity-40 hover:bg-slate-200 transition font-mono">
+                            ← Prev
+                        </button>
+                        <button id="next_ex" onclick="pg_ex(1)" disabled
+                            class="px-4 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black disabled:opacity-40 hover:bg-slate-200 transition font-mono">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+// XSS guard
+function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+
+const API_URL  = window.API_URL  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+function openModal()  { document.getElementById('expenseModal').classList.remove('hidden'); }
+function closeModal() { document.getElementById('expenseModal').classList.add('hidden'); }
+
+// Close modal on backdrop click
+document.getElementById('expenseModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('expenseModal')) closeModal();
+});
+
+async function loadExpenses(type = 'month') {
+    const tableBody = document.getElementById('expenseTableBody');
+    let url = `${API_BASE}/reports/expenses`;
+    let params = new URLSearchParams();
+
+    if (type === 'day') {
+        const date = document.getElementById('dateFilter').value;
+        if (date) params.append('date', date);
+    } else if (type === 'month' || type === 'all') {
+        const month = document.getElementById('monthFilter').value;
+        const year  = document.getElementById('yearFilter').value;
+        if (month && year) {
+            params.append('month', month);
+            params.append('year', year);
+            if (type === 'month') document.getElementById('dateFilter').value = '';
+        }
+    } else if (type === 'annual') {
+        const year = document.getElementById('annualFilter').value;
+        if (!year) return alert('Please enter a year.');
+        params.append('year', year);
+    } else if (type === 'range') {
+        const from = document.getElementById('rangeFrom').value;
+        const to   = document.getElementById('rangeTo').value;
+        if (!from || !to) return alert('Please select both From and To dates.');
+        params.append('from', from);
+        params.append('to', to);
+    }
+
+    if (params.toString()) url += `?${params.toString()}`;
+
+    tableBody.innerHTML = `<tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">Loading…</td></tr>`;
+
+    try {
+        const res  = await apiFetch(url);
+        const data = await res.json();
+
+        if (!data || data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No records found</td></tr>`;
+            return;
+        }
+        _pg_ex_set(data);
+    } catch (err) {
+        tableBody.innerHTML = `<tr><td colspan="5" class="p-20 text-center text-red-500 font-bold uppercase text-xs tracking-widest">Connection Error</td></tr>`;
+    }
+}
+
+async function submitExpense() {
+    const desc = document.getElementById('expDesc').value;
+    const cat  = document.getElementById('expCat').value;
+    const amt  = document.getElementById('expAmount').value;
+    const user = window.EliteAuth?.name || 'Admin';
+
+    if (!desc || !amt) return alert('Please enter description and amount');
+
+    const btn = document.getElementById('saveExpBtn');
+    btn.innerText = 'Saving…';
+    btn.disabled  = true;
+
+    try {
+        const res = await apiFetch(`${API_BASE}/expenses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ description: desc, category: cat, amount: amt, spentBy: user })
+        });
+        const result = await res.json();
+        if (result.success) {
+            closeModal();
+            document.getElementById('expDesc').value   = '';
+            document.getElementById('expAmount').value = '';
+            loadExpenses('month');
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (err) {
+        alert('Server Connection Failed');
+    } finally {
+        btn.innerText = 'Save Expense';
+        btn.disabled  = false;
+    }
+}
+
+function resetFilters() {
+    document.getElementById('dateFilter').value   = '';
+    document.getElementById('annualFilter').value = '';
+    document.getElementById('rangeFrom').value    = '';
+    document.getElementById('rangeTo').value      = '';
+    document.getElementById('yearFilter').value   = new Date().getFullYear();
+    loadExpenses('all');
+}
+
+function exportCSV() {
+    if (!_pg_ex_all || !_pg_ex_all.length) return alert('No data to export.');
+    let csv = 'Date,Description,Category,Spent By,Amount (KES)\n';
+    _pg_ex_all.forEach(exp => {
+        const date = new Date(exp.expense_date).toLocaleDateString('en-GB');
+        const desc = (exp.description || '').replace(/"/g, '""');
+        const cat  = (exp.category    || '').replace(/"/g, '""');
+        const by   = (exp.spent_by    || '').replace(/"/g, '""');
+        const amt  = parseFloat(exp.amount) || 0;
+        csv += `"${date}","${desc}","${cat}","${by}","${amt}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `Expenses_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+
+document.addEventListener('eliteAuthReady', function () {
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+    const _rb0 = document.getElementById('saveExpBtn');
+    if (_rb0) { _rb0.disabled=true; _rb0.style.opacity='0.35'; _rb0.style.cursor='not-allowed'; _rb0.title='POS is read-only — subscription expired'; }
+
+        document.querySelectorAll('button').forEach(b => {
+            if (b.textContent.trim().toLowerCase().includes('add expense')) {
+                b.disabled=true; b.style.opacity='0.35'; b.style.cursor='not-allowed';
+            }
+        });
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+
+    document.getElementById('yearFilter').value  = new Date().getFullYear();
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    document.getElementById('monthFilter').value = currentMonth;
+    loadExpenses('month');
+});
+
+// ── Row renderer ──────────────────────────────────────────────────────────────
+function _ex_renderRows(data) {
+    const tableBody = document.getElementById('expenseTableBody');
+    if (!data || !data.length) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400 font-bold uppercase text-xs tracking-widest">No records on this page</td></tr>';
+        return;
+    }
+    tableBody.innerHTML = data.map(exp => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+            <td class="p-6 text-slate-400 text-xs font-bold font-mono">${new Date(exp.expense_date).toLocaleDateString('en-GB')}</td>
+            <td class="p-6 font-black text-slate-800 uppercase tracking-tight">${esc(exp.description)}</td>
+            <td class="p-6">
+                <span class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-wide">${esc(exp.category)}</span>
+            </td>
+            <td class="p-6 font-bold text-slate-500">${esc(exp.spent_by)}</td>
+            <td class="p-6 text-right font-black text-red-600 font-mono">KES ${parseFloat(exp.amount).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+        </tr>`
+    ).join('');
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+let _pg_ex_all  = [];
+let _pg_ex_page = 1;
+
+function _pg_ex_set(data) { _pg_ex_all = data; _pg_ex_page = 1; _pg_ex_draw(); }
+function _pg_ex_draw() {
+    const total = _pg_ex_all.length;
+    const pages = Math.ceil(total / 10) || 1;
+    const slice = _pg_ex_all.slice((_pg_ex_page - 1) * 10, _pg_ex_page * 10);
+    const lbl   = document.getElementById('lbl_ex');
+    const prev  = document.getElementById('prev_ex');
+    const nxt   = document.getElementById('next_ex');
+    if (lbl)  lbl.textContent = 'Page ' + _pg_ex_page + ' of ' + pages + ' — ' + total + ' record(s)';
+    if (prev) prev.disabled   = _pg_ex_page <= 1;
+    if (nxt)  nxt.disabled    = _pg_ex_page >= pages;
+    _ex_renderRows(slice);
+}
+function pg_ex(dir) {
+    const pages = Math.ceil(_pg_ex_all.length / 10) || 1;
+    _pg_ex_page = Math.max(1, Math.min(pages, _pg_ex_page + dir));
+    _pg_ex_draw();
+}
+</script>
+</body>
+</html>

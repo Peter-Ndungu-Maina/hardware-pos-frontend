@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="profit_loss.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Profit & Loss | Elite Hardware Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto overflow-x-hidden custom-scrollbar">
+
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <p class="text-[9px] font-bold uppercase tracking-[2px] text-slate-400 font-mono mb-1">Elite Hardware Pro · Accounting</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">📊 Profit & Loss</h1>
+                <p id="periodLabel" class="text-xs text-slate-400 font-bold mt-1">Select a period to generate the statement</p>
+            </div>
+            <div class="flex gap-2 flex-wrap no-print">
+                <button onclick="exportPDF()"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-50 transition">
+                    📄 Export PDF
+                </button>
+                <button onclick="exportCSV()"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-50 transition">
+                    ⬇ Export CSV
+                </button>
+                <button onclick="window.print()"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-50 transition">
+                    🖨 Print
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 mb-6 no-print">
+            <div class="flex flex-wrap gap-4 items-end">
+
+                <!-- Mode Toggle -->
+                <div class="flex flex-col gap-1.5">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">View Mode</p>
+                    <div class="flex bg-slate-100 rounded-xl p-1 gap-1">
+                        <button id="modeDay"   onclick="setMode('day')"
+                            class="mode-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition bg-slate-900 text-white">Daily</button>
+                        <button id="modeMonth" onclick="setMode('month')"
+                            class="mode-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition text-slate-500 hover:text-slate-700">Monthly</button>
+                        <button id="modeYear"  onclick="setMode('year')"
+                            class="mode-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition text-slate-500 hover:text-slate-700">Annual</button>
+                        <button id="modeRange" onclick="setMode('range')"
+                            class="mode-btn px-4 py-2 rounded-lg text-[10px] font-black uppercase transition text-slate-500 hover:text-slate-700">Range</button>
+                    </div>
+                </div>
+
+                <!-- Day picker -->
+                <div id="pickerDay" class="flex gap-3 flex-wrap items-end">
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Date</p>
+                        <input type="date" id="dayInput"
+                            class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition">
+                    </div>
+                </div>
+
+                <!-- Month picker -->
+                <div id="pickerMonth" class="hidden flex gap-3 flex-wrap items-end">
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Month</p>
+                        <input type="month" id="monthInput"
+                            class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition">
+                    </div>
+                </div>
+
+                <!-- Year picker -->
+                <div id="pickerYear" class="hidden flex gap-3 flex-wrap items-end">
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Year</p>
+                        <select id="yearInput"
+                            class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition w-28">
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Range picker -->
+                <div id="pickerRange" class="hidden flex gap-3 flex-wrap items-end">
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">From</p>
+                        <input type="date" id="rangeFrom"
+                            class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">To</p>
+                        <input type="date" id="rangeTo"
+                            class="p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition">
+                    </div>
+                </div>
+
+                <button id="genBtn" onclick="fetchPL()"
+                    class="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:bg-emerald-600 transition active:scale-95">
+                    Generate
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpiGrid">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Revenue</p>
+                <p id="kpiRev" class="text-2xl font-black text-blue-600 font-mono leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Cash + M-Pesa collected</p>
+            </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Cost of Goods (COGS)</p>
+                <p id="kpiCogs" class="text-2xl font-black text-red-500 font-mono leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Stock cost of items sold</p>
+            </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Operating Expenses</p>
+                <p id="kpiExp" class="text-2xl font-black text-amber-500 font-mono leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Salaries, rent, utilities…</p>
+            </div>
+            <div id="netCard" class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 transition-all">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Net Profit / Loss</p>
+                <p id="kpiNet" class="text-2xl font-black text-emerald-500 font-mono leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold" id="kpiMargin">Margin —</p>
+            </div>
+        </div>
+
+        <!-- Unpaid credit note -->
+        <div id="creditNote" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 text-xs text-amber-700 font-bold">
+            ⚠ Unpaid Credit Sales: <span id="creditNoteVal" class="font-mono font-black">—</span> — not included in revenue
+        </div>
+
+        <!-- P&L Statement Table -->
+        <div id="plTable" class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+
+            <!-- Print header (hidden until PDF/print) -->
+            <div id="plPrintHeader" class="hidden text-center p-6 border-b border-slate-200">
+                <p class="text-lg font-black font-mono">ELITE HARDWARE PRO</p>
+                <p class="text-sm font-bold mt-1">Profit & Loss Statement</p>
+                <p id="plPrintPeriod" class="text-xs text-slate-400 mt-1"></p>
+            </div>
+
+            <!-- Table header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <p class="text-sm font-black text-slate-800">Statement of Income</p>
+                <p id="tableStatus" class="text-[10px] text-slate-400 font-mono">No data loaded</p>
+            </div>
+
+            <!-- Revenue section -->
+            <div class="px-6 py-2 bg-slate-50 border-b border-slate-100">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Revenue</p>
+            </div>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                <span class="text-sm font-bold text-slate-700">Realized Revenue (Cash & M-Pesa)</span>
+                <span id="rowRev" class="font-black font-mono text-blue-600 text-sm">—</span>
+            </div>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-amber-50/40">
+                <span class="text-sm font-bold text-amber-600">Unpaid Credit Sales <em class="font-normal text-xs not-italic">(excluded from revenue)</em></span>
+                <span id="rowDebts" class="font-black font-mono text-amber-500 text-sm">—</span>
+            </div>
+
+            <!-- COGS section -->
+            <div class="px-6 py-2 bg-slate-50 border-b border-slate-100 mt-1">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost of Goods Sold</p>
+            </div>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                <span class="text-sm font-bold text-red-500">Less: Cost of Goods Sold (COGS)</span>
+                <span id="rowCogs" class="font-black font-mono text-red-500 text-sm">—</span>
+            </div>
+
+            <!-- Gross profit total -->
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200 bg-slate-900">
+                <span class="text-sm font-black text-white uppercase tracking-wide">Gross Profit</span>
+                <span id="rowGross" class="font-black font-mono text-emerald-400 text-base">—</span>
+            </div>
+
+            <!-- Expenses section -->
+            <div class="px-6 py-2 bg-slate-50 border-b border-slate-100 mt-1">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operating Expenses</p>
+            </div>
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 hover:bg-slate-50 transition">
+                <span class="text-sm font-bold text-red-500">Less: Operating Expenses</span>
+                <span id="rowExp" class="font-black font-mono text-red-500 text-sm">—</span>
+            </div>
+
+            <!-- Net profit row -->
+            <div id="plNetRow" class="flex justify-between items-center px-6 py-5 bg-emerald-50 transition-all">
+                <span class="text-sm font-black text-slate-800 uppercase tracking-wide">Net Profit / Loss</span>
+                <span id="rowNet" class="font-black font-mono text-emerald-600 text-xl">—</span>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+let currentMode = 'day';
+let lastData    = null;
+
+// ── Mode switching ─────────────────────────────────────────────────────────────
+function setMode(mode) {
+    currentMode = mode;
+    ['day','month','year','range'].forEach(m => {
+        const btn = document.getElementById('mode' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (btn) {
+            if (m === mode) {
+                btn.classList.add('bg-slate-900','text-white');
+                btn.classList.remove('text-slate-500');
+            } else {
+                btn.classList.remove('bg-slate-900','text-white');
+                btn.classList.add('text-slate-500');
+            }
+        }
+        const p = document.getElementById('picker' + m.charAt(0).toUpperCase() + m.slice(1));
+        if (p) p.style.display = m === mode ? 'flex' : 'none';
+    });
+}
+
+function getDateRange() {
+    const today = new Date();
+    const pad   = n => String(n).padStart(2, '0');
+    if (currentMode === 'day') {
+        const d = document.getElementById('dayInput').value || today.toISOString().split('T')[0];
+        return { from: d, to: d, label: `Daily — ${d}` };
+    }
+    if (currentMode === 'month') {
+        const m = document.getElementById('monthInput').value || `${today.getFullYear()}-${pad(today.getMonth()+1)}`;
+        const [y, mo] = m.split('-').map(Number);
+        const last = new Date(y, mo, 0).getDate();
+        return { from: `${m}-01`, to: `${m}-${pad(last)}`, label: `Monthly — ${m}` };
+    }
+    if (currentMode === 'year') {
+        const y = document.getElementById('yearInput').value || today.getFullYear();
+        return { from: `${y}-01-01`, to: `${y}-12-31`, label: `Annual — ${y}` };
+    }
+    if (currentMode === 'range') {
+        const from = document.getElementById('rangeFrom').value;
+        const to   = document.getElementById('rangeTo').value;
+        if (!from || !to) { alert('Please select both From and To dates.'); return null; }
+        if (from > to)    { alert('From date must be before To date.'); return null; }
+        return { from, to, label: `${from} → ${to}` };
+    }
+    return null;
+}
+
+const fmt = n => 'KES ' + Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+async function fetchPL() {
+    const range = getDateRange();
+    if (!range) return;
+
+    const btn = document.getElementById('genBtn');
+    btn.textContent = 'Loading…';
+    btn.disabled    = true;
+    document.getElementById('tableStatus').textContent  = 'Fetching…';
+    document.getElementById('periodLabel').textContent  = range.label;
+
+    try {
+        let url;
+        if (currentMode === 'month') {
+            const [y, m] = range.from.slice(0, 7).split('-');
+            url = `${API_BASE}/reports/profit-loss?month=${m}&year=${y}`;
+        } else {
+            url = `${API_BASE}/reports/profit-loss?from=${range.from}&to=${range.to}`;
+        }
+
+        const res = await apiFetch(url);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || err.message || `Server error ${res.status}`);
+        }
+        const data = await res.json();
+        lastData = { ...data, range };
+        renderPL(data, range);
+    } catch (err) {
+        console.error('P&L Error:', err);
+        document.getElementById('tableStatus').textContent = '⚠ ' + err.message;
+        alert('Error generating P&L: ' + err.message);
+    } finally {
+        btn.textContent = 'Generate';
+        btn.disabled    = false;
+    }
+}
+
+function renderPL(data, range) {
+    const rev    = Number(data.totalSales    || 0);
+    const cogs   = Number(data.totalCogs     || 0);
+    const exp    = Number(data.totalExpenses || 0);
+    const gross  = Number(data.grossProfit   || (rev - cogs));
+    const net    = Number(data.netProfit     || 0);
+    const debts  = Number(data.unpaidDebts   || 0);
+    const margin = rev > 0 ? ((net / rev) * 100).toFixed(1) : '0.0';
+
+    document.getElementById('kpiRev').textContent    = fmt(rev);
+    document.getElementById('kpiCogs').textContent   = fmt(cogs);
+    document.getElementById('kpiExp').textContent    = fmt(exp);
+    document.getElementById('kpiNet').textContent    = fmt(net);
+    document.getElementById('kpiMargin').textContent = `Margin ${margin}%`;
+
+    const netCard = document.getElementById('netCard');
+    if (net < 0) {
+        netCard.classList.add('border-red-200','bg-red-50');
+        netCard.classList.remove('border-slate-200');
+        document.getElementById('kpiNet').className = 'text-2xl font-black text-red-500 font-mono leading-none mb-2';
+    } else {
+        netCard.classList.remove('border-red-200','bg-red-50');
+        netCard.classList.add('border-slate-200');
+        document.getElementById('kpiNet').className = 'text-2xl font-black text-emerald-500 font-mono leading-none mb-2';
+    }
+
+    document.getElementById('rowRev').textContent   = fmt(rev);
+    document.getElementById('rowDebts').textContent = debts > 0 ? fmt(debts) : '—';
+    document.getElementById('rowCogs').textContent  = `− ${fmt(cogs)}`;
+    document.getElementById('rowGross').textContent = fmt(gross);
+    document.getElementById('rowExp').textContent   = `− ${fmt(exp)}`;
+    document.getElementById('rowNet').textContent   = fmt(net);
+
+    const netRow = document.getElementById('plNetRow');
+    if (net < 0) {
+        netRow.className = 'flex justify-between items-center px-6 py-5 bg-red-50 transition-all';
+        document.getElementById('rowNet').className = 'font-black font-mono text-red-500 text-xl';
+    } else {
+        netRow.className = 'flex justify-between items-center px-6 py-5 bg-emerald-50 transition-all';
+        document.getElementById('rowNet').className = 'font-black font-mono text-emerald-600 text-xl';
+    }
+
+    const creditNote = document.getElementById('creditNote');
+    if (debts > 0) {
+        creditNote.classList.remove('hidden');
+        document.getElementById('creditNoteVal').textContent = fmt(debts);
+    } else {
+        creditNote.classList.add('hidden');
+    }
+
+    document.getElementById('plPrintPeriod').textContent = range.label;
+    document.getElementById('tableStatus').textContent   = `Generated · ${range.label}`;
+}
+
+function exportPDF() {
+    if (!lastData) { alert('Generate a report first.'); return; }
+    const el = document.getElementById('plTable');
+    document.getElementById('plPrintHeader').classList.remove('hidden');
+    html2pdf().set({
+        margin: 0.4,
+        filename: `ProfitLoss_${lastData.range.from}_to_${lastData.range.to}.pdf`,
+        image:  { type: 'jpeg', quality: 0.98 },
+        jsPDF:  { unit: 'in', format: 'a4', orientation: 'portrait' }
+    }).from(el).save().then(() => {
+        document.getElementById('plPrintHeader').classList.add('hidden');
+    });
+}
+
+function exportCSV() {
+    if (!lastData) { alert('Generate a report first.'); return; }
+    const d    = lastData;
+    const fmt2 = n => Number(n || 0).toFixed(2);
+    const rows = [
+        ['Elite Hardware Pro — Profit & Loss Statement'],
+        [`Period: ${d.range.label}`],
+        [`Generated: ${new Date().toLocaleString('en-KE')}`],
+        [],
+        ['Description', 'Amount (KES)'],
+        ['Realized Revenue (Cash & M-Pesa)', fmt2(d.totalSales)],
+        ['Unpaid Credit Sales (excluded)', fmt2(d.unpaidDebts)],
+        ['Less: Cost of Goods Sold (COGS)', `-${fmt2(d.totalCogs)}`],
+        ['Gross Profit', fmt2(d.grossProfit || (d.totalSales - d.totalCogs))],
+        ['Less: Operating Expenses', `-${fmt2(d.totalExpenses)}`],
+        ['NET PROFIT / LOSS', fmt2(d.netProfit)],
+    ];
+    const csv  = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `ProfitLoss_${d.range.from}_to_${d.range.to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+document.addEventListener('eliteAuthReady', () => {
+    const today = new Date();
+    const pad   = n => String(n).padStart(2, '0');
+
+    document.getElementById('dayInput').value   = today.toISOString().split('T')[0];
+    document.getElementById('monthInput').value = `${today.getFullYear()}-${pad(today.getMonth()+1)}`;
+
+    const yearSel = document.getElementById('yearInput');
+    for (let y = today.getFullYear(); y >= today.getFullYear() - 4; y--) {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        yearSel.appendChild(opt);
+    }
+
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('rangeFrom').value = first.toISOString().split('T')[0];
+    document.getElementById('rangeTo').value   = today.toISOString().split('T')[0];
+
+    setMode('month');
+    fetchPL();
+});
+</script>
+</body>
+</html>

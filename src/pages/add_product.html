@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="add_product.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin - Stock Entry | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/tailwind.css">
+   
+</head>
+<body class="antialiased">
+
+    <div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+            
+<div class="max-w-4xl mx-auto">
+            <header class="mb-12">
+                <h1 class="text-4xl font-black text-slate-900 tracking-tighter uppercase">FIFO Stock Management</h1>
+                <p class="text-slate-500 font-bold mt-2">Every entry creates a unique stock batch for accurate profit tracking.</p>
+            </header>
+
+            <!-- BULK IMPORT SECTION -->
+            <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden mb-8">
+                <div class="bg-emerald-700 p-6 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-white font-black uppercase tracking-widest text-sm">📦 Bulk Import Products</h2>
+                        <p class="text-emerald-200 text-xs mt-1">Upload a CSV or Excel file to add multiple products at once</p>
+                    </div>
+                    <button onclick="downloadTemplate()" class="bg-white text-emerald-700 font-black text-xs uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-emerald-50 transition-all">
+                        ⬇ Download Template
+                    </button>
+                </div>
+                <div class="p-8">
+                    <!-- Drop zone -->
+                     <div class="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                        <p class="text-xs text-blue-400 font-bold mb-2">✅ Accepted KRA Categories for Import:</p>
+                        <p class="text-[10px] text-slate-400 leading-relaxed font-mono">
+                            Cement, Plumbing, Electrical, Fasteners, Paint, Steel & Metal, Timber & Wood, Tools, Doors & Windows, Sanitary Ware, General
+                        </p>
+                    </div>
+                    <div id="dropZone" onclick="document.getElementById('bulkFileInput').click()"
+                    style="border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='var(--green)';this.style.background='rgba(0,229,160,0.05)'"
+                    onmouseout="this.style.borderColor='var(--border)';this.style.background=''">
+                    <div style="font-size:36px;margin-bottom:8px;">📂</div>
+                    <div style="font-weight:900;font-size:14px;color:var(--text);text-transform:uppercase;letter-spacing:1px;">Click to Upload or Drag & Drop</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:4px;">.CSV or .XLSX files supported</div>
+                </div>
+<input type="file" id="bulkFileInput" accept=".csv,.xlsx,.xls" style="display:none;" onchange="handleBulkFile(event)">
+
+<div id="bulkPreview" style="display:none;margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div id="bulkPreviewLabel" style="font-size:12px;font-weight:900;color:var(--text);text-transform:uppercase;letter-spacing:1px;"></div>
+        <button onclick="clearBulkFile()" style="font-size:10px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:700;text-transform:uppercase;">✕ Clear</button>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+            <thead id="bulkPreviewHead" style="background:var(--surface2);"></thead>
+            <tbody id="bulkPreviewBody"></tbody>
+        </table>
+    </div>
+    <div id="bulkValidationErrors" style="display:none;margin-top:10px;padding:12px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);border-radius:10px;font-size:11px;color:var(--red);"></div>
+    <button onclick="submitBulkImport()" id="bulkSubmitBtn"
+        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all uppercase tracking-widest text-sm mt-4">
+        ✓ Import Products
+    </button>
+</div>
+
+                    <!-- Results -->
+                    <div id="bulkResults" style="display:none;margin-top:16px;"></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden h-fit">
+                    <div class="bg-slate-900 p-6">
+                        <h2 class="text-white font-black uppercase tracking-widest text-sm">Register New Product</h2>
+                    </div>
+                    <form id="productForm" class="p-8 space-y-5">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Item Name</label>
+                            <input type="text" id="itemName" required placeholder="e.g. Cement 50KG" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold">
+                        </div>
+
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Barcode / SKU</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="barcode" placeholder="Scan barcode or leave blank to auto-generate"
+                                    class="flex-1 p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 focus:bg-white rounded-2xl outline-none font-bold font-mono text-sm">
+                                <button type="button" onclick="generateSKU()"
+                                    title="Auto-generate a unique SKU"
+                                    class="px-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-80 transition-all flex-shrink-0">
+                                    AUTO
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 font-bold">Leave blank to auto-generate · Or scan a physical barcode into this field</p>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Category</label>
+                                <input 
+                                    id="categoryInput" 
+                                    list="categoryOptions" 
+                                    placeholder="Type or select category..."
+                                    class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                                <datalist id="categoryOptions">
+                                    <option value="General">
+                                    <option value="Hardware">
+                                    <option value="Building Materials">
+                                    <option value="Cement">
+                                    <option value="Construction">
+                                    <option value="Tiles & Flooring">
+                                    <option value="Doors & Windows">
+                                    <option value="Sanitary Ware">
+                                    <option value="Steel & Metal">
+                                    <option value="Timber & Wood">
+                                    <option value="Tools">
+                                    <option value="Power Tools">
+                                    <option value="Fasteners">
+                                    <option value="Locks & Security">
+                                    <option value="Plumbing">
+                                    <option value="Water Storage">
+                                    <option value="Electrical">
+                                    <option value="Cables & Wiring">
+                                    <option value="Lighting">
+                                    <option value="Paint">
+                                    <option value="Adhesives">
+                                </datalist>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Unit</label>
+                                <input type="text" id="unit" required placeholder="PCS/KG" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Buying Price (KES)</label>
+                                <input type="number" id="costPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selling Price (KES)</label>
+                                <input type="number" id="sellingPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Initial Qty</label>
+                                <input type="number" id="stockQty" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Delivery Note</label>
+                                <input type="text" id="initialDn" required placeholder="DN-XXXX" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-lg transition-all uppercase tracking-widest text-sm mt-4">Create Product & Batch</button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col h-[700px]">
+                    <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+                        <h2 class="font-black text-slate-900 uppercase tracking-widest text-sm">Add FIFO Batch</h2>
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Stock Layers</span>
+                    </div>
+                    <div class="bg-white rounded-3xl shadow-xl border border-slate-100 flex flex-col h-[700px]">
+    <div class="p-6 border-b border-gray-100">
+        <div class="p-6 bg-slate-900 border-b border-slate-800">
+            <label class="text-[10px] font-white uppercase text-slate-100 tracking-widest block mb-2">Global Batch Reference (Multiple Items)</label>
+            <div class="flex flex-col md:flex-row gap-3">
+                <input type="text" id="globalDN" placeholder="Supplier DN Number..." 
+                    class="flex-1 p-3 bg-slate-800 border border-slate-700 rounded-xl text-white font-bold outline-none focus:border-emerald-500 transition-all text-xs">
+                
+                <button onclick="bulkRestock()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-lg flex items-center gap-2">
+                    🚀 Bulk Restock
+                </button>
+    </div>
+    <p class="text-[9px] text-slate-500 mt-2 italic">Enter quantities/costs for items below, then click "Process Bulk Restock" to save all at once.</p>
+</div>
+        <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">🔍</span>
+            <input type="text" id="stockSearch" placeholder="Search product name..." 
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-blue-500 transition-all">
+        </div>
+    </div>
+    <div id="existingStockList" class="flex-1 overflow-y-auto divide-y divide-gray-50 custom-scrollbar">
+        </div>
+        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between no-print">
+    <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">
+        Showing 1 - 10 of 0
+    </span>
+    <div class="flex gap-2">
+        <button onclick="changePage(-1)" id="prevBtn" class="px-3 py-2 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 transition shadow-sm">
+            Prev
+        </button>
+        <button onclick="changePage(1)" id="nextBtn" class="px-3 py-2 bg-white border border-slate-200 rounded-lg text-[9px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 transition shadow-sm">
+            Next
+        </button>
+    </div>
+</div>
+</div> 
+                </div>
+            </div>
+        </div>
+        <div id="modalOverlay" class="fixed inset-0 bg-black/60 hidden z-[110] backdrop-blur-sm no-print"></div>
+<div id="receiptModal" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white hidden z-[120] w-[95%] md:w-96 font-mono text-sm  flex-col shadow-2xl rounded-3xl overflow-hidden no-print">
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+        <div id="receiptDate"></div> 
+        <div id="receiptContent"></div>
+        <div id="receiptTotal"></div>
+    </div>
+    <div id="receiptButtons" class="p-4 bg-slate-50 border-t border-gray-100 flex flex-col gap-2">
+        <button onclick="window.print()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg">PRINT GRN</button>
+        <button onclick="closeReceipt()" class="w-full bg-gray-100 py-3 rounded-2xl text-gray-500 font-bold uppercase">CLOSE</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     STOCK WRITE-OFF SECTION
+══════════════════════════════════════════════════════ -->
+<div style="max-width:900px;margin:40px auto 0;padding:0 24px 60px;" class="no-print">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <div style="width:4px;height:40px;background:#ff4d6d;border-radius:2px;"></div>
+        <div>
+            <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--muted,#7a8394);margin-bottom:2px;">Inventory Adjustment</p>
+            <h2 style="font-size:20px;font-weight:900;color:var(--text,#d4d4d4);margin:0;">Stock Write-off</h2>
+        </div>
+    </div>
+    <div style="background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:11px;color:#ff4d6d;font-weight:700;">
+        ⚠ Use this for goods damaged, expired, stolen or broken on the shelf — NOT for customer returns. Stock will be reduced and KRA will be notified automatically.
+    </div>
+
+    <div style="background:var(--surface,#252537);border:1px solid var(--border,rgba(255,255,255,0.09));border-radius:16px;padding:28px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+            <!-- Item search -->
+            <div style="grid-column:1/-1;">
+                <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted,#7a8394);display:block;margin-bottom:6px;">Search Item *</label>
+                <div style="display:flex;gap:8px;">
+                    <input id="woSearch" type="text" placeholder="Type item name..." onkeydown="if(event.key==='Enter')searchWriteOffItem()"
+                        style="flex:1;padding:10px 13px;border-radius:9px;background:var(--surface2,#2d2d42);border:1px solid var(--border,rgba(255,255,255,0.09));color:var(--text,#d4d4d4);font-size:13px;outline:none;">
+                    <button onclick="searchWriteOffItem()" style="padding:10px 18px;border-radius:9px;background:#ff4d6d;color:#fff;font-weight:900;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">Search</button>
+                </div>
+                <div id="woResults" style="margin-top:8px;"></div>
+            </div>
+
+            <!-- Selected item display -->
+            <div id="woSelectedCard" style="grid-column:1/-1;display:none;padding:12px 16px;background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <div id="woItemName" style="font-weight:900;font-size:14px;color:var(--text,#d4d4d4);"></div>
+                        <div id="woItemStock" style="font-size:11px;color:var(--muted,#7a8394);margin-top:2px;"></div>
+                    </div>
+                    <div id="woKraStatus" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;"></div>
+                </div>
+            </div>
+
+            <!-- Qty -->
+            <div>
+                <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted,#7a8394);display:block;margin-bottom:6px;">Qty to Write Off *</label>
+                <input id="woQty" type="number" min="1" placeholder="e.g. 3"
+                    style="width:100%;padding:10px 13px;border-radius:9px;background:var(--surface2,#2d2d42);border:1px solid var(--border,rgba(255,255,255,0.09));color:var(--text,#d4d4d4);font-size:13px;outline:none;">
+            </div>
+
+            <!-- Reason -->
+            <div>
+                <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted,#7a8394);display:block;margin-bottom:6px;">Reason *</label>
+                <select id="woReason" style="width:100%;padding:10px 13px;border-radius:9px;background:var(--surface2,#2d2d42);border:1px solid var(--border,rgba(255,255,255,0.09));color:var(--text,#d4d4d4);font-size:13px;outline:none;font-weight:700;">
+                    <option value="">Select reason…</option>
+                    <option value="damaged">Damaged on shelf</option>
+                    <option value="expired">Expired / past sell-by</option>
+                    <option value="theft">Theft / shrinkage</option>
+                    <option value="breakage">Breakage in store</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <!-- Detail -->
+            <div style="grid-column:1/-1;">
+                <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted,#7a8394);display:block;margin-bottom:6px;">Additional Detail <span style="font-weight:400;text-transform:none;">(optional)</span></label>
+                <input id="woDetail" type="text" placeholder="e.g. Bags soaked by rain leak, Cement hardened in storage…"
+                    style="width:100%;padding:10px 13px;border-radius:9px;background:var(--surface2,#2d2d42);border:1px solid var(--border,rgba(255,255,255,0.09));color:var(--text,#d4d4d4);font-size:13px;outline:none;">
+            </div>
+        </div>
+
+        <!-- Cost preview -->
+        <div id="woCostPreview" style="display:none;margin-top:16px;padding:12px 16px;background:rgba(255,255,255,0.04);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:12px;color:var(--muted,#7a8394);">Cost to be written off as expense:</span>
+            <span id="woCostAmt" style="font-family:'Space Mono',monospace;font-size:14px;font-weight:900;color:#ff4d6d;">KES 0.00</span>
+        </div>
+
+        <div id="woError" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:9px;font-size:12px;color:#ff4d6d;font-weight:700;"></div>
+        <div id="woSuccess" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);border-radius:9px;font-size:12px;color:#00e5a0;font-weight:700;"></div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+            <button id="woSubmitBtn" onclick="submitWriteOff()"
+                style="padding:12px 28px;border-radius:10px;border:none;background:#ff4d6d;color:#fff;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;">
+                Process Write-off
+            </button>
+        </div>
+    </div>
+</div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+// ══════════════════════════════════════════════════════
+//  BULK IMPORT
+// ══════════════════════════════════════════════════════
+const BULK_COLS = ['itemName','category','unit','costPrice','sellingPrice','stockQty','deliveryNote', 'barcode'];
+const BULK_HEADERS = ['Item Name','Category','Unit','Buying Price','Selling Price','Qty','Delivery Note', 'Barcode'];
+let bulkData = [];
+
+// Drag and drop
+// Drag and drop - updated colors for dark theme
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.style.borderColor='var(--green)'; dropZone.style.background='rgba(0,229,160,0.05)'; });
+dropZone.addEventListener('dragleave', e => { dropZone.style.borderColor='var(--border)'; dropZone.style.background=''; });
+dropZone.addEventListener('drop',      e => { e.preventDefault(); dropZone.style.borderColor='var(--border)'; dropZone.style.background=''; const f=e.dataTransfer.files[0]; if(f) parseBulkFile(f); });
+// Auto-categorize items to match the backend's KRA classCodeMap
+function autoAssignCategory(itemName, uploadedCategory) {
+    const name = (itemName || '').toLowerCase();
+    const validCategories = [
+        'Cement', 'Building Materials', 'Construction', 'Tiles & Flooring', 'Doors & Windows',
+        'Glass', 'Sanitary Ware', 'Ladders', 'Scaffolding', 'Steel & Metal', 'Timber & Wood',
+        'Fencing', 'Waterproofing', 'Insulation', 'Tools', 'Hardware', 'Pneumatic', 'Safety',
+        'Machinery', 'Power Tools', 'Welding', 'Metal Forming', 'Fasteners', 'Locks & Security',
+        'Bearings', 'Packings', 'Abrasives', 'Cabinets', 'Machine Parts', 'Stampings', 'Plumbing',
+        'Water Storage', 'Pumps', 'Tubes', 'Electrical', 'Cables & Wiring', 'Lighting', 'Solar',
+        'Generators', 'Paint', 'Adhesives', 'Solvents', 'Packing Supplies', 'Storage', 'Cleaning',
+        'Garden', 'General'
+    ];
+
+    // If the uploaded category is perfectly valid, keep it
+    if (uploadedCategory && validCategories.includes(uploadedCategory.trim())) {
+        return uploadedCategory.trim();
+    }
+
+    // Otherwise, infer the correct KRA category from the item name keywords
+    if (name.includes('cement') || name.includes('plaster') || name.includes('ballast')) return 'Cement';
+    if (name.includes('paint') || name.includes('thinner') || name.includes('gloss')) return 'Paint';
+    if (name.includes('nail') || name.includes('screw') || name.includes('bolt') || name.includes('hinge')) return 'Fasteners';
+    if (name.includes('pipe') || name.includes('pvc') || name.includes('valve') || name.includes('tap')) return 'Plumbing';
+    if (name.includes('cable') || name.includes('wire') || name.includes('socket') || name.includes('breaker')) return 'Electrical';
+    if (name.includes('mabati') || name.includes('iron sheet') || name.includes('steel')) return 'Steel & Metal';
+    if (name.includes('timber') || name.includes('wood') || name.includes('mdf')) return 'Timber & Wood';
+    if (name.includes('lock') || name.includes('padlock')) return 'Locks & Security';
+    if (name.includes('drill') || name.includes('grinder') || name.includes('saw')) return 'Power Tools';
+    if (name.includes('tank') || name.includes('jojo')) return 'Water Storage';
+    if (name.includes('glue') || name.includes('silicone')) return 'Adhesives';
+    
+    // Default fallback
+    return 'General';
+}
+function handleBulkFile(e) { const f = e.target.files[0]; if (f) parseBulkFile(f); }
+
+function parseBulkFile(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const reader = new FileReader();
+
+    reader.onload = e => {
+        try {
+            let rows = [];
+            if (ext === 'csv') {
+                const text = e.target.result;
+                const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g,'')));
+                const rawHeaders = lines[0];
+                // Inside parseBulkFile, update csvHeaderMap:
+const csvHeaderMap = {
+    'item name':'itemName','itemname':'itemName','name':'itemName',
+    'category':'category','unit':'unit',
+    'buying price':'costPrice','cost price':'costPrice','costprice':'costPrice',
+    'selling price':'sellingPrice','sell price':'sellingPrice','sellingprice':'sellingPrice','price':'sellingPrice',
+    'qty':'stockQty','quantity':'stockQty','stock':'stockQty','stockqty':'stockQty','initial qty':'stockQty',
+    'delivery note':'deliveryNote','dn':'deliveryNote','deliverynote':'deliveryNote',
+    'barcode':'barcode','sku':'barcode' // <-- ADD THIS LINE
+};
+
+// And update headerMap just below it:
+const headerMap = {
+    // ... existing mappings ...
+    'deliverynote':   'deliveryNote',
+    'barcode':        'barcode', // <-- ADD THIS LINE
+    'sku':            'barcode'  // <-- ADD THIS LINE
+};
+                rows = lines.slice(1).filter(r => r.some(c => c)).map(r => {
+                    const obj = {};
+                    rawHeaders.forEach((h, i) => {
+                        const mapped = csvHeaderMap[h.toLowerCase().trim()];
+                        if (mapped) obj[mapped] = r[i] || '';
+                    });
+                    obj.category = autoAssignCategory(obj.itemName, obj.category);
+                    return obj;
+                });
+            } else {
+                const wb   = XLSX.read(e.target.result, { type: 'array' });
+                const ws   = wb.Sheets[wb.SheetNames[0]];
+                const raw  = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                // Explicit header → field mapping (case-insensitive)
+                const headerMap = {
+                    'item name':      'itemName',
+                    'itemname':       'itemName',
+                    'name':           'itemName',
+                    'category':       'category',
+                    'unit':           'unit',
+                    'buying price':   'costPrice',
+                    'cost price':     'costPrice',
+                    'costprice':      'costPrice',
+                    'buyprice':       'costPrice',
+                    'selling price':  'sellingPrice',
+                    'sell price':     'sellingPrice',
+                    'sellingprice':   'sellingPrice',
+                    'price':          'sellingPrice',
+                    'qty':            'stockQty',
+                    'quantity':       'stockQty',
+                    'stock':          'stockQty',
+                    'stockqty':       'stockQty',
+                    'initial qty':    'stockQty',
+                    'delivery note':  'deliveryNote',
+                    'dn':             'deliveryNote',
+                    'deliverynote':   'deliveryNote',
+                    'barcode':        'barcode', // <-- ADD THIS LINE
+                    'sku':            'barcode'  // <-- ADD THIS LINE   
+                };
+
+                rows = raw.map(r => {
+                    const obj = {};
+                    Object.entries(r).forEach(([key, val]) => {
+                        const mapped = headerMap[key.toLowerCase().trim()];
+                        if (mapped) obj[mapped] = String(val);
+                    });
+                    obj.category = autoAssignCategory(obj.itemName, obj.category);
+                    return obj;
+                });
+            }
+
+            bulkData = rows.filter(r => r.itemName);
+            renderBulkPreview();
+        } catch(err) {
+            alert('Error reading file: ' + err.message);
+        }
+    };
+
+    if (ext === 'csv') reader.readAsText(file);
+    else               reader.readAsArrayBuffer(file);
+}
+
+// Add this map near the top of your scripts, right below let bulkData = [];
+const kraPreviewMap = {
+    'Cement': '30110000', 'Building Materials': '30110000', 'Construction': '30110000',
+    'Tiles & Flooring': '30160000', 'Doors & Windows': '30170000', 'Glass': '30170000',
+    'Sanitary Ware': '30180000', 'Ladders': '30190000', 'Scaffolding': '30190000',
+    'Steel & Metal': '30260000', 'Timber & Wood': '30260000', 'Fencing': '30260000',
+    'Waterproofing': '30140000', 'Insulation': '30140000', 'Tools': '27110000',
+    'Hardware': '31160000', 'Pneumatic': '27130000', 'Safety': '27110000',
+    'Machinery': '27000000', 'Power Tools': '27110000', 'Welding': '23270000',
+    'Metal Forming': '23250000', 'Fasteners': '31160000', 'Locks & Security': '31160000',
+    'Bearings': '31170000', 'Packings': '31180000', 'Abrasives': '31190000',
+    'Cabinets': '31260000', 'Machine Parts': '31270000', 'Stampings': '31280000',
+    'Plumbing': '40170000', 'Water Storage': '40140000', 'Pumps': '40150000',
+    'Tubes': '40180000', 'Electrical': '39000000', 'Cables & Wiring': '39130000',
+    'Lighting': '39100000', 'Solar': '39000000', 'Generators': '26130000',
+    'Paint': '31210000', 'Adhesives': '31200000', 'Solvents': '12190000',
+    'Packing Supplies': '24140000', 'Storage': '56101530', 'Cleaning': '47130000',
+    'Garden': '10150000', 'General': '31160000'
+};
+
+function renderBulkPreview() {
+    if (!bulkData.length) return;
+    document.getElementById('bulkPreview').style.display = 'block';
+    document.getElementById('bulkPreviewLabel').textContent = `Preview — ${bulkData.length} product(s) found`;
+
+    // Add "KRA CODE" to the visual headers
+    document.getElementById('bulkPreviewHead').innerHTML = `<tr>${BULK_HEADERS.map(h =>
+        `<th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap;">${h}</th>`
+    ).join('')}
+    <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--blue);white-space:nowrap;">KRA CODE</th>
+    <th style="padding:8px 12px;font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);">Status</th></tr>`;
+
+    const errors = [];
+
+    // Only render first 20 rows in the preview — all rows still get imported.
+    // Rendering 1000 rows as DOM nodes blocks the main thread for ~2s.
+    const previewRows = bulkData.slice(0, 20);
+
+    document.getElementById('bulkPreviewBody').innerHTML = [
+        ...previewRows.map((row, i) => {
+            const missing = [];
+            if (!row.itemName)     missing.push('Name');
+            if (!row.sellingPrice) missing.push('Selling Price');
+            if (!row.stockQty)     missing.push('Qty');
+            if (!row.deliveryNote) missing.push('DN');
+            const valid  = missing.length === 0;
+            if (!valid) errors.push(`Row ${i+2}: Missing — ${missing.join(', ')}`);
+
+            const statusBadge = valid
+                ? `<span style="color:var(--green);font-weight:900;font-size:10px;">✓ OK</span>`
+                : `<span style="color:var(--red);font-weight:900;font-size:10px;">✕ Missing: ${missing.join(', ')}</span>`;
+
+            const bg = valid ? '' : 'background:rgba(255,77,109,0.05);';
+            const resolvedKraCode = kraPreviewMap[row.category] || '31160000';
+
+            return `<tr style="${bg}border-bottom:1px solid var(--border);">
+                ${BULK_COLS.map(col => `<td style="padding:7px 12px;font-size:11px;color:var(--text);">${row[col] || '<span style="color:var(--muted);">—</span>'}</td>`).join('')}
+                <td style="padding:7px 12px;font-size:11px;font-family:monospace;color:var(--blue);font-weight:bold;">${resolvedKraCode}</td>
+                <td style="padding:7px 12px;">${statusBadge}</td>
+            </tr>`;
+        }),
+        bulkData.length > 20
+            ? `<tr><td colspan="9" style="padding:8px 12px;font-size:11px;color:var(--muted);font-style:italic;text-align:center;">… and ${bulkData.length - 20} more rows (all will be imported)</td></tr>`
+            : ''
+    ].join('');
+
+    // Validate ALL rows (not just preview) so the error count is accurate
+    bulkData.slice(20).forEach((row, i) => {
+        const missing = [];
+        if (!row.itemName)     missing.push('Name');
+        if (!row.sellingPrice) missing.push('Selling Price');
+        if (!row.stockQty)     missing.push('Qty');
+        if (!row.deliveryNote) missing.push('DN');
+        if (missing.length) errors.push(`Row ${i + 22}: Missing — ${missing.join(', ')}`);
+    });
+
+    const errBox = document.getElementById('bulkValidationErrors');
+    if (errors.length) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `⚠️ ${errors.length} row(s) have issues and will be skipped:<br>` + errors.join('<br>');
+    } else {
+        errBox.style.display = 'none';
+    }
+}
+function clearBulkFile() {
+    bulkData = [];
+    document.getElementById('bulkFileInput').value = '';
+    document.getElementById('bulkPreview').style.display  = 'none';
+    document.getElementById('bulkResults').style.display  = 'none';
+}
+
+async function submitBulkImport() {
+    if (!bulkData.length) return;
+    const btn = document.getElementById('bulkSubmitBtn');
+    btn.textContent = 'Importing...';
+    btn.disabled    = true;
+
+    // Debug — log first row to console so we can see what's being sent
+    console.log('[BULK] Sending', bulkData.length, 'items');
+    console.log('[BULK] First row:', JSON.stringify(bulkData[0]));
+
+    try {
+        const res  = await apiFetch(`${API_URL}/inventory/bulk-import`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: bulkData })
+        });
+        const data = await res.json();
+        console.log('[BULK] Server response:', JSON.stringify(data));
+        const box  = document.getElementById('bulkResults');
+        box.style.display = 'block';
+
+        let html = `<div style="padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-bottom:10px;">
+            <div style="font-weight:900;color:#065f46;font-size:13px;">✅ Import Complete</div>
+            <div style="font-size:12px;color:#047857;margin-top:4px;">${data.imported} product(s) imported successfully</div>
+        </div>`;
+
+        if (data.failed > 0) {
+            html += `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
+                <div style="font-weight:900;color:#991b1b;font-size:13px;">⚠️ ${data.failed} item(s) failed</div>
+                <div style="margin-top:8px;">
+                    ${data.results.failed.map(f => `<div style="font-size:11px;color:#dc2626;padding:2px 0;">• ${f.itemName}: ${f.reason}</div>`).join('')}
+                </div>
+            </div>`;
+        }
+
+        box.innerHTML = html;
+        clearBulkFile();
+        loadExistingItems();
+    } catch(err) {
+        alert('Import failed: ' + err.message);
+    } finally {
+        btn.textContent = '✓ Import Products';
+        btn.disabled    = false;
+    }
+}
+
+function downloadTemplate() {
+    const csv = [
+        BULK_HEADERS.join(','),
+        'Cement 50KG,Cement,BAG,800,1200,50,DN-2026-001,6161234567890',
+        'Dulux Paint 4L,Paint,TIN,1500,2200,20,DN-2026-002,6160987654321',
+        'PVC Pipe 1/2",Plumbing,PCS,120,200,100,DN-2026-003,',
+        'Roofing Nails 1KG,Fasteners,KG,150,250,50,DN-2026-004,'
+    ].join('\n');
+    const a   = document.createElement('a');
+    a.href    = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'elite_hardware_bulk_import_template.csv';
+    a.click();
+}
+    </script>
+    <script>
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+
+// ── BARCODE / SKU HELPERS ──────────────────────────────────────────────────
+function generateSKU() {
+    // Format: EH-YYYYMMDD-XXXXX  e.g. EH-20260421-07392
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const rand = String(Math.floor(Math.random() * 99999)).padStart(5, '0');
+    document.getElementById('barcode').value = `EH-${date}-${rand}`;
+}
+
+// Auto-fill barcode field from USB/BT scanner:
+// Most barcode scanners act as a keyboard and send a CR/Enter after the code.
+// Focusing the barcode input before scanning is enough — no driver needed.
+document.addEventListener('DOMContentLoaded', () => {
+    const barcodeInput = document.getElementById('barcode');
+    if (barcodeInput) {
+        barcodeInput.addEventListener('keydown', (e) => {
+            // Scanner typically ends with Enter — move focus to next field
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('itemName')?.focus();
+            }
+        });
+    }
+});
+
+let allInventoryItems = []; 
+let currentPage = 1;
+const itemsPerPage = 5;
+function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('sidebar-open');
+    }
+
+    // Role check deferred to ensure auth.js has run
+    document.addEventListener('DOMContentLoaded', () => {
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+    const _rb0 = document.getElementById('bulkSubmitBtn');
+    if (_rb0) { _rb0.disabled=true; _rb0.style.opacity='0.35'; _rb0.style.cursor='not-allowed'; _rb0.title='POS is read-only — subscription expired'; }
+    const _rb1 = document.getElementById('woSubmitBtn');
+    if (_rb1) { _rb1.disabled=true; _rb1.style.opacity='0.35'; _rb1.style.cursor='not-allowed'; _rb1.title='POS is read-only — subscription expired'; }
+
+        document.querySelectorAll('button').forEach(b => {
+            const t = b.textContent.trim().toLowerCase();
+            if (t.includes('restock') || t.includes('add stock') || t.includes('import') || t.includes('write-off') || t.includes('submit')) {
+                b.disabled=true; b.style.opacity='0.35'; b.style.cursor='not-allowed';
+            }
+        });
+
+        // ── Block dynamically-rendered price + batch buttons ─────────────────
+        // quickPriceUpdate and updateBatch are called via onclick="..." on buttons
+        // built inside innerHTML on every render, so they can't be disabled at
+        // init time — they don't exist in the DOM yet. Overriding the functions
+        // themselves ensures any call, now or after a re-render, is intercepted.
+        window.quickPriceUpdate = function() {
+            alert('🔒 POS is read-only — subscription expired.\nPrice updates require an active subscription.');
+        };
+        window.updateBatch = function() {
+            alert('🔒 POS is read-only — subscription expired.\nAdding stock batches requires an active subscription.');
+        };
+        window.submitBulkImport = function() {
+            alert('🔒 POS is read-only — subscription expired.\nBulk import requires an active subscription.');
+        };
+        window.bulkRestock = function() {
+            alert('🔒 POS is read-only — subscription expired.\nRestocking requires an active subscription.');
+        };
+        window.submitWriteOff = function() {
+            alert('🔒 POS is read-only — subscription expired.\nWrite-offs require an active subscription.');
+        };
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+
+        const userRole = window.EliteAuth?.role;
+        if (userRole === 'admin') {
+            document.getElementById('reportsNav')?.classList.replace('hidden', 'flex');
+        }
+    });
+
+    // 1. REGISTER NEW PRODUCT WITH INITIAL FIFO BATCH
+   
+document.getElementById('productForm').addEventListener('submit', async (e) => {
+    // Read-only guard — checked here because the form submit listener is registered
+    // at parse time, before the DOMContentLoaded lock runs its function overrides.
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        e.preventDefault();
+        alert('🔒 POS is read-only — subscription expired.\nAdding new products requires an active subscription.');
+        return;
+    }
+    e.preventDefault();
+    
+    const dn = document.getElementById('initialDn').value.trim().toUpperCase();
+
+    // 1. Check if DN is empty
+    if (!dn) return alert("Please enter a Delivery Note");
+
+    // 2. Prepare product object
+    const barcodeVal = document.getElementById('barcode').value.trim();
+    const product = {
+        itemName: document.getElementById('itemName').value,
+        category: document.getElementById('categoryInput').value, 
+        unit: document.getElementById('unit').value,
+        costPrice: parseFloat(document.getElementById('costPrice').value),
+        sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
+        stockQty: parseInt(document.getElementById('stockQty').value),
+        deliveryNote: dn,
+        barcode: barcodeVal || null,
+        role: window.EliteAuth?.role || 'admin',
+        userName: window.EliteAuth?.name || 'Admin'
+    };
+
+    try {
+        const res = await apiFetch(`${API_URL}/inventory`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(product)
+        });
+        
+        const data = await res.json();
+        
+        // Handle the specific "Duplicate" error from the backend
+        if (data.message && data.message.includes('unique_delivery_note')) {
+            alert("❌ ERROR: This Delivery Note (DN) already exists. Please check your paperwork.");
+        } else if (data.success) {
+            alert("✅ Product & Batch registered successfully!");
+            location.reload();
+        } else { 
+            alert("Error: " + data.message); 
+        }
+    } catch (err) { 
+        alert("Server connection failed."); 
+    }
+});
+
+   // 2. ADD NEW STOCK BATCH (FIFO RESTOCK)
+    async function updateBatch(id) {
+        // Input elements
+        const qtyInput = document.getElementById(`qty-${id}`);
+        const costInput = document.getElementById(`cost-${id}`);
+        const sellInput = document.getElementById(`standalone-price-${id}`);
+        
+        // 1. GET GLOBAL DN ELEMENT
+        const globalDNInput = document.getElementById('globalDN');
+        
+        const qty = parseInt(qtyInput.value);
+        const cost = parseFloat(costInput.value);
+        const newSell = parseFloat(sellInput.value);
+        
+        const item = allInventoryItems.find(i => i.id === id);
+        const itemName = item ? item.item_name : "Unknown Item";
+
+        if (!qty || !cost || !newSell) {
+            return alert("Please fill in Qty, Buying Cost, and Selling Price.");
+        }
+
+        // Price change confirmation logic
+        if (newSell !== item.price) {
+            const confirmPrice = confirm(`Price Change Detected!\n\nOld Price: KES ${item.price}\nNew Price: KES ${newSell}\n\nDo you want to apply this new price to all sales moving forward?`);
+            if (!confirmPrice) return;
+        }
+
+        // 2. RESOLVE DELIVERY NUMBER (GLOBAL OR PROMPT)
+        let finalDn = "";
+        
+        if (globalDNInput && globalDNInput.value.trim() !== "") {
+            // Use the Global Reference if it's filled
+            finalDn = globalDNInput.value.trim().toUpperCase();
+        } else {
+            // Fallback to prompt if Global is empty
+            const manualPrompt = prompt("Enter Delivery Note / Reference Number:");
+            if (!manualPrompt) return; // User cancelled prompt
+            finalDn = manualPrompt.toUpperCase();
+        }
+
+        const userName = window.EliteAuth?.name || 'Admin';
+
+        try {
+            // Send request to backend
+            const res = await apiFetch(`${API_URL}/inventory/restock-fifo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    inventory_id: id,
+                    batch_qty: qty,
+                    unit_cost: cost,
+                    new_selling_price: newSell,
+                    delivery_number: finalDn,
+                    userName 
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                // Show success slip
+                generateGRNSlip(itemName, qty, finalDn);
+                
+                // Clear the row inputs (but keep Global DN for the next item)
+                qtyInput.value = '';
+                costInput.value = '';
+                
+                // Refresh list in background
+                loadExistingItems(); 
+            } else {
+                alert("Error: " + data.message);
+            }
+        } catch (e) { 
+            console.error("Connection error details:", e);
+            alert("Server error. Check connection."); 
+        }
+    }
+    async function bulkRestock() {
+    const globalDN = document.getElementById('globalDN').value.trim().toUpperCase();
+    if (!globalDN) return alert("Please enter a Global Delivery Note / Reference Number first!");
+
+    const itemsToRestock = [];
+    const userName = window.EliteAuth?.name || 'Admin';
+
+    // Loop through ALL items loaded in memory
+    allInventoryItems.forEach(item => {
+        const qtyInput = document.getElementById(`qty-${item.id}`);
+        const costInput = document.getElementById(`cost-${item.id}`);
+        const sellInput = document.getElementById(`standalone-price-${item.id}`);
+
+        // If the quantity field is filled and greater than 0
+        if (qtyInput && qtyInput.value && parseInt(qtyInput.value) > 0) {
+            itemsToRestock.push({
+                inventory_id: item.id,
+                item_name: item.item_name,
+                batch_qty: parseInt(qtyInput.value),
+                unit_cost: parseFloat(costInput.value) || item.cost_price,
+                new_selling_price: parseFloat(sellInput.value) || item.price,
+                delivery_number: globalDN,
+                userName
+            });
+        }
+    });
+
+    if (itemsToRestock.length === 0) {
+        return alert("No items have quantities filled. Please enter quantities for the items you want to restock.");
+    }
+
+    if (!confirm(`Are you sure you want to restock ${itemsToRestock.length} items using DN: ${globalDN}?`)) return;
+
+    try {
+        const res = await apiFetch(`${API_URL}/inventory/bulk-restock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: itemsToRestock })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(`✅ Successfully restocked ${itemsToRestock.length} items!`);
+            
+            // Clear inputs for the restocked items
+            itemsToRestock.forEach(item => {
+                document.getElementById(`qty-${item.inventory_id}`).value = '';
+                document.getElementById(`cost-${item.inventory_id}`).value = '';
+            });
+
+            loadExistingItems(); // Refresh the list to show new stock totals
+        } else {
+            alert("Error: " + data.message);
+        }
+    } catch (e) {
+        alert("Server error during bulk restock.");
+    }
+}
+// Logic to build the GRN Slip (Shared logic from inventory.html)
+function generateGRNSlip(itemName, qty, dn) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
+    const headerHtml = `
+        <div class="text-center border-b-2 border-black pb-4 mb-4">
+            <h2 class="font-black text-xl uppercase tracking-tighter">GOODS RECEIVED NOTE</h2>
+            <p class="text-[10px] font-bold uppercase tracking-widest">ELITE HARDWARE LTD</p>
+            <p class="text-[8px] text-gray-500 mt-1">KRA PIN: A014661185V</p>
+        </div>
+        <div class="space-y-1 mb-6 text-xs font-bold">
+            <div class="flex justify-between"><span>DATE:</span> <span>${dateStr}</span></div>
+            <div class="flex justify-between"><span>DN REF:</span> <span class="text-blue-600">${dn}</span></div>
+        </div>`;
+
+    const contentHtml = `
+        <table class="w-full text-left text-xs mb-6">
+            <thead>
+                <tr class="border-b border-black">
+                    <th class="py-2">ITEM DESCRIPTION</th>
+                    <th class="text-right py-2">QTY</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="py-4 font-black uppercase text-sm">${itemName}</td>
+                    <td class="py-4 text-right font-black text-xl">${qty}</td>
+                </tr>
+            </tbody>
+        </table>`;
+
+    document.getElementById('receiptDate').innerHTML = headerHtml;
+    document.getElementById('receiptContent').innerHTML = contentHtml;
+    document.getElementById('receiptTotal').innerHTML = `
+        <div class="bg-slate-900 text-white p-4 rounded-xl text-center">
+            <p class="font-black text-[10px] uppercase tracking-widest">Stock Updated Successfully</p>
+        </div>`;
+    
+    document.getElementById('receiptModal').classList.remove('hidden');
+    document.getElementById('modalOverlay').classList.remove('hidden');
+}
+function closeReceipt() {
+    document.getElementById('receiptModal').classList.add('hidden');
+    document.getElementById('modalOverlay').classList.add('hidden');
+}
+//Load all items once on page load, then filter/paginate in-memory for better performance
+
+async function loadExistingItems() {
+    try {
+        const res = await apiFetch(`${API_URL}/inventory`);
+        allInventoryItems = await res.json();
+        // We call render without passing items directly now
+        renderFilteredItems(); 
+    } catch (e) { 
+        console.error("Load failed", e); 
+    }
+}
+
+function renderFilteredItems() {
+    const container = document.getElementById('existingStockList');
+    const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
+    
+    // 1. Filter the full list
+    const filtered = allInventoryItems.filter(item => 
+        item.item_name.toLowerCase().includes(searchTerm)
+    );
+
+    // 2. Calculate Pagination
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+
+    // 3. Slice the data
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    const paginatedItems = filtered.slice(start, end);
+
+    // 4. Update UI Buttons & Text
+    document.getElementById('pageInfo').innerText = `Showing ${totalItems === 0 ? 0 : start + 1} - ${Math.min(end, totalItems)} of ${totalItems}`;
+    document.getElementById('prevBtn').disabled = (currentPage === 1);
+    document.getElementById('nextBtn').disabled = (currentPage === totalPages || totalItems === 0);
+
+    if (paginatedItems.length === 0) {
+        container.innerHTML = `<div class="p-10 text-center text-slate-400 font-bold">No items found.</div>`;
+        return;
+    }
+
+    // 5. Draw the HTML with "Out of Stock" logic
+    container.innerHTML = paginatedItems.map(item => {
+        // CHECK: Is the item out of stock?
+        const isOutOfStock = item.stock_quantity <= 0;
+        
+        // CSS classes based on stock status
+        const cardClass = isOutOfStock ? "bg-red-50/30 border-red-100" : "bg-white border-gray-50";
+        const badgeClass = isOutOfStock ? "bg-red-500 text-white animate-pulse" : "bg-blue-50 text-blue-600 border-blue-100";
+        const priceContainerClass = isOutOfStock 
+            ? "bg-red-100 border-red-300 ring-2 ring-red-500 ring-offset-1" 
+            : "bg-emerald-50 border-emerald-100";
+
+        return `
+            <div class="p-6 border-b ${cardClass} hover:bg-slate-50/50 transition">
+                <div class="flex flex-col gap-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="font-black text-slate-900 uppercase text-sm tracking-tight">${item.item_name}</p>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${badgeClass}">
+                                ${isOutOfStock ? 'OUT OF STOCK' : `Current Stock: ${item.stock_quantity} ${item.unit}`}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 p-2 rounded-xl border ${priceContainerClass}">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-black ${isOutOfStock ? 'text-red-700' : 'text-emerald-600'} uppercase ml-1">
+                                    ${isOutOfStock ? 'Verify Price' : 'Sell Price'}
+                                </span>
+                                <input type="number" id="standalone-price-${item.id}" value="${item.price}" step="any"
+                                    class="w-20 bg-transparent text-sm font-black ${isOutOfStock ? 'text-red-800' : 'text-emerald-700'} outline-none px-1 [appearance:textfield]">
+                            </div>
+                            <button onclick="quickPriceUpdate(${item.id})" 
+                                class="${isOutOfStock ? 'bg-red-600' : 'bg-emerald-600'} text-white px-2 py-2 rounded-lg text-[9px] font-black uppercase shadow-sm">
+                                Update
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 pt-3 border-t border-dashed border-gray-200">
+                        <input type="number" id="qty-${item.id}" placeholder="+ Qty" 
+                            class="w-20 p-2 ${isOutOfStock ? 'bg-white border-red-200 ring-1 ring-red-100' : 'bg-gray-50'} border rounded-lg text-xs font-bold">
+                        
+                        <input type="number" id="cost-${item.id}" placeholder="Cost" 
+                            class="w-20 p-2 ${isOutOfStock ? 'bg-white border-red-200 ring-1 ring-red-100' : 'bg-gray-50'} border rounded-lg text-xs font-bold">
+                        
+                        <button onclick="updateBatch(${item.id})" 
+                            class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase active:scale-95 transition">
+                            Add Batch
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}// Navigation Function
+function changePage(direction) {
+    currentPage += direction;
+    renderFilteredItems();
+    // Scroll back to top of the list
+    document.getElementById('existingStockList').scrollTop = 0;
+}
+
+// SEARCH LISTENER: debounced 150ms — prevents re-render on every keystroke
+let _searchDebounceTimer;
+document.getElementById('stockSearch').addEventListener('input', () => {
+    clearTimeout(_searchDebounceTimer);
+    _searchDebounceTimer = setTimeout(() => {
+        currentPage = 1;
+        renderFilteredItems();
+    }, 150);
+});
+
+loadExistingItems();
+    async function quickPriceUpdate(id) {
+    const newPrice = document.getElementById(`standalone-price-${id}`).value;
+    const userName = window.EliteAuth?.name || 'Admin';
+
+    if(!confirm(`Change selling price to KES ${newPrice}?`)) return location.reload();
+
+    try {
+        const res = await apiFetch(`${API_URL}/inventory/update-price/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPrice, userName })
+        });
+        
+        if ((await res.json()).success) {
+            alert("Price updated successfully!");
+        }
+    } catch (e) { alert("Failed to update price"); }
+}
+
+// ══════════════════════════════════════════════════════
+//  STOCK WRITE-OFF
+// ══════════════════════════════════════════════════════
+let _woItem = null;
+
+async function searchWriteOffItem() {
+    const q = document.getElementById('woSearch').value.trim();
+    if (!q) return;
+    const resultsEl = document.getElementById('woResults');
+    resultsEl.innerHTML = '<p style="font-size:11px;color:var(--muted,#7a8394);padding:4px 0;">Searching...</p>';
+    try {
+        const res  = await apiFetch(API_BASE + '/inventory?search=' + encodeURIComponent(q));
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.items || []);
+        if (!items.length) {
+            resultsEl.innerHTML = '<p style="font-size:11px;color:#ff4d6d;padding:4px 0;">No items found.</p>';
+            return;
+        }
+        resultsEl.innerHTML = items.slice(0, 8).map((item, idx) =>
+            `<div onclick="selectWriteOffItem(${idx})" data-idx="${idx}"
+                style="padding:9px 12px;border-radius:8px;background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.15);margin-bottom:5px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
+                onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <div>
+                    <span style="font-weight:700;font-size:12px;color:var(--text,#d4d4d4);">${item.item_name}</span>
+                    <span style="font-size:10px;color:var(--muted,#7a8394);margin-left:8px;">${item.category || ''}</span>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-size:11px;font-weight:700;color:#00e5a0;">Stock: ${item.stock_quantity}</span>
+                    <span style="font-size:9px;color:var(--muted,#7a8394);margin-left:6px;">@ KES ${parseFloat(item.cost_price||0).toLocaleString()}/unit</span>
+                </div>
+            </div>`
+        ).join('');
+        // Store items for selection
+        window._woSearchResults = items;
+    } catch(e) {
+        resultsEl.innerHTML = '<p style="font-size:11px;color:#ff4d6d;">Search failed. Please try again.</p>';
+    }
+}
+
+function selectWriteOffItem(idx) {
+    const item = window._woSearchResults[idx];
+    if (!item) return;
+    _woItem = item;
+
+    document.getElementById('woResults').innerHTML = '';
+    document.getElementById('woSearch').value = item.item_name;
+
+    // Show selected card
+    const card = document.getElementById('woSelectedCard');
+    card.style.display = 'block';
+    document.getElementById('woItemName').textContent = item.item_name;
+    document.getElementById('woItemStock').textContent =
+        `Current stock: ${item.stock_quantity} ${item.unit || 'units'} · Cost: KES ${parseFloat(item.cost_price||0).toLocaleString()} per unit`;
+
+    // KRA status badge
+    const kraEl = document.getElementById('woKraStatus');
+    if (item.kra_registered) {
+        kraEl.textContent = '✓ KRA Registered';
+        kraEl.style.cssText = 'font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(0,229,160,0.1);color:#00e5a0;';
+    } else {
+        kraEl.textContent = '⚠ Not in KRA';
+        kraEl.style.cssText = 'font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(245,158,11,0.1);color:#f59e0b;';
+    }
+
+    // Wire up cost preview
+    document.getElementById('woQty').oninput = updateWoCostPreview;
+    updateWoCostPreview();
+}
+
+function updateWoCostPreview() {
+    if (!_woItem) return;
+    const qty      = parseFloat(document.getElementById('woQty').value) || 0;
+    const unitCost = parseFloat(_woItem.cost_price) || 0;
+    const total    = qty * unitCost;
+    const preview  = document.getElementById('woCostPreview');
+    const amtEl    = document.getElementById('woCostAmt');
+    preview.style.display = qty > 0 ? 'flex' : 'none';
+    amtEl.textContent = 'KES ' + total.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function submitWriteOff() {
+    const btn    = document.getElementById('woSubmitBtn');
+    const errEl  = document.getElementById('woError');
+    const succEl = document.getElementById('woSuccess');
+    if (btn.disabled) return;
+    errEl.style.display  = 'none';
+    succEl.style.display = 'none';
+
+    if (!_woItem)  { errEl.textContent = 'Please search and select an item first.'; errEl.style.display = 'block'; return; }
+    const qty    = parseFloat(document.getElementById('woQty').value) || 0;
+    const reason = document.getElementById('woReason').value;
+    if (qty <= 0)    { errEl.textContent = 'Enter a quantity greater than 0.'; errEl.style.display = 'block'; return; }
+    if (!reason)     { errEl.textContent = 'Please select a reason.'; errEl.style.display = 'block'; return; }
+    if (qty > parseInt(_woItem.stock_quantity)) {
+        errEl.textContent = `Cannot write off ${qty} — only ${_woItem.stock_quantity} in stock.`;
+        errEl.style.display = 'block'; return;
+    }
+
+    if (!confirm(`Write off ${qty} × "${_woItem.item_name}"?\n\nThis will:\n• Reduce stock by ${qty}\n• Record KES ${(qty * parseFloat(_woItem.cost_price||0)).toLocaleString()} as an expense\n• Notify KRA\n\nThis cannot be undone.`)) return;
+
+    btn.textContent = 'Processing…'; btn.disabled = true;
+    try {
+        const res  = await apiFetch(API_BASE + '/inventory/' + _woItem.id + '/write-off', {
+            method: 'POST',
+            body:   JSON.stringify({
+                qty,
+                reason,
+                reason_detail:     document.getElementById('woDetail').value.trim() || null,
+                expense_category:  'Stock Write-offs'
+            })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { errEl.textContent = data.message || 'Failed.'; errEl.style.display = 'block'; return; }
+
+        // Success — reset form
+        succEl.textContent = data.message;
+        succEl.style.display = 'block';
+        document.getElementById('woQty').value    = '';
+        document.getElementById('woReason').value = '';
+        document.getElementById('woDetail').value = '';
+        document.getElementById('woSearch').value = '';
+        document.getElementById('woSelectedCard').style.display = 'none';
+        document.getElementById('woCostPreview').style.display  = 'none';
+        _woItem = null;
+        window._woSearchResults = [];
+
+        // Update the item's stock in results if visible
+        setTimeout(() => { succEl.style.display = 'none'; }, 6000);
+    } catch(e) {
+        errEl.textContent = 'Server error. Please try again.';
+        errEl.style.display = 'block';
+    } finally {
+        btn.textContent = 'Process Write-off'; btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>

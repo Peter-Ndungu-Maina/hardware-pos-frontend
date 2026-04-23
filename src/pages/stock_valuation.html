@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin"></script>
+    <script src="/src/pages/sidebar.js" data-active="stock_valuation.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock Valuation Report | Elite Hardware</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+   
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+
+    <!-- MAIN -->
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+
+        <!-- Mobile top-bar spacer — pushes content below the fixed mobile menu -->
+        <div class="block md:hidden" style="height:56px;"></div>
+
+        <div class="max-w-7xl mx-auto">
+
+        <!-- PAGE HEADER -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 no-print gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">Stock Valuation Report</h1>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Current inventory value at cost price & retail price</p>
+            </div>
+            <button onclick="generatePDF()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-slate-800 transition no-print">
+                📄 Export PDF
+            </button>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 no-print">
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Category</label>
+                <select id="filterCategory" onchange="applyFilters()" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700">
+                    <option value="all">All Categories</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Stock Status</label>
+                <select id="filterStatus" onchange="applyFilters()" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700">
+                    <option value="all">All Items</option>
+                    <option value="instock">In Stock</option>
+                    <option value="low">Low Stock (&lt;10)</option>
+                    <option value="out">Out of Stock</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Search</label>
+                <input type="text" id="filterSearch" onkeyup="applyFilters()" placeholder="Search product name..." class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+        </div>
+
+        <!-- PDF AREA -->
+        <div id="pdf-area">
+
+            <div id="pdf-header" class="hidden text-center pb-6 border-b-2 border-slate-100 mb-6">
+                <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Elite Hardware — Stock Valuation Report</h2>
+                <p class="text-xs font-bold text-slate-400 mt-1" id="genDateLabel"></p>
+            </div>
+
+            <!-- SUMMARY CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <!-- Cost Value — teal/cyan -->
+                <div style="background:linear-gradient(135deg,#0d9488,#0891b2);padding:20px;border-radius:20px;box-shadow:0 4px 20px rgba(8,145,178,0.35);">
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:6px;">Total Stock Value (Cost)</p>
+                    <h2 id="statCostValue" style="font-size:20px;font-weight:900;color:#fff;font-family:'Space Mono',monospace;line-height:1.1;">KES 0</h2>
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:6px;">What you paid</p>
+                </div>
+                <!-- Retail Value — indigo/blue -->
+                <div style="background:linear-gradient(135deg,#4f46e5,#2563eb);padding:20px;border-radius:20px;box-shadow:0 4px 20px rgba(79,70,229,0.35);">
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:6px;">Total Stock Value (Retail)</p>
+                    <h2 id="statRetailValue" style="font-size:20px;font-weight:900;color:#fff;font-family:'Space Mono',monospace;line-height:1.1;">KES 0</h2>
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:6px;">What it sells for</p>
+                </div>
+                <!-- Potential Profit — violet/purple -->
+                <div style="background:linear-gradient(135deg,#7c3aed,#a21caf);padding:20px;border-radius:20px;box-shadow:0 4px 20px rgba(124,58,237,0.35);">
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:6px;">Potential Gross Profit</p>
+                    <h2 id="statPotentialProfit" style="font-size:20px;font-weight:900;color:#fff;font-family:'Space Mono',monospace;line-height:1.1;">KES 0</h2>
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:6px;">If all stock sells</p>
+                </div>
+                <!-- SKUs — amber/orange -->
+                <div style="background:linear-gradient(135deg,#d97706,#ea580c);padding:20px;border-radius:20px;box-shadow:0 4px 20px rgba(217,119,6,0.35);">
+                    <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,0.7);margin-bottom:6px;">Total SKUs</p>
+                    <h2 id="statSKUs" style="font-size:20px;font-weight:900;color:#fff;font-family:'Space Mono',monospace;line-height:1.1;">0</h2>
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;color:rgba(255,255,255,0.6);margin-top:6px;">Unique products</p>
+                </div>
+            </div>
+
+            <!-- CATEGORY BREAKDOWN -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 mb-8 no-print" id="categoryBreakdown">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Value by Category</p>
+                <div id="categoryBars" class="space-y-3"></div>
+            </div>
+
+            <!-- VALUATION TABLE -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Item-by-Item Valuation</h3>
+                    <span id="tableCount" class="text-[10px] font-black text-slate-400 uppercase">0 items</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                <th class="p-4">#</th>
+                                <th class="p-4">Product</th>
+                                <th class="p-4">Category</th>
+                                <th class="p-4">Unit</th>
+                                <th class="p-4">Qty on Hand</th>
+                                <th class="p-4">Cost Price</th>
+                                <th class="p-4">Selling Price</th>
+                                <th class="p-4 text-emerald-600">Cost Value</th>
+                                <th class="p-4 text-blue-600">Retail Value</th>
+                                <th class="p-4 text-purple-600">Potential Profit</th>
+                                <th class="p-4">Stock Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="valuationBody" class="text-sm divide-y divide-slate-100">
+                            <tr><td colspan="11" class="p-20 text-center text-slate-400 italic">Loading stock valuation...</td></tr>
+                        </tbody>
+                    </table>
+                <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(255,255,255,0.09);background:var(--surface,#252537);border-radius:0 0 12px 12px;">
+                    <span id="lbl_sv" style="font-size:10px;font-weight:700;color:#7a8394;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;"></span>
+                    <div style="display:flex;gap:8px;">
+                        <button id="prev_sv" onclick="pg_sv(-1)" style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>← Prev</button>
+                        <button id="next_sv" onclick="pg_sv(1)"  style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>Next →</button>
+                    </div>
+                </div>
+                </div>
+
+                <!-- GRAND TOTAL ROW -->
+                <div class="p-5 border-t-2 border-slate-200 bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-4" id="grandTotalRow">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Grand Total (Cost)</p>
+                        <p id="grandCost" class="text-lg font-black text-emerald-600">KES 0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Grand Total (Retail)</p>
+                        <p id="grandRetail" class="text-lg font-black text-blue-600">KES 0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase">Potential Gross Profit</p>
+                        <p id="grandProfit" class="text-lg font-black text-purple-600">KES 0</p>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- end pdf-area -->
+
+        </div><!-- end max-w-7xl wrapper -->
+    </main>
+</div>
+
+<script>
+
+    // XSS guard — wrap all server-sourced strings before innerHTML insertion
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+    }
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+let allValuation = [];
+
+async function fetchValuation() {
+        const body = document.getElementById('valuationBody');
+        body.innerHTML = `<tr><td colspan="11" class="p-20 text-center text-slate-400 italic">Loading...</td></tr>`;
+        try {
+            const res  = await apiFetch(`${API_URL}/reports/stock-valuation`);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Server error');
+            allValuation = data;
+
+            // Populate category filter
+            const cats = [...new Set(data.map(d => d.category).filter(Boolean))].sort();
+            const sel  = document.getElementById('filterCategory');
+            sel.innerHTML = '<option value="all">All Categories</option>' +
+                cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+            renderTable(allValuation);
+        } catch (err) {
+            console.error('Operation failed');
+            body.innerHTML = `<tr><td colspan="11" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`;
+        }
+    }
+
+    function renderTable(data) { _pg_sv_set(data); }
+    function _sv_renderRows(data) {
+        const body = document.getElementById('valuationBody');
+        // tableCount shows total filtered items, not just current page slice
+        document.getElementById('tableCount').innerText = `${_pg_sv_all.length} item${_pg_sv_all.length !== 1 ? 's' : ''}`;
+        document.getElementById('genDateLabel').innerText = `Generated: ${new Date().toLocaleString()}`;
+
+        if (!data.length) {
+            body.innerHTML = `<tr><td colspan="11" class="p-20 text-center text-slate-400 italic">No inventory data found.</td></tr>`;
+            updateSummary(0, 0, 0, 0);
+            return;
+        }
+
+        body.innerHTML = data.map((item, i) => {
+            // parseFloat guards against server returning strings or null
+            const costVal   = parseFloat(item.cost_value)   || 0;
+            const retailVal = parseFloat(item.retail_value) || 0;
+            const potProfit = retailVal - costVal;
+
+            const qty = parseFloat(item.stock_quantity) || 0;
+            let statusHtml;
+            if (qty <= 0)       statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-red-100 text-red-700 uppercase">Out of Stock</span>`;
+            else if (qty < 10)  statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-orange-100 text-orange-700 uppercase">Low</span>`;
+            else                statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase">Good</span>`;
+
+            const profitColor = potProfit > 0 ? 'text-purple-600' : 'text-red-500';
+
+            return `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 text-slate-400 font-bold text-xs">${i + 1}</td>
+                <td class="p-4 font-black text-slate-800 text-xs uppercase">${esc(item.item_name)}</td>
+                <td class="p-4 text-slate-500 font-bold text-xs">${esc(item.category)}</td>
+                <td class="p-4 text-slate-400 font-bold text-xs">${esc(item.unit)}</td>
+                <td class="p-4 font-black text-slate-700 text-base">${qty.toLocaleString()}</td>
+                <td class="p-4 text-slate-600 font-bold">KES ${parseFloat(item.cost_price).toLocaleString()}</td>
+                <td class="p-4 text-slate-600 font-bold">KES ${parseFloat(item.selling_price).toLocaleString()}</td>
+                <td class="p-4 font-black text-emerald-600">KES ${costVal.toLocaleString()}</td>
+                <td class="p-4 font-black text-blue-600">KES ${retailVal.toLocaleString()}</td>
+                <td class="p-4 font-black ${profitColor}">KES ${potProfit.toLocaleString()}</td>
+                <td class="p-4">${statusHtml}</td>
+            </tr>`;
+        }).join('');
+
+        // Totals calculated from full dataset in _pg_sv_draw()
+
+        // Grand total footer
+        // Grand totals updated from full dataset in _pg_sv_draw()
+    }
+
+    function renderCategoryBars(catMap, grandTotal) {
+        const container = document.getElementById('categoryBars');
+        const sorted = Object.entries(catMap).sort((a, b) => b[1].retail - a[1].retail);
+        container.innerHTML = sorted.map(([cat, vals]) => {
+            const pct = grandTotal > 0 ? Math.round((vals.retail / grandTotal) * 100) : 0;
+            return `
+            <div>
+                <div class="flex justify-between text-xs font-black text-slate-600 mb-1">
+                    <span class="uppercase">${esc(cat)}</span>
+                    <span class="text-slate-400">KES ${vals.retail.toLocaleString()} (${pct}%)</span>
+                </div>
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                    <div class="bg-slate-800 h-2 rounded-full transition-all" style="width:${pct}%"></div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function updateSummary(skus, costVal, retailVal, potProfit) {
+        document.getElementById('statSKUs').innerText           = skus;
+        document.getElementById('statCostValue').innerText      = `KES ${costVal.toLocaleString()}`;
+        document.getElementById('statRetailValue').innerText    = `KES ${retailVal.toLocaleString()}`;
+        document.getElementById('statPotentialProfit').innerText = `KES ${potProfit.toLocaleString()}`;
+    }
+
+    function applyFilters() {
+        const cat    = document.getElementById('filterCategory').value;
+        const status = document.getElementById('filterStatus').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+        const filtered = allValuation.filter(item => {
+            if (cat !== 'all' && item.category !== cat) return false;
+            if (status === 'out'     && item.stock_quantity > 0)   return false;
+            if (status === 'low'     && (item.stock_quantity <= 0 || item.stock_quantity >= 10)) return false;
+            if (status === 'instock' && item.stock_quantity <= 0)  return false;
+            if (search && !item.item_name.toLowerCase().includes(search)) return false;
+            return true;
+        });
+        renderTable(filtered);
+    }
+
+    function generatePDF() {
+        const el     = document.getElementById('pdf-area');
+        const header = document.getElementById('pdf-header');
+        // Hide category bars in PDF (it's a visual chart)
+        document.getElementById('categoryBreakdown').classList.add('hidden');
+        header.classList.remove('hidden');
+        html2pdf().set({
+            margin: 0.3,
+            filename: `Elite_Stock_Valuation_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+        }).from(el).save().then(() => {
+            header.classList.add('hidden');
+            document.getElementById('categoryBreakdown').classList.remove('hidden');
+        });
+    }
+
+    document.addEventListener('eliteAuthReady', fetchValuation);
+
+// ── Pagination [sv] ────────────────────────────────────────
+let _pg_sv_all  = [];
+let _pg_sv_page = 1;
+function _pg_sv_set(data) {
+    _pg_sv_all  = data;
+    _pg_sv_page = 1;
+    _pg_sv_draw();
+}
+function _pg_sv_draw() {
+    const total = _pg_sv_all.length;
+    const pages = Math.ceil(total / 10) || 1;
+    const slice = _pg_sv_all.slice((_pg_sv_page-1)*10, _pg_sv_page*10);
+
+    // ── Calculate totals from FULL dataset, not just current page ──
+    // Uses cost_value and retail_value — pre-computed by the server (qty × price)
+    let allCost = 0, allRetail = 0, catMapAll = {};
+    _pg_sv_all.forEach(function(item) {
+        const cv  = parseFloat(item.cost_value)   || 0;
+        const rv  = parseFloat(item.retail_value) || 0;
+        const qty = parseFloat(item.stock_quantity) || 0;
+        allCost   += cv;
+        allRetail += rv;
+        const cat = item.category || 'Uncategorised';
+        if (!catMapAll[cat]) catMapAll[cat] = { cost: 0, retail: 0, qty: 0 };
+        catMapAll[cat].cost   += cv;
+        catMapAll[cat].retail += rv;
+        catMapAll[cat].qty    += qty;
+    });
+    const allProfit = allRetail - allCost;
+    updateSummary(_pg_sv_all.length, allCost, allRetail, allProfit);
+    renderCategoryBars(catMapAll, allRetail);
+    document.getElementById('grandCost').innerText   = 'KES ' + allCost.toLocaleString(undefined, {maximumFractionDigits:2});
+    document.getElementById('grandRetail').innerText = 'KES ' + allRetail.toLocaleString(undefined, {maximumFractionDigits:2});
+    document.getElementById('grandProfit').innerText = 'KES ' + allProfit.toLocaleString(undefined, {maximumFractionDigits:2});
+    const lbl   = document.getElementById('lbl_sv');
+    const prev  = document.getElementById('prev_sv');
+    const nxt   = document.getElementById('next_sv');
+    if(lbl)  lbl.textContent  = 'Page '+_pg_sv_page+' of '+pages+' — '+total+' record(s)';
+    if(prev) prev.disabled    = _pg_sv_page <= 1;
+    if(nxt)  nxt.disabled     = _pg_sv_page >= pages;
+    _sv_renderRows(slice);
+}
+function pg_sv(dir) {
+    const pages = Math.ceil(_pg_sv_all.length / 10) || 1;
+    _pg_sv_page = Math.max(1, Math.min(pages, _pg_sv_page + dir));
+    _pg_sv_draw();
+}
+
+</script>
+</body>
+</html>

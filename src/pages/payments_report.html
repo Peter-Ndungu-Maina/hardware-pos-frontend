@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager,cashier"></script>
+    <script src="/src/pages/sidebar.js" data-active="payments_report.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Payment Intelligence | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
+</head>
+<body class="antialiased">
+
+   <div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+            
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 no-print gap-4">
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight">Cash Flow Audit</h1>
+                    <p id="accessLevelLabel" class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Verifying Access...</p>
+                </div>
+<div class="flex gap-2 no-print">
+    <button onclick="generatePDF()" class="bg-red-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-red-700 transition">
+        📄 Export PDF
+    </button>
+    <button onclick="exportCSV()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-emerald-700 transition">
+        ⬇ Export CSV
+    </button>
+</div>
+            </div>
+
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8 no-print items-end">
+                <div>
+                    <label for="dateFilter" class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Daily View</label>
+                    <input type="date" id="dateFilter" onchange="fetchPayments('day')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Monthly View</label>
+                    <input type="month" id="monthFilter" onchange="fetchPayments('month')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Annual View</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="annualFilter" placeholder="YYYY" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchPayments('annual')" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-2 xl:col-span-2">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Date Range</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="rangeFrom" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <span class="text-slate-400 text-[10px] font-black">TO</span>
+                        <input type="date" id="rangeTo" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="fetchPayments('range')" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2 lg:col-span-2 xl:col-span-4">
+                    <label for="methodFilter" class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Payment Method</label>
+                    <select id="methodFilter" onchange="fetchPayments('method')" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <option value="">All Methods</option>
+                        <option value="Cash">Cash Only</option>
+                        <option value="M-Pesa">M-Pesa Only</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end lg:col-span-1 xl:col-span-1">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition">Reset</button>
+                </div>
+            </div>
+
+            <div id="pdf-area">
+                <div id="pdf-header" class="hidden text-center pb-6 border-b-2 border-slate-100 mb-6">
+                    <h2 class="text-2xl font-black text-slate-900 uppercase">Elite Hardware - Payment Audit Trail</h2>
+                    <p class="text-xs font-bold text-slate-400" id="genDateLabel"></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-slate-800 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Collected</p>
+                        <h2 id="totalCollected" class="text-2xl font-black text-slate-800">Ksh 0</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-blue-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">M-Pesa Banked</p>
+                        <h2 id="totalMpesa" class="text-2xl font-black text-blue-600">Ksh 0</h2>
+                    </div>
+                    <div class="bg-white p-6 rounded-3xl border-t-4 border-emerald-500 shadow-sm">
+                        <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Physical Cash</p>
+                        <h2 id="totalCash" class="text-2xl font-black text-emerald-600">Ksh 0</h2>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-auto">
+                    <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
+                        <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Transaction Logs</h3>
+                        <span id="currentDate" class="text-[10px] font-bold text-slate-400 uppercase"></span>
+                    </div>
+                    <table class="w-full text-left" id="paymentTable">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                <th class="p-4">Date/Time</th>
+                                <th class="p-4">Customer & Item</th>
+                                <th class="p-4">Method</th>
+                                <th class="p-4">Reference</th>
+                                <th class="p-4">Served By</th>
+                                <th class="p-4 text-right">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentTableBody" class="text-sm divide-y divide-slate-100">
+                            <tr><td colspan="6" class="p-20 text-center text-slate-400 font-medium italic">Synchronizing audit data...</td></tr>
+                        </tbody>
+                    </table>
+                <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(255,255,255,0.09);background:var(--surface,#252537);border-radius:0 0 12px 12px;">
+                    <span id="lbl_pr" style="font-size:10px;font-weight:700;color:#7a8394;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;"></span>
+                    <div style="display:flex;gap:8px;">
+                        <button id="prev_pr" onclick="pg_pr(-1)" style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>← Prev</button>
+                        <button id="next_pr" onclick="pg_pr(1)"  style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>Next →</button>
+                    </div>
+                </div>
+                </div>
+
+                <div class="mt-8 text-center hidden show-on-print">
+                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest">Elite Hardware Intelligence - Official Auditor Report</p>
+                    <p class="text-[9px] text-slate-400 mt-1">KRA PIN: A014661185V &nbsp;|&nbsp; eTIMS Compliant</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+
+async function fetchPayments(type) {
+            const dateInput   = document.getElementById('dateFilter');
+            const monthInput  = document.getElementById('monthFilter');
+            const annualInput = document.getElementById('annualFilter');
+            const rangeFrom   = document.getElementById('rangeFrom');
+            const rangeTo     = document.getElementById('rangeTo');
+            const methodVal   = document.getElementById('methodFilter').value;
+
+            if (type === 'day')    { monthInput.value = ''; annualInput.value = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+            if (type === 'month')  { dateInput.value  = ''; annualInput.value = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+            if (type === 'annual') { dateInput.value  = ''; monthInput.value  = ''; rangeFrom.value = ''; rangeTo.value = ''; }
+            if (type === 'range')  { dateInput.value  = ''; monthInput.value  = ''; annualInput.value = ''; }
+
+            let params = new URLSearchParams();
+            if (type === 'annual') {
+                const year = annualInput.value;
+                if (!year) return alert('Please enter a year.');
+                params.append('year', year);
+            } else if (type === 'range') {
+                const from = rangeFrom.value, to = rangeTo.value;
+                if (!from || !to) return alert('Please select both From and To dates.');
+                params.append('from', from);
+                params.append('to', to);
+            } else if (dateInput.value) {
+                params.append('date', dateInput.value);
+            } else if (monthInput.value) {
+                const [year, month] = monthInput.value.split('-');
+                params.append('month', month);
+                params.append('year', year);
+            }
+            if (methodVal) params.append('method', methodVal);
+
+            try {
+                const res = await apiFetch(`${API_BASE}/reports/payments?${params.toString()}`);
+                const data = await res.json();
+                
+              // ── GROUP MULTI-ITEM CARTS INTO SINGLE ROWS ──────────────────
+                const groupedPayments = [];
+                const seenTx = new Map();
+
+                data.forEach(p => {
+                    const baseCode = p.mpesa_code ? p.mpesa_code.split('-')[0] : 'CASH';
+                    const customer = p.Sales?.customer_name || p.customer_name || 'Walk-in';
+
+                    const key = p.tx_ref
+                        ? String(p.tx_ref)
+                        : `FB_${p.created_at.substring(0, 16)}_${customer}_${baseCode}`;
+
+                    const amt = parseFloat(p.amount) || 0;
+                    const isMpesa = p.payment_method === 'M-Pesa';
+
+                    if (seenTx.has(key)) {
+                        const tx = groupedPayments[seenTx.get(key)];
+                        tx.amount += amt;
+                        // Accumulate exact splits for the KPI cards
+                        if (isMpesa) tx._mpesa_amount += amt; else tx._cash_amount += amt;
+                        
+                        const itemName = p.Sales?.item_name || p.item_name;
+                        if (itemName && !tx._items.includes(itemName)) {
+                            tx._items.push(itemName);
+                        }
+                        // Accumulate unique methods
+                        if (p.payment_method && !tx._methods.includes(p.payment_method)) {
+                            tx._methods.push(p.payment_method);
+                        }
+                        // Accumulate unique M-Pesa codes
+                        if (p.mpesa_code) {
+                            const bCode = p.mpesa_code.split('-')[0];
+                            if (!tx._mpesa_codes.includes(bCode)) tx._mpesa_codes.push(bCode);
+                        }
+                    } else {
+                        const tx = { ...p, _items: [], _methods: [], _mpesa_codes: [], _mpesa_amount: 0, _cash_amount: 0 };
+                        tx.amount = amt;
+                        if (isMpesa) tx._mpesa_amount += amt; else tx._cash_amount += amt;
+                        
+                        const firstItem = p.Sales?.item_name || p.item_name;
+                        if (firstItem) tx._items.push(firstItem);
+                        if (p.payment_method) tx._methods.push(p.payment_method);
+                        if (p.mpesa_code) tx._mpesa_codes.push(p.mpesa_code.split('-')[0]);
+                        
+                        seenTx.set(key, groupedPayments.length);
+                        groupedPayments.push(tx);
+                    }
+                });
+
+                // Format display and CSV fields on each grouped transaction
+                groupedPayments.forEach(tx => {
+                    if (tx._items.length > 0) {
+                        tx.item_name_display = tx._items.length === 1
+                            ? tx._items[0]
+                            : `${tx._items[0]} +${tx._items.length - 1} more`;
+                        tx.item_name_csv     = tx._items.join(' | ');
+                    } else {
+                        tx.item_name_display = tx.sale_id
+                            ? ''
+                            : '<span class="text-orange-500 italic">[Debt Repayment]</span>';
+                        tx.item_name_csv = tx.sale_id ? '' : 'Debt Repayment';
+                    }
+                    // Join multiple M-Pesa codes into one string (e.g. "CKE123, CKF456")
+                    tx.mpesa_code_display = tx._mpesa_codes.length > 0 ? tx._mpesa_codes.join(', ') : '—';
+                    tx.payment_method_csv = tx._methods.join(' + ');
+                    tx.tx_ref_display     = tx.tx_ref || '—';
+                });
+
+                renderPayments(groupedPayments);
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                document.getElementById('paymentTableBody').innerHTML = `<tr><td colspan="6" class="p-10 text-center text-red-500 font-bold">Network Error.</td></tr>`;
+            }
+        }
+
+      function renderPayments(payments) { _pg_pr_set(payments); }
+
+        function _pr_renderRows(payments) {
+            const body = document.getElementById('paymentTableBody');
+
+            if (!payments || payments.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="p-20 text-center text-slate-400 font-medium italic">No transactions found.</td></tr>`;
+                resetCounters();
+                return;
+            }
+
+            body.innerHTML = payments.map(p => {
+                const amt = parseFloat(p.amount) || 0;
+
+                const dateObj = new Date(p.created_at);
+                const date = dateObj.toLocaleDateString();
+                const time = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+               // Logic to handle Joined Sales data or fallback to direct payment data
+                const customer = p.Sales?.customer_name || p.customer_name || 'Walk-in';
+                const item = p.item_name_display;
+
+                // item count badge for multi-item carts
+                const itemCount = p._items?.length || 0;
+                const itemCountBadge = itemCount > 1
+                    ? `<span class="ml-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] font-black">${itemCount} items</span>`
+                    : '';
+
+                // NEW: Generate multiple badges if the transaction was split
+                const methodsArr = p._methods && p._methods.length > 0 ? p._methods : [p.payment_method || 'Cash'];
+                const methodsHTML = methodsArr.map(m => {
+                    const isMpesa = m === 'M-Pesa';
+                    return `<span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ${isMpesa ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}">${m}</span>`;
+                }).join(' ');
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 text-slate-500" data-label="Date/Time">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-slate-700">${date}</span>
+                                <span class="text-[10px] uppercase font-bold text-slate-400">${time}</span>
+                            </div>
+                        </td>
+                        <td class="p-4" data-label="Customer & Item">
+                            <div class="font-black text-slate-800 uppercase text-xs">${customer}</div>
+                            <div class="text-[10px] text-slate-400 font-bold">${item}${itemCountBadge}</div>
+                        </td>
+                        <td class="p-4" data-label="Method">
+                            <div class="flex flex-wrap gap-1">${methodsHTML}</div>
+                        </td>
+                        <td class="p-4 font-mono text-xs text-blue-600 font-bold" data-label="Reference">
+                            <div style="word-break:break-all;">${p.mpesa_code_display || '—'}</div>
+                            <div class="text-[9px] text-slate-400 mt-0.5">${p.tx_ref_display || '—'}</div>
+                        </td>
+                        <td class="p-4 text-slate-400 font-bold text-[10px] uppercase" data-label="Staff">${p.received_by || 'Admin'}</td>
+                        <td class="p-4 text-right font-black text-slate-900" data-label="Amount">Ksh ${amt.toLocaleString()}</td>
+                    </tr>
+                `;
+            }).join('');
+        
+            document.getElementById('currentDate').innerText = `Last Updated: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('genDateLabel').innerText = `Report Timestamp: ${new Date().toLocaleString()}`;
+        }
+
+        function resetCounters() {
+            document.getElementById('totalCollected').innerText = 'Ksh 0';
+            document.getElementById('totalMpesa').innerText = 'Ksh 0';
+            document.getElementById('totalCash').innerText = 'Ksh 0';
+        }
+
+        function clearFilters() {
+            document.getElementById('dateFilter').value   = '';
+            document.getElementById('monthFilter').value  = '';
+            document.getElementById('annualFilter').value = '';
+            document.getElementById('rangeFrom').value    = '';
+            document.getElementById('rangeTo').value      = '';
+            document.getElementById('methodFilter').value = '';
+            fetchPayments();
+        }
+
+        function generatePDF() {
+            const element = document.getElementById('pdf-area');
+            const header = document.getElementById('pdf-header');
+            header.classList.remove('hidden');
+            const opt = {
+                margin: 0.3,
+                filename: `Payment_Audit_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save().then(() => header.classList.add('hidden'));
+        }
+       function exportCSV() {
+            if (typeof _pg_pr_all === 'undefined' || !_pg_pr_all.length) return alert('No data to export.');
+            let csv = 'Date/Time,Customer,Items,Item Count,Method,M-Pesa Code,Receipt/Invoice No,Served By,Amount (KES)\n';
+            _pg_pr_all.forEach(p => {
+                const date     = new Date(p.created_at).toLocaleString('en-KE');
+                const customer = p.Sales?.customer_name || p.customer_name || 'Walk-in';
+                const items    = (p.item_name_csv   || '').replace(/"/g, '""');
+                const count    = p._items?.length   || 1;
+                const method   = p.payment_method_csv || p.payment_method || '';
+                const mpesa    = p.mpesa_code_display || '';
+                const txRef    = p.tx_ref_display   || '';
+                const staff    = p.received_by      || 'Admin';
+                const amt      = parseFloat(p.amount) || 0;
+                csv += `"${date}","${customer.replace(/"/g,'""')}","${items}","${count}","${method}","${mpesa}","${txRef}","${staff}","${amt}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `Payment_Audit_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+    }
+
+window.addEventListener('load', () => {
+    const userRole = window.EliteAuth?.role?.toLowerCase();
+    const userName = window.EliteAuth?.name || localStorage.getItem('userName') || '';
+    const isCashier = userRole === 'cashier';
+
+    if (!['admin', 'manager', 'cashier'].includes(userRole)) {
+        alert('Access denied.');
+        window.location.replace('/');
+        return;
+    }
+
+    // Show banner so cashier knows they only see their own payments
+    if (isCashier) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:rgba(86,156,214,0.12);border:1px solid rgba(86,156,214,0.3);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:11px;font-weight:700;color:#569cd6;';
+        banner.textContent = `🔒 Showing your payments only — ${userName}`;
+        const main = document.querySelector('main') || document.body;
+        main.insertBefore(banner, main.firstChild);
+    }
+
+    document.getElementById('accessLevelLabel').innerText = (isCashier ? 'MY PAYMENTS — ' : '') + userRole.toUpperCase();
+    fetchPayments();
+});
+    
+// ── Pagination [pr] ────────────────────────────────────────
+let _pg_pr_all  = [];
+let _pg_pr_page = 1;
+function _pg_pr_set(data) {
+    _pg_pr_all  = data;
+    _pg_pr_page = 1;
+    _pg_pr_draw();
+}
+function _pg_pr_draw() {
+    const total = _pg_pr_all.length;
+    const pages = Math.ceil(total / 10) || 1;
+
+    // Calculate totals utilizing the exact internal split amounts
+    let grandTotal = 0, grandMpesa = 0, grandCash = 0;
+    _pg_pr_all.forEach(p => {
+        grandTotal += (parseFloat(p.amount) || 0);
+        grandMpesa += (parseFloat(p._mpesa_amount) || 0);
+        grandCash  += (parseFloat(p._cash_amount) || 0);
+    });
+    
+    document.getElementById('totalCollected').innerText = `Ksh ${grandTotal.toLocaleString()}`;
+    document.getElementById('totalMpesa').innerText     = `Ksh ${grandMpesa.toLocaleString()}`;
+    document.getElementById('totalCash').innerText      = `Ksh ${grandCash.toLocaleString()}`;
+
+    const lbl  = document.getElementById('pg_pr_lbl');
+    const prev = document.getElementById('prev_pr');
+    const nxt  = document.getElementById('next_pr');
+    if (lbl)  lbl.textContent  = 'Page ' + _pg_pr_page + ' of ' + pages + ' — ' + total + ' record(s)';
+    if (prev) prev.disabled    = _pg_pr_page <= 1;
+    if (nxt)  nxt.disabled     = _pg_pr_page >= pages;
+
+    const slice = _pg_pr_all.slice((_pg_pr_page - 1) * 10, _pg_pr_page * 10);
+    _pr_renderRows(slice);
+}
+function pg_pr(dir) {
+    const pages = Math.ceil(_pg_pr_all.length / 10) || 1;
+    _pg_pr_page = Math.max(1, Math.min(pages, _pg_pr_page + dir));
+    _pg_pr_draw();
+}
+
+</script>
+</body>
+</html>

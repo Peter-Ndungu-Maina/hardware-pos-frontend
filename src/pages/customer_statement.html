@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="customer_statement.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Customer Statements | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="antialiased">
+
+<style>
+    /* ── Page-level tokens matching the rest of the POS ─────── */
+    :root {
+        --green: #00e5a0;
+        --green-dim: rgba(0,229,160,0.10);
+        --red: #ff4d6d;
+        --blue: #3b82f6;
+        --surface: #111827;
+        --surface2: #1a2236;
+        --border: rgba(255,255,255,0.07);
+        --text: #f1f5f9;
+        --muted: #64748b;
+        --mono: 'Space Mono', monospace;
+    }
+    .cs-label {
+        display: block;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-bottom: 7px;
+    }
+    .cs-input {
+        width: 100%;
+        padding: 11px 14px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 700;
+        outline: none;
+        transition: border-color 0.15s;
+        box-sizing: border-box;
+        font-family: 'DM Sans', sans-serif;
+    }
+    .cs-input:focus { border-color: var(--green); }
+    .cs-input::placeholder { color: var(--muted); font-weight: 400; }
+    /* date inputs — force light text on dark bg */
+    .cs-input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.5); }
+
+    .cs-btn-primary {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 900;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+        white-space: nowrap;
+        font-family: var(--mono);
+    }
+    .cs-btn-generate {
+        background: var(--green);
+        color: #000;
+        box-shadow: 0 4px 20px rgba(0,229,160,0.2);
+    }
+    .cs-btn-generate:hover { filter: brightness(1.06); }
+    .cs-btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .cs-btn-word {
+        background: #1e3a5f;
+        color: #93c5fd;
+        border: 1px solid rgba(59,130,246,0.3);
+    }
+    .cs-btn-word:hover:not(:disabled) { background: #1e40af; color: #fff; }
+    .cs-btn-word:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .cs-btn-pdf {
+        background: rgba(255,77,109,0.12);
+        color: var(--red);
+        border: 1px solid rgba(255,77,109,0.3);
+    }
+    .cs-btn-pdf:hover:not(:disabled) { background: var(--red); color: #fff; }
+    .cs-btn-pdf:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .cs-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 24px;
+    }
+    .cs-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0;
+    }
+    .cs-section-label {
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--muted);
+        font-family: var(--mono);
+    }
+    .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+    }
+</style>
+
+<div class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+
+        <!-- ── Header ─────────────────────────────────────── -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 no-print">
+            <div>
+                <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;">Elite Hardware Pro</p>
+                <h1 style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-0.5px;line-height:1;margin:0 0 5px;">Customer Statements</h1>
+                <p style="font-size:11px;color:var(--muted);margin:0;">Generate account ledgers &amp; export to PDF or Word</p>
+            </div>
+            <div class="flex gap-3 flex-wrap no-print">
+                <button onclick="exportWord()" class="cs-btn-primary cs-btn-word" id="btnWord" disabled>
+                    📄 Export Word
+                </button>
+                <button onclick="exportPDF()" class="cs-btn-primary cs-btn-pdf" id="btnPdf" disabled>
+                    📄 Export PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Filter Card ────────────────────────────────── -->
+        <div class="cs-card mb-6 no-print">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-end">
+
+                <!-- Customer Phone -->
+                <div>
+                    <label class="cs-label">Customer Phone *</label>
+                    <input type="text" id="custPhone" placeholder="07XXXXXXXX"
+                        class="cs-input"
+                        onkeydown="if(event.key==='Enter') generateStatement()">
+                </div>
+
+                <!-- Statement Type -->
+                <div>
+                    <label class="cs-label">Statement Type</label>
+                    <select id="stmtType" class="cs-input">
+                        <option value="credit">Credit Statement (Debt Only)</option>
+                        <option value="all">General Statement (All Sales)</option>
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div>
+                    <label class="cs-label">Date Range — From (Optional)</label>
+                    <input type="date" id="rangeFrom" class="cs-input">
+                </div>
+                <div>
+                    <label class="cs-label">Date Range — To (Optional)</label>
+                    <div class="flex gap-2 items-center">
+                        <input type="date" id="rangeTo" class="cs-input" style="flex:1;">
+                        <button onclick="generateStatement()" id="btnGenerate"
+                            class="cs-btn-primary cs-btn-generate">
+                            Generate
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ── Preview Card ───────────────────────────────── -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;" id="previewCard" style="display:none;">
+            <div class="preview-header no-print">
+                <span class="cs-section-label">Document Preview</span>
+            </div>
+                
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <div id="printArea" style="background:#fff; width:100%; max-width:800px; margin:0 auto; padding:20px; box-sizing:border-box;">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; color: #333; border-collapse: collapse;">
+                            <tr>
+                                <td style="padding: 20px 40px;">
+                                    <div style="float: right; text-align: right;">
+                                        <div style="background:#111; color:#fff; width:48px; height:48px; line-height:48px; text-align:center; font-size:32px; font-weight:900; margin-left:auto; margin-bottom:4px;">E.</div>
+                                        <p style="margin: 0; font-size: 16px; font-weight: 900; color: #111;">Elite Hardware</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="background-color: #222; color: #fff; padding: 12px 40px; font-size: 11px; font-weight: bold; letter-spacing: 1px;">
+                                    inquire@elitehardware.co.ke &nbsp;|&nbsp; +254 700 000 000
+                                </td>
+                            </tr>
+                            <tr><td style="background-color: #d97706; height: 12px;"></td></tr>
+                            
+                            <tr>
+                                <td style="padding: 40px;">
+                                    <h2 id="vDocTitle" style="text-align: center; font-size: 26px; font-weight: 900; color: #1f2937; margin: 0 0 35px 0;">Customer Account Statement</h2>
+                                    
+                                    <h3 style="font-size: 16px; font-weight:bold; color: #374151; margin: 0 0 8px 0;">Account Details</h3>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Account Holder:</strong> <span id="vName"></span></p>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Account Number:</strong> <span id="vPhone"></span></p>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Statement Period:</strong> <span id="vPeriod"></span></p>
+
+                                    <h3 style="font-size: 16px; font-weight:bold; color: #374151; margin: 30px 0 8px 0;">Summary</h3>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Opening Balance:</strong> <span id="vOpen"></span></p>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Total Debits (Purchases):</strong> <span id="vDebits"></span></p>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Total Credits (Payments):</strong> <span id="vCredits"></span></p>
+                                    <p style="margin: 4px 0; font-size: 13px; color: #4b5563;"><strong>Closing Balance:</strong> <span id="vClose"></span></p>
+
+                                    <h3 style="font-size: 16px; font-weight:bold; color: #374151; margin: 30px 0 12px 0;">Transaction Details</h3>
+                                    <table width="100%" cellpadding="10" cellspacing="0" style="border-collapse: collapse; font-size: 12px;">
+                                        <thead>
+                                            <tr style="background-color: #f9fafb; text-align: left; color: #4b5563;">
+                                                <th style="border: 1px solid #e5e7eb; font-weight: bold;">Date</th>
+                                                <th style="border: 1px solid #e5e7eb; font-weight: bold;">Description</th>
+                                                <th style="border: 1px solid #e5e7eb; font-weight: bold; text-align: right;">Credits (KES)</th>
+                                                <th style="border: 1px solid #e5e7eb; font-weight: bold; text-align: right;">Debits (KES)</th>
+                                                <th style="border: 1px solid #e5e7eb; font-weight: bold; text-align: right;">Balance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="vLedgerBody">
+                                            </tbody>
+                                    </table>
+                                    
+                                    <h3 style="font-size: 14px; font-weight:bold; color: #374151; margin: 40px 0 8px 0;">Important Notes</h3>
+                                    <p style="font-size: 11px; color: #6b7280; line-height: 1.6; margin: 0;">
+                                        Please review the transactions listed above carefully. If you have any questions or discrepancies, contact customer support within 30 days.<br>
+                                        Customer Support: <strong>+254 700 000 000</strong><br>
+                                        Email: <strong>inquire@elitehardware.co.ke</strong>
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+    </main>
+</div>
+
+    <script>
+        const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+        
+        const fmt = (num) => parseFloat(num || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        async function generateStatement() {
+            const phone = document.getElementById('custPhone').value.trim();
+            const type  = document.getElementById('stmtType').value;
+            const from  = document.getElementById('rangeFrom').value;
+            const to    = document.getElementById('rangeTo').value;
+            const btn   = document.getElementById('btnGenerate');
+
+            if (!phone) return alert('Customer Phone is required.');
+
+            btn.disabled = true;
+            btn.textContent = 'Fetching...';
+
+            try {
+                let url = `${API_BASE}/reports/customer-statement?phone=${encodeURIComponent(phone)}&type=${type}`;
+                if (from) url += `&from=${from}`;
+                if (to)   url += `&to=${to}`;
+
+                const res = await apiFetch(url);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message);
+
+                // --- POPULATE SUMMARY & HEADER ---
+                document.getElementById('vDocTitle').textContent = type === 'credit' 
+                    ? 'Customer Credit Account Statement' 
+                    : 'Customer Account Statement';
+
+                document.getElementById('vName').textContent = data.customer.name;
+                document.getElementById('vPhone').textContent = data.customer.phone;
+                
+                const periodStr = (from && to) ? `${fmtDate(from)} to ${fmtDate(to)}` : (from ? `From ${fmtDate(from)}` : (to ? `Until ${fmtDate(to)}` : 'All Time'));
+                document.getElementById('vPeriod').textContent = periodStr + ` (${type === 'credit' ? 'Credit Ledger' : 'Full Ledger'})`;
+
+                document.getElementById('vOpen').textContent = 'KES ' + fmt(data.summary.openingBalance);
+                document.getElementById('vDebits').textContent = 'KES ' + fmt(data.summary.totalDebits);
+                document.getElementById('vCredits').textContent = 'KES ' + fmt(data.summary.totalCredits);
+                
+                const cb = document.getElementById('vClose');
+                cb.textContent = 'KES ' + fmt(data.summary.closingBalance);
+                cb.style.color = data.summary.closingBalance > 0 ? '#dc2626' : '#059669';
+
+                // --- POPULATE TABLE ---
+                const tbody = document.getElementById('vLedgerBody');
+                if (data.ledger.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #9ca3af; font-style: italic; border: 1px solid #e5e7eb;">No transactions found in this period.</td></tr>`;
+                } else {
+                    tbody.innerHTML = data.ledger.map(row => `
+                        <tr>
+                            <td style="padding: 10px; border: 1px solid #e5e7eb; color: #4b5563;">${fmtDate(row.date)}</td>
+                            <td style="padding: 10px; border: 1px solid #e5e7eb; color: #374151;">
+                                <strong style="display:block; font-size: 11px;">${row.ref}</strong>
+                                <span style="color: #6b7280;">${row.description}</span>
+                            </td>
+                            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #059669;">${row.credit > 0 ? fmt(row.credit) : '-'}</td>
+                            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; color: #dc2626;">${row.debit > 0 ? fmt(row.debit) : '-'}</td>
+                            <td style="padding: 10px; border: 1px solid #e5e7eb; text-align: right; font-weight: bold; color: #111827;">${fmt(row.balance)}</td>
+                        </tr>
+                    `).join('');
+                }
+
+                // --- REVEAL UI ---
+                document.getElementById('previewCard').style.display = 'block';
+                document.getElementById('btnPdf').disabled = false;
+                document.getElementById('btnWord').disabled = false;
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Generate';
+            }
+        }
+
+        // --- PDF OVERLAY ---
+        function showPdfOverlay() {
+            if (!document.getElementById('pdfSpinStyle')) {
+                const style = document.createElement('style');
+                style.id = 'pdfSpinStyle';
+                style.textContent = '@keyframes pdfSpin { to { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            }
+            const overlay = document.createElement('div');
+            overlay.id = 'pdfOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+            overlay.innerHTML = `
+                <div style="width:52px;height:52px;border:5px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:pdfSpin 0.8s linear infinite;"></div>
+                <p style="color:#fff;font-family:'DM Sans',sans-serif;font-weight:900;font-size:14px;letter-spacing:1px;text-transform:uppercase;margin:0;">Generating PDF…</p>
+                <p style="color:rgba(255,255,255,0.6);font-family:'DM Sans',sans-serif;font-size:12px;margin:0;">Download will start automatically</p>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function hidePdfOverlay() {
+            const el = document.getElementById('pdfOverlay');
+            if (el) el.remove();
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('printArea');
+            const name = document.getElementById('vName').textContent.replace(/\s+/g, '_');
+            
+            const btn = document.getElementById('btnPdf');
+            btn.disabled = true;
+            btn.textContent = 'Preparing...';
+
+            // Show overlay immediately before heavy work begins
+            showPdfOverlay();
+
+            const opt = {
+                margin: 0.3,
+                filename: `${name}_Statement.pdf`,
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { 
+                    scale: 1.5,
+                    useCORS: true, 
+                    logging: false 
+                },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            // Yield to browser so overlay paints before canvas work starts
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    html2pdf().set(opt).from(element).toPdf().get('pdf').save().then(() => {
+                        hidePdfOverlay();
+                        btn.disabled = false;
+                        btn.textContent = '📄 Export PDF';
+                    }).catch(() => {
+                        hidePdfOverlay();
+                        btn.disabled = false;
+                        btn.textContent = '📄 Export PDF';
+                    });
+                }, 50);
+            });
+        }
+
+        function exportWord() {
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML To Doc</title></head><body>";
+            const footer = "</body></html>";
+            const html = header + document.getElementById('printArea').innerHTML + footer;
+            
+            const name = document.getElementById('vName').textContent.replace(/\s+/g, '_');
+            const type = document.getElementById('stmtType').value === 'credit' ? 'Credit' : 'Statement';
+
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            
+            link.href = url;
+            link.download = `${name}_${type}_${new Date().toISOString().split('T')[0]}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

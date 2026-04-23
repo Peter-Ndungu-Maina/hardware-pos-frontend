@@ -1,0 +1,2129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="returns_audit.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elite Hardware | Returns & Exchanges</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/src/tailwind.css">
+    <style>
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 300;
+            display: none; align-items: center; justify-content: center;
+            padding: 1rem; backdrop-filter: blur(6px);
+        }
+        .modal-overlay.active { display: flex; }
+
+        /* Mobile: bottom sheet style */
+        @media (max-width: 600px) {
+            #exchangeModal {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+            .exchange-modal-inner {
+                border-radius: 20px 20px 0 0 !important;
+                max-height: 93vh !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 20px 16px 32px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            /* Prevent iOS auto-zoom on input focus (font-size must be >= 16px) */
+            .exchange-modal-inner input,
+            .exchange-modal-inner select,
+            .exchange-modal-inner textarea {
+                font-size: 16px !important;
+            }
+            /* Item row: stack item search above qty */
+            .item-qty-row {
+                grid-template-columns: 1fr !important;
+            }
+            .item-qty-row .qty-col {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .item-qty-row .qty-col label { white-space: nowrap; margin-bottom: 0 !important; }
+            .item-qty-row .qty-col input { flex: 1; max-width: 100px; }
+            /* Compact textarea on mobile */
+            .exchange-modal-inner textarea { max-height: 60px; }
+        }
+
+        @keyframes fadeIn  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        .fade-in { animation: fadeIn 0.3s ease forwards; }
+
+        /* Reason badge colours */
+        .badge-damaged    { background:var(--red-dim); color:var(--red); border:1px solid rgba(255,77,109,0.3); }
+        .badge-wrong_item { background:var(--amber-dim); color:var(--amber); border:1px solid rgba(245,158,11,0.3); }
+        .badge-other      { background:var(--blue-dim); color:var(--blue); border:1px solid rgba(86,156,214,0.3); }
+
+        /* Light mode overrides */
+        body.light .modal-overlay { background:rgba(15,23,42,0.5); }
+        body.light .badge-damaged    { background:var(--red-dim); color:var(--red); }
+        body.light .badge-wrong_item { background:var(--amber-dim); color:var(--amber); }
+        body.light .badge-other      { background:var(--blue-dim); color:var(--blue); }
+        body.light ::-webkit-scrollbar-thumb { background:#cbd5e1; }
+
+        /* ── Audit table print (default) ── */
+        @media print {
+            .no-print { display:none !important; }
+            #pdf-header { display:block !important; }
+            body { background:white !important; color:#111 !important; }
+            #sidebar, #sidebarMount, #mobileBar { display:none !important; }
+            main { margin-left:0 !important; }
+            .print-table th, .print-table td { color:#111 !important; border-color:#ccc !important; }
+        }
+
+        /* ── Voucher print — only active when body.printing-voucher ── */
+        body.printing-voucher * { visibility: hidden; }
+        body.printing-voucher #voucherModal,
+        body.printing-voucher #voucherModal * { visibility: visible !important; }
+        @media print {
+            body.printing-voucher #voucherModal {
+                position: fixed !important; inset: 0 !important;
+                background: white !important; display: flex !important;
+                align-items: flex-start !important; justify-content: center !important;
+                padding: 0 !important;
+            }
+            body.printing-voucher #voucherModal > div {
+                width: 80mm !important; max-width: 80mm !important;
+                padding: 8px !important; border-radius: 0 !important;
+                box-shadow: none !important; max-height: none !important;
+                overflow: visible !important;
+            }
+            body.printing-voucher { size: 80mm auto; margin: 2mm 1mm; }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:var(--muted); border-radius:4px; }
+
+        /* ── MOBILE RESPONSIVE ── */
+
+        /* Table horizontal scroll on small screens */
+        .table-scroll-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 16px;
+        }
+        .table-scroll-wrapper table {
+            min-width: 700px;
+        }
+
+        /* Mobile card view for returns table rows */
+        .mobile-card {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            /* Main padding */
+            .main-padding { padding: 16px !important; }
+
+            /* Header stack vertically */
+            .page-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+            .header-actions { width: 100%; display: flex; gap: 8px; }
+            .header-actions button { flex: 1; font-size: 10px !important; padding: 10px 8px !important; }
+
+            /* KPI cards — 2 columns */
+            .kpi-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; margin-bottom: 20px !important; }
+            .kpi-grid > div { padding: 14px !important; }
+            .kpi-grid h3 { font-size: 18px !important; }
+
+            /* Filters — full width stacked */
+            .filters-row { flex-direction: column !important; gap: 8px !important; }
+            .filters-row > div { width: 100% !important; }
+            .filters-row input,
+            .filters-row select { width: 100% !important; box-sizing: border-box; }
+            .filters-row button { width: 100% !important; }
+
+            /* Hide desktop table, show mobile cards */
+            .desktop-table { display: none !important; }
+            .mobile-card { display: block; }
+
+            /* Pagination */
+            .pagination-row { flex-direction: column !important; gap: 8px !important; align-items: center !important; }
+            .pagination-row > div { width: 100%; display: flex; gap: 8px; }
+            .pagination-row button { flex: 1; }
+
+            /* Exchange modal */
+            .exchange-modal-inner { padding: 18px !important; border-radius: 14px !important; }
+            .exchange-modal-inner .modal-grid-2 { grid-template-columns: 1fr !important; }
+
+            /* Voucher modal */
+            #voucherModal > div { padding: 16px !important; border-radius: 12px !important; }
+        }
+
+        @media (max-width: 480px) {
+            .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+            .kpi-grid h3 { font-size: 16px !important; }
+            .reason-btns { flex-direction: column !important; }
+            .reason-btns button { width: 100% !important; }
+        }
+
+        /* Hide drag handle on desktop */
+        @media (min-width: 601px) {
+            .drag-handle { display: none !important; }
+        }
+        .return-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .return-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        .return-card-body {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 11px;
+        }
+        .return-card-field label {
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted);
+            display: block;
+            margin-bottom: 2px;
+        }
+        .return-card-field span {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+<!-- ── EXCHANGE FORM MODAL ───────────────────────────────────── -->
+<div id="exchangeModal" class="modal-overlay">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:28px;" class="fade-in exchange-modal-inner">
+        <!-- Drag handle (visible on mobile only) -->
+        <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;" class="drag-handle"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <div>
+                <h2 style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text);">PROCESS EXCHANGE</h2>
+                <p style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:1px;">Exchange only — no cash refunds</p>
+            </div>
+            <button onclick="closeExchangeModal()" style="background:var(--surface2);border:none;color:var(--muted);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>
+        </div>
+        <!-- Step 1: Search original sale -->
+        <div style="margin-bottom:18px;">
+            <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:6px;">Search by Name, Phone or Receipt No</label>
+            <div style="display:flex;gap:8px;">
+                <input id="searchPhone" type="text" placeholder="e.g. Peter / 0712345678 / REC-..."
+                    style="flex:1;padding:11px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:13px;outline:none;"
+                    onkeydown="if(event.key==='Enter') searchSale()">
+                <button onclick="searchSale()" style="padding:11px 18px;border-radius:10px;background:linear-gradient(135deg,#569cd6,#4f46e5);color:#fff;font-weight:900;font-size:10px;text-transform:uppercase;border:none;cursor:pointer;white-space:nowrap;">Search</button>
+            </div>
+            <div id="saleSearchResults" style="margin-top:10px;"></div>
+        </div>
+
+        <!-- Pre-filled from search or manual entry -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;" class="modal-grid-2">
+            <div>
+                <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:5px;">Customer Name</label>
+                <input id="fCustomerName" type="text" placeholder="Optional"
+                    style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:13px;outline:none;">
+            </div>
+            <div>
+                <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:5px;">Original Receipt Ref</label>
+                <input id="fReceipt" type="text" placeholder="Optional"
+                    style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:13px;outline:none;">
+            </div>
+            <div>
+                <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#ff4d6d;display:block;margin-bottom:5px;">KRA Receipt No. <span style="font-weight:400;color:var(--muted);">(Kra_Receipt_No) — auto-filled</span></label>
+                <input id="fKraInvoice" type="text" placeholder="Auto-filled — e.g. REC-20260322-0002-...-1774192377360"
+                    style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid rgba(255,77,109,0.3);color:var(--text);font-weight:600;font-size:13px;outline:none;">
+            </div>
+            <div style="margin-top:10px;">
+                <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#ff4d6d;display:block;margin-bottom:5px;">eTIMS No. <span style="font-weight:400;color:var(--muted);">(E-tims_No) — Required for Credit Note</span></label>
+                <input id="fKraEtimsInvoiceNo" type="text" placeholder="Auto-filled — numeric e.g. 1059171"
+                    style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid rgba(255,77,109,0.3);color:var(--text);font-weight:600;font-size:13px;outline:none;">
+                <div style="font-size:9px;color:var(--muted);margin-top:4px;">Auto-filled from sale search. Find manually in Sales table → E-tims_No column.</div>
+            </div>
+        </div>
+
+        <!-- Returned item -->
+        <div style="background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:12px;padding:14px;margin-bottom:14px;">
+            <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#ff4d6d;margin-bottom:10px;">↩ Returned Item</p>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:10px;" class="item-qty-row">
+                <div>
+                    <label style="font-size:9px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Item</label>
+                    <div style="position:relative;">
+                        <div style="display:flex;gap:6px;">
+                            <input id="fReturnedItemSearch" type="text" placeholder="Search item name..."
+                                autocomplete="off"
+                                oninput="filterItemDropdown('fReturnedItemSearch','fReturnedItemList','fReturnedItemSelected','fReturnedItem', onReturnedItemChange)"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();searchReturnedItem();}"
+                                style="flex:1;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:12px;outline:none;">
+                            <button onclick="searchReturnedItem()" title="Search item"
+                                style="padding:10px 14px;border-radius:9px;background:rgba(255,77,109,0.15);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:900;">🔍</button>
+                        </div>
+                        <div id="fReturnedItemList" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg);border:1px solid rgba(255,77,109,0.3);border-radius:9px;max-height:180px;overflow-y:auto;margin-top:4px;"></div>
+                        <input type="hidden" id="fReturnedItem">
+                        <div id="fReturnedItemSelected" style="display:none;margin-top:6px;padding:6px 10px;border-radius:7px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.25);font-size:11px;font-weight:700;color:#ff4d6d;"></div>
+                    </div>
+                </div>
+                <div style="min-width:70px;" class="qty-col">
+                    <label style="font-size:9px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Qty</label>
+                    <input id="fReturnedQty" type="number" value="1" min="1" oninput="onReturnedItemChange()" onchange="onReturnedItemChange()"
+                        style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:700;font-size:13px;outline:none;text-align:center;">
+                    <span id="retQtyHint" style="display:none;font-size:9px;color:#00e5a0;font-weight:700;margin-top:4px;text-align:center;"></span>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:9px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Return Reason</label>
+                <div style="display:flex;gap:8px;" class="reason-btns">
+                    <button onclick="setReason('damaged')" id="btn-damaged"
+                        style="flex:1;padding:8px;border-radius:8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border:1px solid rgba(255,77,109,0.3);background:rgba(255,77,109,0.08);color:#ff4d6d;transition:all 0.15s;"
+                        class="reason-btn">Damaged</button>
+                    <button onclick="setReason('wrong_item')" id="btn-wrong_item"
+                        style="flex:1;padding:8px;border-radius:8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);color:#f59e0b;transition:all 0.15s;"
+                        class="reason-btn">Wrong Item</button>
+                    <button onclick="setReason('other')" id="btn-other"
+                        style="flex:1;padding:8px;border-radius:8px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border:1px solid rgba(86,156,214,0.3);background:rgba(86,156,214,0.08);color:#569cd6;transition:all 0.15s;"
+                        class="reason-btn">Other</button>
+                </div>
+                <input type="hidden" id="fReason" value="">
+            </div>
+            <div id="costWriteoffPreview" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);">
+                <span style="font-size:10px;font-weight:700;color:#ff4d6d;">⚠ Damaged — KES <span id="writeoffAmt">0</span> will be logged as expense (cost price)</span>
+            </div>
+        </div>
+
+        <!-- Replacement item -->
+        <div style="background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:14px;margin-bottom:14px;">
+            <p style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#00e5a0;margin-bottom:10px;">↪ Replacement Item</p>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:10px;" class="item-qty-row">
+                <div>
+                    <label style="font-size:9px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Item</label>
+                    <div style="position:relative;">
+                        <div style="display:flex;gap:6px;">
+                            <input id="fReplacementItemSearch" type="text" placeholder="Search item name..."
+                                autocomplete="off"
+                                oninput="filterItemDropdown('fReplacementItemSearch','fReplacementItemList','fReplacementItemSelected','fReplacementItem', validateReplacementValue)"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();searchReplacementItem();}"
+                                style="flex:1;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:12px;outline:none;">
+                            <button onclick="searchReplacementItem()" title="Search item"
+                                style="padding:10px 14px;border-radius:9px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:#00e5a0;font-size:12px;cursor:pointer;white-space:nowrap;font-weight:900;">🔍</button>
+                        </div>
+                        <div id="fReplacementItemList" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--bg);border:1px solid rgba(0,229,160,0.25);border-radius:9px;max-height:180px;overflow-y:auto;margin-top:4px;"></div>
+                        <input type="hidden" id="fReplacementItem">
+                        <div id="fReplacementItemSelected" style="display:none;margin-top:6px;padding:6px 10px;border-radius:7px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);font-size:11px;font-weight:700;color:#00e5a0;"></div>
+                    </div>
+                    <div id="valueErrorMsg" style="display:none;margin-top:6px;padding:6px 10px;border-radius:7px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);font-size:10px;font-weight:700;color:#ff4d6d;">
+                        ⚠ Replacement item value exceeds returned item value. Please choose an item of equal or lesser value.
+                    </div>
+                </div>
+                <div style="min-width:70px;" class="qty-col">
+                    <label style="font-size:9px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:1px;">Qty</label>
+                    <input id="fReplacementQty" type="number" value="1" min="1" oninput="onReplacementQtyChange()" onchange="onReplacementQtyChange()"
+                        style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:700;font-size:13px;outline:none;text-align:center;">
+                    <span id="qtyMismatchMsg" style="display:none;font-size:9px;color:#ff4d6d;font-weight:700;margin-top:4px;text-align:center;"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div style="margin-bottom:18px;">
+            <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:5px;">Notes (Optional)</label>
+            <textarea id="fNotes" rows="2" placeholder="Any additional notes..."
+                style="width:100%;padding:10px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:600;font-size:13px;outline:none;resize:none;"></textarea>
+        </div>
+
+        <div id="exchangeError" style="display:none;padding:10px 14px;border-radius:9px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);color:#ff4d6d;font-size:12px;font-weight:600;margin-bottom:14px;"></div>
+
+        <div style="display:flex;gap:10px;">
+            <button onclick="closeExchangeModal()" style="flex:1;padding:13px;border-radius:10px;background:var(--surface2);color:var(--muted);font-weight:700;font-size:12px;border:none;cursor:pointer;">Cancel</button>
+            <button id="submitExchangeBtn" onclick="submitExchange()"
+                style="flex:2;padding:13px;border-radius:10px;background:linear-gradient(135deg,#00e5a0,#0891b2);color:#000;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer;">
+                Process Exchange
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ── PDF PRINT HEADER (hidden on screen) ──────────────────── -->
+<div id="pdf-header" style="display:none;padding:20px;border-bottom:2px solid #111;margin-bottom:16px;">
+    <h1 style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;">ELITE HARDWARE POS</h1>
+    <p style="font-size:11px;">Returns & Exchanges Audit Report — Printed: <span id="printDate"></span></p>
+</div>
+
+<!-- ── MAIN LAYOUT ──────────────────────────────────────────── -->
+<div class="flex h-screen overflow-hidden">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 flex flex-col min-h-screen overflow-y-auto" style="background:var(--bg);">
+        <div style="padding:28px 32px;" class="main-padding">
+
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:14px;" class="no-print page-header">
+                <div>
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:4px;font-family:'Space Mono',monospace;">Exchange Management</p>
+                    <h1 style="font-size:26px;font-weight:900;color:var(--text);line-height:1;">Returns & Exchanges</h1>
+                    <p style="font-size:11px;color:var(--muted);margin-top:4px;">Customer exchanges &amp; supplier returns</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;" class="header-actions">
+                    <button onclick="window.print()" style="padding:10px 18px;border-radius:10px;background:var(--surface2);color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:1px solid var(--border);cursor:pointer;">🖨 Print Audit</button>
+                    <button id="newActionBtn" onclick="openExchangeModal()" style="padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#00e5a0,#0891b2);color:#000;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer;box-shadow:0 2px 12px rgba(0,229,160,0.3);">+ New Exchange</button>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex;gap:4px;margin-bottom:24px;background:var(--surface2);border-radius:12px;padding:4px;width:fit-content;" class="no-print">
+                <button id="tabCustomer" onclick="switchTab('customer')"
+                    style="padding:9px 20px;border-radius:9px;border:none;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;cursor:pointer;background:var(--green);color:#000;">
+                    👤 Customer Returns
+                </button>
+                <button id="tabSupplier" onclick="switchTab('supplier')"
+                    style="padding:9px 20px;border-radius:9px;border:none;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;cursor:pointer;background:none;color:var(--muted);">
+                    🏭 Supplier Returns
+                </button>
+            </div>
+
+            <!-- ══ CUSTOMER RETURNS TAB ══ -->
+            <div id="customerTab">
+
+            <!-- KPI Cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px;" class="no-print kpi-grid">
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px 20px;">
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;">Total Exchanges</p>
+                    <h3 id="kpiTotal" style="font-size:22px;font-weight:900;color:var(--text);font-family:'Space Mono',monospace;">—</h3>
+                    <p style="font-size:9px;color:var(--muted);margin-top:4px;">All time</p>
+                </div>
+                <div style="background:linear-gradient(135deg,#2d1a1a,#3a2020);border:1px solid rgba(255,77,109,0.2);border-radius:16px;padding:18px 20px;">
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#ff4d6d;margin-bottom:6px;">Cost Absorbed</p>
+                    <h3 id="kpiCost" style="font-size:22px;font-weight:900;color:#ff4d6d;font-family:'Space Mono',monospace;">—</h3>
+                    <p style="font-size:9px;color:var(--muted);margin-top:4px;">Damaged write-offs</p>
+                </div>
+                <div style="background:var(--surface2);border:1px solid rgba(255,77,109,0.15);border-radius:16px;padding:18px 20px;">
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;">Damaged Returns</p>
+                    <h3 id="kpiDamaged" style="font-size:22px;font-weight:900;color:#ff4d6d;font-family:'Space Mono',monospace;">—</h3>
+                    <p style="font-size:9px;color:var(--muted);margin-top:4px;">Items damaged</p>
+                </div>
+                <div style="background:var(--surface2);border:1px solid rgba(245,158,11,0.15);border-radius:16px;padding:18px 20px;">
+                    <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;">Wrong Item</p>
+                    <h3 id="kpiWrong" style="font-size:22px;font-weight:900;color:#f59e0b;font-family:'Space Mono',monospace;">—</h3>
+                    <p style="font-size:9px;color:var(--muted);margin-top:4px;">Wrong item returned</p>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 no-print items-end">
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">From Date</label>
+                    <input type="date" id="filterFrom" onchange="loadReturns()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">To Date</label>
+                    <input type="date" id="filterTo" onchange="loadReturns()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Monthly View</label>
+                    <input type="month" id="monthFilter" onchange="applyMonth()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Annual View</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="annualFilter" placeholder="YYYY" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <button onclick="applyAnnual()" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Reason</label>
+                    <select id="filterReason" onchange="loadReturns()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                        <option value="">All Reasons</option>
+                        <option value="damaged">Damaged</option>
+                        <option value="wrong_item">Wrong Item</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Staff</label>
+                    <input type="text" id="filterStaff" placeholder="Staff name..." onkeyup="debounceLoad()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div class="sm:col-span-2 lg:col-span-2 xl:col-span-4">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Search Customer, Phone or Receipt No.</label>
+                    <input type="text" id="filterSearch" placeholder="Name, phone or receipt no..." onkeyup="debounceLoad()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                </div>
+                <div class="flex justify-end lg:col-span-1 xl:col-span-2">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition">Reset</button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-scroll-wrapper desktop-table" style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+                  <div style="overflow-x:auto;">
+                <table class="w-full text-left print-table" style="border-collapse:collapse;min-width:700px;">
+                    <thead style="background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.09);">
+                        <tr style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">
+                            <th style="padding:14px 16px;">Date & Staff</th>
+                            <th style="padding:14px 16px;">Customer</th>
+                            <th style="padding:14px 16px;">Returned Item</th>
+                            <th style="padding:14px 16px;">Reason</th>
+                            <th style="padding:14px 16px;">Replacement</th>
+                            <th style="padding:14px 16px;text-align:right;">Cost Written Off</th>
+                            <th style="padding:14px 16px;">Receipt Ref</th>
+                            <th style="padding:14px 16px;text-align:center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnsTableBody">
+                        <tr>
+                            <td colspan="7" style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div id="mobileCardsContainer" class="mobile-card"></div>
+
+            <!-- Pagination -->
+            <div id="pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding:0 4px;" class="no-print pagination-row">
+                <span id="pageInfo" style="font-size:11px;color:var(--muted);font-weight:600;"></span>
+                <div style="display:flex;gap:8px;">
+                    <button id="prevBtn" onclick="changePage(-1)" style="padding:8px 16px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;" disabled>← Prev</button>
+                    <button id="nextBtn" onclick="changePage(1)"  style="padding:8px 16px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;" disabled>Next →</button>
+                </div>
+            </div>
+            </div><!-- /customer tab -->
+
+            <!-- ══ SUPPLIER RETURNS TAB ══ -->
+            <div id="supplierTab" style="display:none;">
+
+                <!-- Supplier KPIs -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;">
+                    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px 20px;">
+                        <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;">Total Returns</p>
+                        <h3 id="skpiTotal" style="font-size:22px;font-weight:900;color:var(--text);font-family:'Space Mono',monospace;">—</h3>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#2d1a1a,#3a2020);border:1px solid rgba(255,77,109,0.2);border-radius:16px;padding:18px 20px;">
+                        <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#ff4d6d;margin-bottom:6px;">Value Returned</p>
+                        <h3 id="skpiValue" style="font-size:22px;font-weight:900;color:#ff4d6d;font-family:'Space Mono',monospace;">—</h3>
+                    </div>
+                    <div style="background:var(--surface2);border:1px solid rgba(0,229,160,0.15);border-radius:16px;padding:18px 20px;">
+                        <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:6px;">Confirmed</p>
+                        <h3 id="skpiAdjusted" style="font-size:22px;font-weight:900;color:var(--green);font-family:'Space Mono',monospace;">—</h3>
+                    </div>
+                    <div style="background:linear-gradient(135deg,#2d2000,#3a2d00);border:1px solid rgba(245,158,11,0.3);border-radius:16px;padding:18px 20px;position:relative;overflow:hidden;">
+                        <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:#f59e0b;border-radius:0 16px 16px 0;"></div>
+                        <p style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#f59e0b;margin-bottom:6px;">⏳ Pending Claims</p>
+                        <h3 id="skpiPending" style="font-size:22px;font-weight:900;color:#f59e0b;font-family:'Space Mono',monospace;">—</h3>
+                        <p id="skpiPendingCount" style="font-size:10px;color:var(--muted);margin-top:4px;">— items awaiting credit note</p>
+                    </div>
+                </div>
+
+                <!-- Supplier Returns Table -->
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+                    <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead style="background:rgba(255,255,255,0.03);border-bottom:1px solid var(--border);">
+                            <tr style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);">
+                                <th style="padding:14px 16px;text-align:left;">Date</th>
+                                <th style="padding:14px 16px;text-align:left;">Supplier</th>
+                                <th style="padding:14px 16px;text-align:left;">Item</th>
+                                <th style="padding:14px 16px;text-align:center;">Qty</th>
+                                <th style="padding:14px 16px;text-align:left;">Reason</th>
+                                <th style="padding:14px 16px;text-align:right;">Value</th>
+                                <th style="padding:14px 16px;text-align:left;">Credit Note</th>
+                                <th style="padding:14px 16px;text-align:left;">By</th>
+                                <th style="padding:14px 16px;text-align:left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierReturnsBody">
+                            <tr><td colspan="9" style="padding:40px;text-align:center;color:var(--muted);">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div><!-- /supplier tab -->
+
+        </div><!-- /padding wrapper -->
+    </main>
+</div>
+
+<script>
+
+    // XSS guard — wrap all server-sourced strings before innerHTML insertion
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+    }
+const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+let currentPage = 1;
+let totalPages  = 1;
+let debounceTimer;
+let inventoryItems = [];
+let selectedReason = '';
+let activeTab = 'customer';
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(tab) {
+    activeTab = tab;
+    const isCustomer = tab === 'customer';
+    document.getElementById('customerTab').style.display   = isCustomer ? '' : 'none';
+    document.getElementById('supplierTab').style.display   = isCustomer ? 'none' : '';
+    document.getElementById('tabCustomer').style.background = isCustomer ? 'var(--green)' : 'none';
+    document.getElementById('tabCustomer').style.color      = isCustomer ? '#000' : 'var(--muted)';
+    document.getElementById('tabSupplier').style.background = isCustomer ? 'none' : 'var(--amber)';
+    document.getElementById('tabSupplier').style.color      = isCustomer ? 'var(--muted)' : '#000';
+    // Update action button
+    const btn = document.getElementById('newActionBtn');
+    if (isCustomer) {
+        btn.textContent = '+ New Exchange';
+        btn.onclick = openExchangeModal;
+    } else {
+        btn.textContent = '+ Supplier Return';
+        btn.onclick = openSupplierReturnModal;
+        loadSupplierReturns();
+    }
+}
+
+// ── On load ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    waitForAuthThenLoad();
+});
+
+/**
+ * waitForAuthThenLoad()
+ * ─────────────────────────────────────────────────────────────────────────────
+ * auth.js defines window.apiFetch asynchronously via an IIFE. On a fast reload
+ * this DOMContentLoaded handler can fire before auth.js resolves — apiFetch is
+ * undefined, every apiFetch() call throws, the catch blocks show "Error loading
+ * data." even though the server is fine.
+ *
+ * This mirrors the identical fix in inventory.html: poll until apiFetch is ready
+ * (max ~3 s) then fire the initial data load. Normal loads where auth is already
+ * resolved fire immediately with zero delay.
+ */
+function waitForAuthThenLoad() {
+    if (typeof window.apiFetch === 'function') {
+        _initReturnsPage();
+        return;
+    }
+    // Poll every 50 ms — auth.js typically resolves in < 300 ms
+    let attempts = 0;
+    const MAX_ATTEMPTS = 60; // 60 × 50 ms = 3 s max wait
+    const poll = setInterval(() => {
+        attempts++;
+        if (typeof window.apiFetch === 'function') {
+            clearInterval(poll);
+            _initReturnsPage();
+        } else if (attempts >= MAX_ATTEMPTS) {
+            clearInterval(poll);
+            console.warn('[Auth] apiFetch not ready after 3 s — attempting load anyway');
+            _initReturnsPage();
+        }
+    }, 50);
+}
+
+function _initReturnsPage() {
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+    const _rb0 = document.getElementById('submitExchangeBtn');
+    if (_rb0) { _rb0.disabled=true; _rb0.style.opacity='0.35'; _rb0.style.cursor='not-allowed'; _rb0.title='POS is read-only — subscription expired'; }
+    const _rb1 = document.getElementById('newActionBtn');
+    if (_rb1) { _rb1.disabled=true; _rb1.style.opacity='0.35'; _rb1.style.cursor='not-allowed'; _rb1.title='POS is read-only — subscription expired'; }
+    const _rb2 = document.getElementById('srSubmitBtn');
+    if (_rb2) { _rb2.disabled=true; _rb2.style.opacity='0.35'; _rb2.style.cursor='not-allowed'; _rb2.title='POS is read-only — subscription expired'; }
+
+        // Block exchange and supplier return modals from opening at all
+        window._origOpenExchangeModal       = window.openExchangeModal;
+        window._origOpenSupplierReturnModal = window.openSupplierReturnModal;
+        window.openExchangeModal       = function() { alert('🔒 POS is read-only. Exchanges require an active subscription.'); };
+        window.openSupplierReturnModal = function() { alert('🔒 POS is read-only. Supplier returns require an active subscription.'); };
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+    document.getElementById('printDate').textContent = new Date().toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' });
+    loadSummary();
+    loadReturns();
+    loadInventoryForDropdowns();
+}
+
+// ── Summary KPIs ─────────────────────────────────────────────
+async function loadSummary() {
+    if (typeof window.apiFetch !== 'function') { return; } // auth not ready yet
+    try {
+        const res  = await apiFetch(API + '/returns/summary');
+        const data = await res.json();
+        document.getElementById('kpiTotal').textContent   = data.totalExchanges;
+        document.getElementById('kpiCost').textContent    = 'KES ' + (data.totalCostAbsorbed || 0).toLocaleString();
+        document.getElementById('kpiDamaged').textContent = data.damagedCount;
+        document.getElementById('kpiWrong').textContent   = data.wrongItemCount;
+    } catch (e) { console.error('Summary error:', e); }
+}
+
+// ── Load audit log ────────────────────────────────────────────
+function applyMonth() {
+    const m = document.getElementById('monthFilter').value;
+    if (!m) return;
+    const [y, mo] = m.split('-');
+    const lastDay = new Date(y, parseInt(mo), 0).getDate();
+    document.getElementById('filterFrom').value   = `${y}-${mo}-01`;
+    document.getElementById('filterTo').value     = `${y}-${mo}-${String(lastDay).padStart(2,'0')}`;
+    document.getElementById('annualFilter').value = '';
+    currentPage = 1;
+    loadReturns();
+}
+
+function applyAnnual() {
+    const year = document.getElementById('annualFilter').value;
+    if (!year) return alert('Please enter a year.');
+    document.getElementById('filterFrom').value   = `${year}-01-01`;
+    document.getElementById('filterTo').value     = `${year}-12-31`;
+    document.getElementById('monthFilter').value  = '';
+    currentPage = 1;
+    loadReturns();
+}
+
+async function loadReturns() {
+    const from   = document.getElementById('filterFrom').value;
+    const to     = document.getElementById('filterTo').value;
+    const reason = document.getElementById('filterReason').value;
+    const staff  = document.getElementById('filterStaff').value;
+    const search = document.getElementById('filterSearch')?.value || '';
+
+    const params = new URLSearchParams({ page: currentPage });
+    if (from)   params.set('from', from);
+    if (to)     params.set('to', to);
+    if (reason) params.set('reason', reason);
+    if (staff)  params.set('staff', staff);
+    if (search) params.set('search', search);
+
+    const tbody = document.getElementById('returnsTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Loading...</td></tr>';
+    const mobileContainer = document.getElementById('mobileCardsContainer');
+    if (mobileContainer) mobileContainer.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">Loading...</div>';
+
+    if (typeof window.apiFetch !== 'function') { return; } // auth not ready yet — waitForAuthThenLoad will retry
+
+    try {
+        const res  = await apiFetch(API + '/returns?' + params.toString());
+        const data = await res.json();
+        totalPages = data.totalPages || 1;
+        renderTable(data.returns || []);
+        renderPagination(data.totalCount || 0);
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:40px;text-align:center;color:#ff4d6d;font-size:13px;">Error loading data.</td></tr>';
+    }
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('returnsTableBody');
+    const mobileContainer = document.getElementById('mobileCardsContainer');
+
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No exchanges found.</td></tr>';
+        mobileContainer.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px;">No exchanges found.</div>';
+        return;
+    }
+
+    const reasons = { damaged: 'badge-damaged', wrong_item: 'badge-wrong_item', other: 'badge-other' };
+    const labels  = { damaged: 'Damaged', wrong_item: 'Wrong Item', other: 'Other' };
+
+    // Store mapped data so the reprint button can access it
+    window._returnsResultsMap = {};
+
+    // Desktop table rows
+    tbody.innerHTML = rows.map((r, idx) => {
+        window._returnsResultsMap[idx] = r;
+        const date    = new Date(r.created_at).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' });
+        const time    = new Date(r.created_at).toLocaleTimeString('en-KE', { hour:'2-digit', minute:'2-digit' });
+        const badgeClass = reasons[r.return_reason] || 'badge-other';
+        const cost    = parseFloat(r.cost_price_written_off || 0);
+        return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.12s;" ' +
+               'onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" ' +
+               'onmouseout="this.style.background=\'\'">' +
+               '<td style="padding:14px 16px;">' +
+                   '<div style="font-size:12px;font-weight:700;color:var(--text);">' + date + '</div>' +
+                   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + time + ' · ' + esc(r.processed_by || '—') + '</div>' +
+               '</td>' +
+               '<td style="padding:14px 16px;">' +
+                   '<div style="font-size:12px;font-weight:700;color:var(--text);">' + esc(r.customer_name || '—') + '</div>' +
+                   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + esc(r.customer_phone || '') + '</div>' +
+               '</td>' +
+               '<td style="padding:14px 16px;">' +
+                   '<div style="font-size:12px;font-weight:700;color:var(--text);">' + r.returned_item_name + '</div>' +
+                   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Qty: ' + r.returned_quantity + '</div>' +
+               '</td>' +
+               '<td style="padding:14px 16px;">' +
+                   '<span class="' + badgeClass + '" style="font-size:9px;font-weight:900;text-transform:uppercase;padding:3px 9px;border-radius:20px;letter-spacing:0.5px;">' +
+                   (labels[r.return_reason] || r.return_reason) + '</span>' +
+               '</td>' +
+               '<td style="padding:14px 16px;">' +
+                   '<div style="font-size:12px;font-weight:700;color:#00e5a0;">' + r.replacement_item_name + '</div>' +
+                   '<div style="font-size:10px;color:var(--muted);margin-top:2px;">Qty: ' + r.replacement_quantity + '</div>' +
+               '</td>' +
+               '<td style="padding:14px 16px;text-align:right;">' +
+                   (cost > 0
+                       ? '<span style="font-family:\'Space Mono\',monospace;font-size:12px;font-weight:900;color:#ff4d6d;">KES ' + cost.toLocaleString() + '</span>'
+                       : '<span style="font-size:11px;color:var(--muted);">—</span>') +
+               '</td>' +
+               '<td style="padding:14px 16px;">' +
+                   (r.kra_return_ref ? '<div style="font-size:10px;color:#00e5a0;font-weight:700;font-family:\'Space Mono\',monospace;">KRA: ' + r.kra_return_ref + '</div>' : '') +
+                   '<span style="font-size:11px;color:var(--muted);font-family:\'Space Mono\',monospace;">' + esc(r.original_receipt || '—') + '</span>' +
+               '</td>' +
+               '<td style="padding:14px 16px;text-align:center;">' +
+                    '<button onclick="printRecentVoucher(' + idx + ')" ' +
+                    'style="background:linear-gradient(135deg,#1e3a5f,#1e293b);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;" ' +
+                    'onmouseover="this.style.background=\'linear-gradient(135deg,#00e5a0,#00c98e)\';this.style.color=\'#000\';" ' +
+                    'onmouseout="this.style.background=\'linear-gradient(135deg,#1e3a5f,#1e293b)\';this.style.color=\'#00e5a0\';">' +
+                    '🖨️ Voucher</button>' +
+               '</td>' +
+               '</tr>';
+    }).join('');
+
+    // Mobile cards
+    mobileContainer.innerHTML = rows.map((r, idx) => {
+        const date    = new Date(r.created_at).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' });
+        const time    = new Date(r.created_at).toLocaleTimeString('en-KE', { hour:'2-digit', minute:'2-digit' });
+        const badgeClass = reasons[r.return_reason] || 'badge-other';
+        const cost    = parseFloat(r.cost_price_written_off || 0);
+        return `<div class="return-card">
+            <div class="return-card-header">
+                <div>
+                    <div style="font-size:12px;font-weight:700;color:var(--text);">${r.customer_name || '—'}</div>
+                    <div style="font-size:10px;color:var(--muted);margin-top:2px;">${r.customer_phone || ''}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                    <span class="${badgeClass}" style="font-size:9px;font-weight:900;text-transform:uppercase;padding:3px 9px;border-radius:20px;letter-spacing:0.5px;">${labels[r.return_reason] || r.return_reason}</span>
+                    <button onclick="printRecentVoucher(${idx})" style="background:linear-gradient(135deg,#1e3a5f,#1e293b);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);padding:4px 8px;border-radius:6px;font-size:8px;font-weight:900;text-transform:uppercase;">🖨️ Voucher</button>
+                </div>
+            </div>
+            <div class="return-card-body">
+                <div class="return-card-field">
+                    <label>↩ Returned</label>
+                    <span>${esc(r.returned_item_name)}</span>
+                    <div style="font-size:10px;color:var(--muted);">Qty: ${r.returned_quantity}</div>
+                </div>
+                <div class="return-card-field">
+                    <label>↪ Replacement</label>
+                    <span style="color:#00e5a0;">${esc(r.replacement_item_name)}</span>
+                    <div style="font-size:10px;color:var(--muted);">Qty: ${r.replacement_quantity}</div>
+                </div>
+                <div class="return-card-field">
+                    <label>Date & Staff</label>
+                    <span style="font-size:11px;">${date}</span>
+                    <div style="font-size:10px;color:var(--muted);">${time} · ${r.processed_by || '—'}</div>
+                </div>
+                <div class="return-card-field">
+                    <label>Cost Written Off</label>
+                    <span style="font-family:'Space Mono',monospace;${cost > 0 ? 'color:#ff4d6d;' : 'color:var(--muted);'}">${cost > 0 ? 'KES ' + cost.toLocaleString() : '—'}</span>
+                    ${r.original_receipt ? `<div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:'Space Mono',monospace;">${esc(r.original_receipt)}</div>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// --- NEW REPRINT FUNCTION ---
+function printRecentVoucher(idx) {
+    const r = window._returnsResultsMap && window._returnsResultsMap[idx];
+    if (!r) {
+        alert('Receipt data not found. Please refresh and try again.');
+        return;
+    }
+
+    const voucherData = {
+        customerName:        r.customer_name || '—',
+        voucherNo:           'EXC-' + String(r.id).padStart(6, '0'), // Uses historical ID
+        date:                new Date(r.created_at).toLocaleString(), // Uses historical date
+        originalReceipt:     r.original_receipt || '',
+        kraReceiptNo:        r.kra_receipt_no || '',
+        etimsNo:             r.etims_no || '',
+        returnedItemName:    r.returned_item_name || '',
+        returnedQty:         r.returned_quantity || 0,
+        replacementItemName: r.replacement_item_name || '',
+        replacementQty:      r.replacement_quantity || 0,
+        returnReason:        r.return_reason || 'other',
+        kraReturnRef:        r.kra_return_ref || '',
+        kraReturnQrUrl:      r.kra_return_qr_url || '',
+        etimsSubmitted:      !!(r.kra_return_ref || r.kra_return_qr_url),
+        servedBy:            r.processed_by || 'Staff'
+    };
+
+    showVoucher(voucherData);
+}
+
+// --- UPDATED SHOW VOUCHER ---
+function showVoucher(data) {
+    // ── Store structured data for live thermal printing ──
+    window._lastCreditNoteData = {
+        customerName:        data.customerName        || '—',
+        voucherNo:           data.voucherNo           || ('EXC-' + Date.now().toString().slice(-8)),
+        originalReceipt:     data.originalReceipt     || '',
+        kraReceiptNo:        data.kraReceiptNo        || '',
+        etimsNo:             data.etimsNo             || '',
+        returnedItemName:    data.returnedItemName    || '',
+        returnedQty:         data.returnedQty         || 0,
+        replacementItemName: data.replacementItemName || '',
+        replacementQty:      data.replacementQty      || 0,
+        reason:              ({'damaged':'Damaged Goods','wrong_item':'Wrong Item','other':'Other'})[data.returnReason] || data.returnReason || '—',
+        servedBy:            data.servedBy            || window.EliteAuth?.name || localStorage.getItem('userName') || 'Staff',
+        kraReturnRef:        data.kraReturnRef        || '',
+        kraReturnQrUrl:      data.kraReturnQrUrl      || '',
+        etimsSubmitted:      data.etimsSubmitted      || false,
+        date:                data.date                || new Date().toLocaleString(),
+    };
+    
+    const servedBy   = window._lastCreditNoteData.servedBy;
+    const reason     = window._lastCreditNoteData.reason;
+    const refNo      = window._lastCreditNoteData.voucherNo;
+    const now        = window._lastCreditNoteData.date;
+    const noteLabel  = data.returnReason === 'damaged' || data.returnReason === 'Damaged Goods' ? 'CREDIT NOTE' : 'EXCHANGE NOTE';
+
+    // KRA eTIMS block — matches inventory receipt style
+    const kraBlock = data.kraReturnQrUrl ? `
+        <div style="border-top:2px dashed #000;margin:8px 0;padding-top:10px;text-align:center;font-family:'Courier New',monospace;">
+            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">KRA eTIMS ${noteLabel}</div>
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}"
+                 style="width:120px;height:120px;image-rendering:pixelated;margin:0 auto;display:block;" alt="KRA QR" />
+            <div style="font-size:9px;margin-top:6px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
+                    <span>KRA PIN:</span>
+                    <span style="font-weight:900;">A014661185V</span>
+                </div>
+                ${data.kraReturnRef ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
+                    <span>KRA REF:</span>
+                    <span style="font-weight:900;">${data.kraReturnRef}</span>
+                </div>` : ''}
+            </div>
+            <div style="border-top:1px solid #000;margin-top:8px;padding-top:5px;font-size:8px;font-weight:700;text-transform:uppercase;">
+                SCAN TO VERIFY ON KRA eTIMS
+            </div>
+        </div>` : `
+        <div style="border-top:2px dashed #000;margin:8px 0;padding-top:8px;text-align:center;">
+            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">KRA eTIMS ${noteLabel}</div>
+            <div style="font-size:9px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
+                    <span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:3px 0;">
+                    <span>eTIMS Status:</span>
+                    <span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span>
+                </div>
+            </div>
+        </div>`;
+
+    const voucherHTML = (copyLabel, copyClass) => `
+        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;">
+            <span class="copy-badge ${copyClass}">${copyLabel}</span>
+            <div style="text-align:center;font-size:14px;font-weight:900;">ELITE HARDWARE LTD</div>
+            <div style="text-align:center;font-size:9px;letter-spacing:2px;margin:2px 0;">EXCHANGE VOUCHER — ${noteLabel}</div>
+            <div style="text-align:center;font-size:8px;color:#888;">PIN: A014661185V &nbsp;|&nbsp; NO CASH VALUE</div>
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:700;">${now}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${data.customerName || '—'}</span></div>
+            ${data.originalReceipt ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>RECEIPT NO:</span><span style="font-weight:700;font-family:'Courier New',monospace;">${data.originalReceipt}</span></div>` : ''}
+            ${data.kraReceiptNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>KRA RECEIPT:</span><span style="font-weight:700;font-family:'Courier New',monospace;">${data.kraReceiptNo}</span></div>` : ''}
+            ${data.etimsNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>eTIMS NO:</span><span style="font-weight:900;color:#16a34a;">${data.etimsNo}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>REASON:</span><span style="font-weight:700;text-transform:uppercase;">${reason}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div>
+
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                <thead><tr style="border-bottom:2px solid #000;">
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Item</th>
+                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:40px;">Qty</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:60px;">Action</th>
+                </tr></thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:6px 0;font-weight:700;text-transform:uppercase;">${data.returnedItemName || '—'}</td>
+                        <td style="padding:6px 0;text-align:center;font-weight:700;">${data.returnedQty}</td>
+                        <td style="padding:6px 0;text-align:right;font-size:9px;color:#dc2626;font-weight:900;">RETURNED</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:6px 0;font-weight:700;text-transform:uppercase;">${data.replacementItemName || '—'}</td>
+                        <td style="padding:6px 0;text-align:center;font-weight:700;">${data.replacementQty}</td>
+                        <td style="padding:6px 0;text-align:right;font-size:9px;color:#16a34a;font-weight:900;">ISSUED</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            ${kraBlock}
+
+            <div style="border-top:1px solid #000;padding-top:10px;margin-top:6px;">
+                <p style="margin:10px 0;font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
+            </div>
+            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:0.1em;">*** ${copyLabel} ***</p>
+        </div>
+    `;
+
+    document.getElementById('voucherContent').innerHTML =
+        voucherHTML('★ CUSTOMER COPY ★', 'copy-badge-customer') +
+        voucherHTML('★ SHOP COPY ★', 'copy-badge-shop') +
+        `<style>
+            @media print { 
+                @page { size: 80mm auto; margin: 2mm; } 
+                .receipt-watermark::before {
+                    content: 'ELITE HARDWARE';
+                    position: absolute; top: 50%; left: 50%;
+                    transform: translate(-50%,-50%) rotate(-35deg);
+                    font-size: 22px; font-weight: 900;
+                    color: rgba(0,0,0,0.07);
+                    letter-spacing: 0.18em; text-transform: uppercase;
+                    white-space: nowrap; pointer-events: none;
+                    font-family: 'Courier New', monospace;
+                }
+                .receipt-watermark { position: relative; }
+                .receipt-watermark > * { position: relative; z-index: 1; }
+                .copy-badge {
+                    display: block !important; text-align: center;
+                    font-family: 'Courier New', monospace;
+                    font-size: 8px; font-weight: 900;
+                    letter-spacing: 0.2em; text-transform: uppercase;
+                    border: 1px dashed #999; padding: 3px 6px; margin-bottom: 6px;
+                }
+                .copy-badge-customer { color: #000; border-color: #000; }
+                .copy-badge-shop     { color: #555; border-color: #aaa; }
+            }
+            /* Screen styles for dual copy label */
+            .copy-badge {
+                display: inline-block; font-family: 'Courier New', monospace; font-size: 9px;
+                font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+                border: 1px dashed #cbd5e1; padding: 2px 8px; border-radius: 3px;
+                margin-bottom: 4px; color: #64748b;
+            }
+        </style>`;
+
+    document.getElementById('voucherModal').style.display = 'flex';
+}
+
+function renderPagination(total) {
+    document.getElementById('pageInfo').textContent = 'Page ' + currentPage + ' of ' + totalPages + ' (' + total + ' records)';
+    document.getElementById('prevBtn').disabled = currentPage <= 1;
+    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+function changePage(dir) {
+    currentPage = Math.max(1, Math.min(totalPages, currentPage + dir));
+    loadReturns();
+}
+
+function debounceLoad() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { currentPage = 1; loadReturns(); }, 400);
+}
+
+function clearFilters() {
+    document.getElementById('filterFrom').value    = '';
+    document.getElementById('filterTo').value      = '';
+    document.getElementById('monthFilter').value   = '';
+    document.getElementById('annualFilter').value  = '';
+    document.getElementById('filterReason').value  = '';
+    document.getElementById('filterStaff').value   = '';
+    const s = document.getElementById('filterSearch'); if (s) s.value = '';
+    currentPage = 1;
+    loadReturns();
+}
+
+// ── Load inventory for dropdowns ─────────────────────────────
+async function loadInventoryForDropdowns() {
+    if (typeof window.apiFetch !== 'function') { return; } // auth not ready yet
+    try {
+        const res  = await apiFetch(API + '/inventory');
+        const raw  = await res.json();
+        // Normalize: handle both paginated {items:[]} and flat array responses
+        inventoryItems = Array.isArray(raw) ? raw : (raw.items || []);
+        // Items are now used by the text-search dropdowns — no legacy select to populate
+    } catch (e) { console.error('Inventory load error:', e); }
+}
+
+function populateDropdown(id, items) {
+    // Legacy: kept for compatibility but items are now searched via text inputs
+    // Items are stored in inventoryItems global — no select to populate
+}
+
+// ── Item search helpers (handles special characters via text search) ──────────
+function filterItemDropdown(searchId, listId, selectedId, hiddenId, onSelectCallback) {
+    const q     = document.getElementById(searchId).value.trim().toLowerCase();
+    const list  = document.getElementById(listId);
+    if (!q) { list.style.display = 'none'; return; }
+    // Escape regex special chars for safety, but match substrings robustly
+    const filtered = inventoryItems.filter(i =>
+        i.item_name.toLowerCase().includes(q)
+    );
+    if (!filtered.length) {
+        list.innerHTML = '<div style="padding:10px 12px;font-size:11px;color:var(--muted);">No items found</div>';
+        list.style.display = 'block';
+        return;
+    }
+    list.innerHTML = filtered.slice(0, 20).map(i => {
+        const stockLabel = i.stock_quantity > 0
+            ? '<span style="color:#00e5a0;font-size:9px;font-weight:700;">Stock: ' + i.stock_quantity + ' ' + (i.unit||'') + '</span>'
+            : '<span style="color:#ff4d6d;font-size:9px;font-weight:700;">Out of stock</span>';
+        const priceLabel = '<span style="color:#569cd6;font-size:9px;">KES ' + parseFloat(i.price||0).toLocaleString() + '</span>';
+        // Encode data safely using data attributes
+        return '<div class="item-option" ' +
+               'data-id="' + i.id + '" ' +
+               'data-cost="' + (i.cost_price||0) + '" ' +
+               'data-price="' + (i.price||0) + '" ' +
+               'data-stock="' + i.stock_quantity + '" ' +
+               'data-unit="' + encodeURIComponent(i.unit||'') + '" ' +
+               'data-name="' + encodeURIComponent(i.item_name) + '" ' +
+               'onclick="selectItem(this,\'' + searchId + '\',\'' + listId + '\',\'' + selectedId + '\',\'' + hiddenId + '\',' + (typeof onSelectCallback === 'function' ? 'true' : 'false') + ',\'' + (onSelectCallback === onReturnedItemChange ? 'returned' : 'replacement') + '\')" ' +
+               'style="padding:9px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.12s;" ' +
+               'onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'\'">' +
+               '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+               '<span style="font-size:12px;font-weight:700;color:var(--text);">' + i.item_name + '</span>' +
+               priceLabel +
+               '</div>' +
+               '<div style="margin-top:3px;">' + stockLabel + '</div>' +
+               '</div>';
+    }).join('');
+    list.style.display = 'block';
+}
+
+function selectItem(el, searchId, listId, selectedId, hiddenId, hasCallback, cbType) {
+    const id    = el.dataset.id;
+    const name  = decodeURIComponent(el.dataset.name);
+    const cost  = el.dataset.cost;
+    const price = el.dataset.price;
+    const stock = el.dataset.stock;
+    const unit  = decodeURIComponent(el.dataset.unit);
+
+    document.getElementById(hiddenId).value           = id;
+    document.getElementById(hiddenId).dataset.cost    = cost;
+    document.getElementById(hiddenId).dataset.price   = price;
+    document.getElementById(hiddenId).dataset.stock   = stock;
+    document.getElementById(hiddenId).dataset.unit    = unit;
+    document.getElementById(hiddenId).dataset.name    = name;
+    document.getElementById(searchId).value           = name;
+    document.getElementById(listId).style.display     = 'none';
+
+    if (cbType === 'returned')    updateReturnedBadge();
+    if (cbType === 'replacement') updateReplacementBadge();
+
+    if (cbType === 'returned')     onReturnedItemChange();
+    if (cbType === 'replacement') {
+        validateReplacementValue();
+        updateWriteoffPreview(); // <--- Added this to trigger when a replacement is clicked
+    }
+}
+
+function updateReturnedBadge() {
+    const hidden = document.getElementById('fReturnedItem');
+    if (!hidden.value) return;
+    const qty    = parseInt(document.getElementById('fReturnedQty').value) || 1;
+    const price  = parseFloat(hidden.dataset.price || 0);
+    const stock  = hidden.dataset.stock || '?';
+    const unit   = hidden.dataset.unit  || '';
+    const name   = hidden.dataset.name  || document.getElementById('fReturnedItemSearch').value;
+    const total  = (price * qty).toLocaleString();
+    const selBox = document.getElementById('fReturnedItemSelected');
+    selBox.textContent   = '✓ ' + name + '  ·  Stock: ' + stock + ' ' + unit + '  ·  KES ' + parseFloat(price).toLocaleString() + (qty > 1 ? ' × ' + qty + ' = KES ' + total : '');
+    selBox.style.display = 'block';
+}
+
+function updateReplacementBadge() {
+    const hidden = document.getElementById('fReplacementItem');
+    if (!hidden.value) return;
+    const qty    = parseInt(document.getElementById('fReplacementQty').value) || 1;
+    const price  = parseFloat(hidden.dataset.price || 0);
+    const stock  = hidden.dataset.stock || '?';
+    const unit   = hidden.dataset.unit  || '';
+    const name   = hidden.dataset.name  || document.getElementById('fReplacementItemSearch').value;
+    const total  = (price * qty).toLocaleString();
+    const selBox = document.getElementById('fReplacementItemSelected');
+    selBox.textContent   = '✓ ' + name + '  ·  Stock: ' + stock + ' ' + unit + '  ·  KES ' + parseFloat(price).toLocaleString() + (qty > 1 ? ' × ' + qty + ' = KES ' + total : '');
+    selBox.style.display = 'block';
+}
+
+function searchReturnedItem() {
+    filterItemDropdown('fReturnedItemSearch','fReturnedItemList','fReturnedItemSelected','fReturnedItem', onReturnedItemChange);
+    document.getElementById('fReturnedItemList').style.display = 
+        document.getElementById('fReturnedItemList').innerHTML ? 'block' : 'none';
+}
+
+function searchReplacementItem() {
+    filterItemDropdown('fReplacementItemSearch','fReplacementItemList','fReplacementItemSelected','fReplacementItem', validateReplacementValue);
+    document.getElementById('fReplacementItemList').style.display = 
+        document.getElementById('fReplacementItemList').innerHTML ? 'block' : 'none';
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    ['fReturnedItemList','fReplacementItemList'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.contains(e.target) &&
+            e.target.id !== 'fReturnedItemSearch' && e.target.id !== 'fReplacementItemSearch') {
+            el.style.display = 'none';
+        }
+    });
+});
+
+// ── Value validation for replacement (NOT applied to wrong_item) ──────────────
+function validateReplacementValue() {
+    const reason  = document.getElementById('fReason').value;
+    const retQty  = parseInt(document.getElementById('fReturnedQty').value) || 1;
+    const repQty  = parseInt(document.getElementById('fReplacementQty').value) || 1;
+
+    // ── Qty must match exactly — always enforced regardless of reason ──
+    const qtyHint = document.getElementById('qtyMismatchMsg');
+    if (retQty !== repQty) {
+        if (qtyHint) {
+            qtyHint.textContent = '⚠ Must match returned qty (' + retQty + ')';
+            qtyHint.style.display = 'block';
+        }
+        document.getElementById('valueErrorMsg').style.display = 'none';
+        return false;
+    }
+    if (qtyHint) qtyHint.style.display = 'none';
+
+    // Wrong item: no value restriction — customer got different item by mistake, can exchange freely
+    if (reason === 'wrong_item') {
+        document.getElementById('valueErrorMsg').style.display = 'none';
+        return true;
+    }
+    const retHidden  = document.getElementById('fReturnedItem');
+    const repHidden  = document.getElementById('fReplacementItem');
+    const retPrice   = parseFloat(retHidden.dataset.price || 0);
+    const repPrice   = parseFloat(repHidden.dataset.price || 0);
+    const retTotal   = retPrice * retQty;
+    const repTotal   = repPrice * repQty;
+    if (retHidden.value && repHidden.value && repTotal > retTotal) {
+        const errEl = document.getElementById('valueErrorMsg');
+        errEl.innerHTML = '⚠ Replacement total <b>KES ' + repTotal.toLocaleString() + '</b> exceeds returned value <b>KES ' + retTotal.toLocaleString() + '</b>. Choose an equal or lesser value item/qty.';
+        errEl.style.display = 'block';
+        return false;
+    }
+    document.getElementById('valueErrorMsg').style.display = 'none';
+    return true;
+}
+
+// ── Modal logic ───────────────────────────────────────────────
+function openExchangeModal() {
+    clearExchangeForm();
+    document.getElementById('exchangeModal').classList.add('active');
+}
+
+function closeExchangeModal() {
+    document.getElementById('exchangeModal').classList.remove('active');
+}
+
+function clearExchangeForm() {
+    ['fCustomerName','fReceipt','fKraInvoice','fKraEtimsInvoiceNo','fNotes','searchPhone'].forEach(id => document.getElementById(id).value = '');
+    const receiptEl = document.getElementById('fReceipt');
+    receiptEl.dataset.saleId        = '';
+    receiptEl.dataset.customerPhone = '';
+    receiptEl.dataset.unitPrice     = '';
+    receiptEl.dataset.digitaxSaleId = '';
+    // Reset KRA field styles
+    ['fKraInvoice','fKraEtimsInvoiceNo'].forEach(id => {
+        const el = document.getElementById(id);
+        el.style.borderColor = '';
+        el.style.background  = '';
+        el.placeholder       = id === 'fKraEtimsInvoiceNo' ? 'Auto-filled — numeric e.g. 1059171' : 'Auto-filled — e.g. REC-20260322-0002-...-1774192377360';
+        const w = el.parentElement.querySelector('.etims-warn');
+        if (w) w.remove();
+    });
+    document.getElementById('fReturnedQty').value     = 1;
+    document.getElementById('fReturnedQty').removeAttribute('max');
+    const hint = document.getElementById('retQtyHint'); if (hint) hint.style.display = 'none';
+    document.getElementById('fReplacementQty').value  = 1;
+    // Clear new search-based item fields
+    ['fReturnedItem','fReplacementItem'].forEach(id => {
+        const el = document.getElementById(id);
+        el.value = ''; el.dataset.cost = ''; el.dataset.price = ''; el.dataset.stock = '';
+    });
+    ['fReturnedItemSearch','fReplacementItemSearch'].forEach(id => document.getElementById(id).value = '');
+    ['fReturnedItemSelected','fReplacementItemSelected'].forEach(id => {
+        const el = document.getElementById(id); el.textContent = ''; el.style.display = 'none';
+    });
+    ['fReturnedItemList','fReplacementItemList'].forEach(id => {
+        const el = document.getElementById(id); el.innerHTML = ''; el.style.display = 'none';
+    });
+    document.getElementById('fReason').value          = '';
+    document.getElementById('saleSearchResults').innerHTML = '';
+    document.getElementById('exchangeError').style.display = 'none';
+    document.getElementById('costWriteoffPreview').style.display = 'none';
+    document.getElementById('valueErrorMsg').style.display = 'none';
+    const qmMsg = document.getElementById('qtyMismatchMsg'); if (qmMsg) qmMsg.style.display = 'none';
+    selectedReason = '';
+    document.querySelectorAll('.reason-btn').forEach(b => b.style.opacity = '1');
+}
+
+function setReason(reason) {
+    selectedReason = reason;
+    document.getElementById('fReason').value = reason;
+    document.querySelectorAll('.reason-btn').forEach(b => {
+        b.style.opacity = b.id === 'btn-' + reason ? '1' : '0.4';
+        b.style.transform = b.id === 'btn-' + reason ? 'scale(1.04)' : 'scale(1)';
+    });
+    updateWriteoffPreview();
+    validateReplacementValue();
+}
+
+function onReturnedItemChange() { updateReturnedBadge(); updateWriteoffPreview(); validateReplacementValue(); }
+function onReplacementQtyChange() { 
+    updateReplacementBadge(); 
+    validateReplacementValue(); 
+    updateWriteoffPreview(); // <--- Added this to ensure UI updates dynamically
+}
+
+function updateWriteoffPreview() {
+    // Show preview for both expense-generating reasons
+    if (selectedReason !== 'damaged' && selectedReason !== 'wrong_item') {
+        document.getElementById('costWriteoffPreview').style.display = 'none';
+        return;
+    }
+    
+    const retHidden = document.getElementById('fReturnedItem');
+    const repHidden = document.getElementById('fReplacementItem');
+    
+    const retQty = parseInt(document.getElementById('fReturnedQty').value) || 1;
+    const repQty = parseInt(document.getElementById('fReplacementQty').value) || 1;
+    
+    const previewEl = document.getElementById('costWriteoffPreview');
+    let expenseValue = 0;
+    
+    if (selectedReason === 'damaged') {
+        const cost = parseFloat(retHidden.dataset.cost || 0) || 0;
+        expenseValue = cost * retQty;
+        
+        previewEl.innerHTML = `<span style="font-size:10px;font-weight:700;color:#ff4d6d;">⚠ Damaged — KES <span>${expenseValue.toLocaleString()}</span> logged as expense (Cost Price). Item DESTROYED (Not restocked).</span>`;
+        previewEl.style.background = 'rgba(255,77,109,0.1)';
+        previewEl.style.borderColor = 'rgba(255,77,109,0.2)';
+    } else if (selectedReason === 'wrong_item') {
+        const retPrice = parseFloat(retHidden.dataset.price || 0) || 0;
+        const repPrice = parseFloat(repHidden.dataset.price || 0) || 0;
+        expenseValue = Math.abs((repPrice * repQty) - (retPrice * retQty));
+        
+        previewEl.innerHTML = `<span style="font-size:10px;font-weight:700;color:#f59e0b;">⚠ Wrong Item — KES <span>${expenseValue.toLocaleString()}</span> logged as expense (Sell Price Diff). Item RESTOCKED to shelf.</span>`;
+        previewEl.style.background = 'rgba(245,158,11,0.1)';
+        previewEl.style.borderColor = 'rgba(245,158,11,0.2)';
+    }
+    
+    previewEl.style.display = expenseValue > 0 ? 'block' : 'none';
+}
+// ── Search original sale ──────────────────────────────────────
+async function searchSale() {
+    const q = document.getElementById('searchPhone').value.trim();
+    if (!q) return;
+    const container = document.getElementById('saleSearchResults');
+    container.innerHTML = '<p style="font-size:11px;color:var(--muted);padding:6px 0;">Searching...</p>';
+    try {
+        const res  = await apiFetch(API + '/returns/search-sale?q=' + encodeURIComponent(q));
+        const data = await res.json();
+        if (!data.length) {
+            container.innerHTML = '<p style="font-size:11px;color:#ff4d6d;padding:6px 0;">No sales found. Try a different name, phone or receipt number.</p>';
+            return;
+        }
+       // Store results in a temporary map to avoid inline JS encoding issues with special chars
+        window._saleResultsMap = {};
+        container.innerHTML = data.map((s, idx) => {
+            const date = new Date(s.sale_date).toLocaleDateString('en-KE', { day:'2-digit', month:'short', year:'numeric' });
+            
+            // NEW: Calculate remaining returnable quantity 
+            // (Assumes your backend sends 'returned_quantity'. Defaults to 0 if none returned yet)
+            const returnedQty = parseInt(s.returned_quantity || s.qty_returned || 0);
+            const remainingQty = parseInt(s.quantity_sold) - returnedQty;
+
+          window._saleResultsMap[idx] = {
+                id:             s.id,
+                name:           s.customer_name  || '',
+                phone:          s.customer_phone || '',
+                qty:            s.quantity_sold,
+                returnedQty:    returnedQty,
+                remainingQty:   remainingQty,
+                itemName:       s.item_name      || '',
+                unitPrice:      s.unit_price     || 0,
+                // CHANGED: Fallback to invoice_number if receipt_number is null
+                receiptNumber:  s.invoice_number || s.receipt_number || '', 
+                kraReceiptNo:   s['Kra_Receipt_No'] || '',
+                etimsNo:        s['E-tims_No']      || '',
+                digitaxSaleId:  s.digitax_sale_id   || '',
+            };
+
+            const isExhausted = remainingQty <= 0;
+            const clickHandler = isExhausted ? '' : `onclick="selectSaleByIndex(${idx})"`;
+            const pointerStyle = isExhausted ? 'cursor:not-allowed; opacity:0.6; filter:grayscale(1);' : 'cursor:pointer;';
+            const hoverEvents = isExhausted ? '' : 'onmouseover="this.style.background=\'rgba(86,156,214,0.15)\'" onmouseout="this.style.background=\'rgba(86,156,214,0.08)\'"';
+
+            const qtyBadge = isExhausted
+                ? `<span style="font-size:10px;font-weight:900;color:#ff4d6d;background:rgba(255,77,109,0.1);padding:2px 8px;border-radius:20px;">Fully Returned</span>`
+                : `<span style="font-size:10px;font-weight:900;color:#00e5a0;background:rgba(0,229,160,0.1);padding:2px 8px;border-radius:20px;">Bought: ${s.quantity_sold} (Rem: ${remainingQty})</span>`;
+
+            return '<div ' + clickHandler + ' ' +
+                   'style="padding:10px 12px;border-radius:9px;background:rgba(86,156,214,0.08);border:1px solid rgba(86,156,214,0.2);margin-bottom:6px;transition:background 0.15s;' + pointerStyle + '" ' +
+                   hoverEvents + '>' +
+                   '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                       '<span style="font-size:12px;font-weight:700;color:var(--text);">' + s.item_name + '</span>' +
+                       '<span style="font-size:10px;font-weight:700;color:#569cd6;">KES ' + parseFloat(s.total_amount).toLocaleString() + '</span>' +
+                   '</div>' +
+                   '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">' +
+                       '<span style="font-size:10px;color:var(--muted);">' + date + ' · ' + (s.customer_name||'N/A') + ' · ' + (s.payment_status||'') + '</span>' +
+                       qtyBadge +
+                   '</div>' +
+                  '<div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">' +
+                       ((s.invoice_number || s.receipt_number) ? '<span style="font-size:9px;color:#569cd6;font-family:\'Space Mono\',monospace;">Ref: ' + (s.invoice_number || s.receipt_number) + '</span>' : '') +
+                       (s['E-tims_No']      ? '<span style="font-size:9px;color:#00e5a0;font-family:\'Space Mono\',monospace;">eTIMS No: ' + s['E-tims_No'] + '</span>' : '') +
+                   '</div>' +
+                   '</div>';
+        }).join('');
+    } catch (e) {
+        container.innerHTML = '<p style="font-size:11px;color:#ff4d6d;padding:6px 0;">Search failed.</p>';
+    }
+}
+
+function selectSaleByIndex(idx) {
+    const s = window._saleResultsMap && window._saleResultsMap[idx];
+    if (!s || s.remainingQty <= 0) return; // Prevent selection if fully returned
+    // Pass remainingQty as the 5th parameter now
+    selectSale(s.id, s.name, s.phone, s.qty, s.remainingQty, s.itemName, s.unitPrice, s.receiptNumber, s.kraReceiptNo, s.etimsNo, s.digitaxSaleId);
+}
+
+function selectSale(id, name, phone, qtySold, remainingQty, itemName, unitPrice, receiptNumber, kraReceiptNo, etimsNo, digitaxSaleId) {
+    document.getElementById('fCustomerName').value      = name;
+    document.getElementById('fReceipt').value           = receiptNumber || '';
+    document.getElementById('fKraInvoice').value        = kraReceiptNo  || '';
+    document.getElementById('fKraEtimsInvoiceNo').value = String(etimsNo || '');
+
+    // Store all IDs on fReceipt dataset for payload
+    const receiptEl = document.getElementById('fReceipt');
+    receiptEl.dataset.saleId        = id            || '';
+    receiptEl.dataset.customerPhone = phone         || '';
+    receiptEl.dataset.unitPrice     = unitPrice     || 0;
+    receiptEl.dataset.digitaxSaleId = digitaxSaleId || '';
+
+    // NEW: Set max on returned qty input to remainingQty
+    const qtyInput = document.getElementById('fReturnedQty');
+    qtyInput.max   = remainingQty || 9999;
+    qtyInput.value = 1;
+
+    // Show hint under qty input
+    const hint = document.getElementById('retQtyHint');
+    if (hint) {
+        hint.textContent = 'Max returnable: ' + (remainingQty || '?') + ' (Bought: ' + qtySold + ')';
+        hint.style.display = 'block';
+    }
+
+    // Auto-fill returned item if item_name matches inventory
+    if (itemName) {
+        const match = inventoryItems.find(i =>
+            i.item_name.toLowerCase() === itemName.toLowerCase()
+        );
+        if (match) {
+            document.getElementById('fReturnedItem').value          = match.id;
+            document.getElementById('fReturnedItem').dataset.cost   = match.cost_price || 0;
+            document.getElementById('fReturnedItem').dataset.price  = match.price || 0;
+            document.getElementById('fReturnedItem').dataset.stock  = match.stock_quantity;
+            document.getElementById('fReturnedItem').dataset.unit   = match.unit || '';
+            document.getElementById('fReturnedItem').dataset.name   = match.item_name;
+            document.getElementById('fReturnedItemSearch').value    = match.item_name;
+            updateReturnedBadge();
+            onReturnedItemChange();
+        }
+    }
+
+    document.getElementById('saleSearchResults').innerHTML =
+        '<p style="font-size:10px;color:#00e5a0;padding:4px 0;">✓ Sale selected — <b>' + remainingQty + '</b> returnable units left ' +
+        (itemName ? ' of <b>' + itemName + '</b>' : '') + '.</p>';
+
+    // Highlight filled KRA fields green, flag missing ones red
+    const kraInvoiceEl = document.getElementById('fKraInvoice');
+    const etimsEl      = document.getElementById('fKraEtimsInvoiceNo');
+
+    if (kraReceiptNo) {
+        kraInvoiceEl.style.borderColor = '#00e5a0';
+        kraInvoiceEl.style.background  = 'rgba(0,229,160,0.06)';
+    }
+    if (etimsNo) {
+        etimsEl.style.borderColor = '#00e5a0';
+        etimsEl.style.background  = 'rgba(0,229,160,0.06)';
+    } else {
+        etimsEl.style.borderColor = '#ff4d6d';
+        etimsEl.style.background  = 'rgba(255,77,109,0.08)';
+        etimsEl.placeholder       = '⚠ Not found — enter manually e.g. 1059171';
+        // Show warning below the field
+        const hintWarn = etimsEl.parentElement.querySelector('.etims-warn');
+        if (!hintWarn) {
+            const w = document.createElement('div');
+            w.className   = 'etims-warn';
+            w.style.cssText = 'font-size:9px;color:#ff4d6d;font-weight:700;margin-top:4px;';
+            w.textContent = '⚠ eTIMS No. not on this sale record — enter it manually from DigiTax.';
+            etimsEl.parentElement.appendChild(w);
+        }
+    }
+    // Reset border when user types manually
+    etimsEl.oninput = () => {
+        if (etimsEl.value.trim()) {
+            etimsEl.style.borderColor = '#00e5a0';
+            etimsEl.style.background  = 'rgba(0,229,160,0.06)';
+            const w = etimsEl.parentElement.querySelector('.etims-warn');
+            if (w) w.remove();
+        }
+    };
+}
+
+// ── Submit exchange ───────────────────────────────────────────
+async function submitExchange() {
+    const errEl = document.getElementById('exchangeError');
+    errEl.style.display = 'none';
+
+    const returnedItemId    = document.getElementById('fReturnedItem').value;
+    const replacementItemId = document.getElementById('fReplacementItem').value;
+    const reason            = document.getElementById('fReason').value;
+
+    if (!returnedItemId)    return showError('Please select the returned item.');
+    if (!replacementItemId) return showError('Please select the replacement item.');
+    if (!reason)            return showError('Please select a return reason.');
+
+    const kraEtimsNo = document.getElementById('fKraEtimsInvoiceNo').value.trim();
+    if (!kraEtimsNo)  return showError('eTIMS No. is required. Find it in your Sales table → E-tims_No column (numeric, e.g. 1059171).');
+
+    const retQtyInput = document.getElementById('fReturnedQty');
+    const retQty      = parseInt(retQtyInput.value) || 1;
+    const maxQty      = parseInt(retQtyInput.max) || 9999;
+    if (retQty > maxQty) return showError(`Cannot return ${retQty} units — customer only has ${maxQty} returnable unit(s) left on this receipt.`);
+
+    // ── Qty match check: replacement qty must equal returned qty exactly ──
+    const repQtyVal = parseInt(document.getElementById('fReplacementQty').value) || 1;
+    if (repQtyVal !== retQty) return showError(`Replacement quantity (${repQtyVal}) must exactly match returned quantity (${retQty}). Adjust replacement qty to ${retQty}.`);
+
+    // Value check: replacement must not exceed returned item price (except for wrong_item)
+    if (reason !== 'wrong_item') {
+        if (!validateReplacementValue()) {
+            return showError('Replacement item value cannot exceed the returned item value. Choose an equal or lesser value item.');
+        }
+    }
+
+    const btn = document.getElementById('submitExchangeBtn');
+    btn.textContent = 'Processing...';
+    btn.disabled = true;
+
+    const retItemName = document.getElementById('fReturnedItemSearch').value || '—';
+    const repItemName = document.getElementById('fReplacementItemSearch').value || '—';
+    const receiptEl   = document.getElementById('fReceipt');
+    const retHidden   = document.getElementById('fReturnedItem');
+
+    const payload = {
+        originalReceipt:       receiptEl.value.trim()                           || null,
+        originalSaleId:        receiptEl.dataset.saleId                         || null,
+        digitaxSaleId:         receiptEl.dataset.digitaxSaleId                  || null,
+        customerName:          document.getElementById('fCustomerName').value   || null,
+        customerPhone:         receiptEl.dataset.customerPhone                  || null,
+        returnedItemId:        parseInt(returnedItemId),
+        returnedQuantity:      retQty,
+        returnReason:          reason,
+        replacementItemId:     parseInt(replacementItemId),
+        replacementQuantity:   parseInt(document.getElementById('fReplacementQty').value) || 1,
+        sellingPriceOriginal:  parseFloat(retHidden.dataset.price || receiptEl.dataset.unitPrice || 0) || null,
+        notes:                 document.getElementById('fNotes').value          || null,
+        kraInvoiceNumber:      document.getElementById('fKraInvoice').value.trim()        || null,
+        kraEtimsInvoiceNumber: document.getElementById('fKraEtimsInvoiceNo').value.trim() || null,
+    };
+
+    try {
+        const res  = await apiFetch(API + '/returns/exchange', {
+            method: 'POST',
+            body:   JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            showError(data.message || 'Exchange failed.');
+            return;
+        }
+        const voucherData = {
+            customerName:        document.getElementById('fCustomerName').value || '—',
+            originalReceipt:     receiptEl.value.trim()                         || null,
+            kraReceiptNo:        document.getElementById('fKraInvoice').value.trim()        || null,
+            etimsNo:             document.getElementById('fKraEtimsInvoiceNo').value.trim() || null,
+            returnedItemName:    retItemName,
+            returnedQty:         retQty,
+            replacementItemName: repItemName,
+            replacementQty:      parseInt(document.getElementById('fReplacementQty').value) || 1,
+            returnReason:        reason,
+            kraReturnRef:        data.kraReturnRef   || null,
+            kraReturnQrUrl:      data.kraReturnQrUrl || null,
+            etimsSubmitted:      data.etimsSubmitted || false,
+        };
+        closeExchangeModal();
+        loadReturns();
+        loadSummary();
+        loadInventoryForDropdowns();
+
+        // Warn staff if credit note failed — replacement was NOT issued to KRA
+        if (!data.kraReturnRef && !data.etimsSubmitted) {
+            alert('⚠️ WARNING: The KRA credit note was NOT accepted.\n\nThe physical exchange has been recorded locally but was NOT submitted to KRA.\n\nPlease REVERSE the physical exchange or contact DigiTax support to resolve before proceeding.');
+            return;
+        }
+
+        showVoucher(voucherData);
+    } catch (e) {
+        showError('Server error. Please try again.');
+    } finally {
+        btn.textContent = 'Process Exchange';
+        btn.disabled    = false;
+    }
+}
+
+function showVoucher(data) {
+    // ── Store structured data for live thermal printing ──
+    window._lastCreditNoteData = {
+        customerName:        data.customerName        || '—',
+        voucherNo:           data.voucherNo           || ('EXC-' + Date.now().toString().slice(-8)),
+        originalReceipt:     data.originalReceipt     || '',
+        kraReceiptNo:        data.kraReceiptNo        || '',
+        etimsNo:             data.etimsNo             || '',
+        returnedItemName:    data.returnedItemName    || '',
+        returnedQty:         data.returnedQty         || 0,
+        replacementItemName: data.replacementItemName || '',
+        replacementQty:      data.replacementQty      || 0,
+        reason:              ({'damaged':'Damaged Goods','wrong_item':'Wrong Item','other':'Other'})[data.returnReason] || data.returnReason || '—',
+        servedBy:            data.servedBy            || window.EliteAuth?.name || localStorage.getItem('userName') || 'Staff',
+        kraReturnRef:        data.kraReturnRef        || '',
+        kraReturnQrUrl:      data.kraReturnQrUrl      || '',
+        etimsSubmitted:      data.etimsSubmitted      || false,
+        date:                data.date                || new Date().toLocaleString(),
+    };
+    
+    const servedBy   = window._lastCreditNoteData.servedBy;
+    const reason     = window._lastCreditNoteData.reason;
+    const refNo      = window._lastCreditNoteData.voucherNo;
+    const now        = window._lastCreditNoteData.date;
+    const noteLabel  = data.returnReason === 'damaged' || data.returnReason === 'Damaged Goods' ? 'CREDIT NOTE' : 'EXCHANGE VOUCHER';
+
+    // KRA eTIMS block — sleek inline layout matching inventory receipts
+    const kraBlock = data.kraReturnQrUrl ? `
+        <div style="border:1px solid #000; margin-top:10px; padding:8px 6px;">
+            <div style="text-align:center; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">KRA eTIMS ${noteLabel}</div>
+            <div style="text-align:center; margin:8px 0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}" style="width:120px;height:120px;image-rendering:pixelated;margin:0 auto;display:block;" alt="KRA QR"/>
+            </div>
+            <div style="font-size:8px;font-style:italic;color:#888;margin-bottom:4px;text-align:center;">✓ Live eTIMS QR</div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span></div>
+            ${data.kraReturnRef ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>KRA REF:</span><span style="font-weight:900;">${data.kraReturnRef}</span></div>` : ''}
+            <div style="text-align:center;font-size:8px;font-weight:700;margin-top:6px;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</div>
+        </div>` : `
+        <div style="border:1px solid #000; margin-top:10px; padding:8px 6px;">
+            <div style="text-align:center; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">KRA eTIMS ${noteLabel}</div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span></div>
+            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>eTIMS Status:</span><span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span></div>
+        </div>`;
+
+    const voucherHTML = (copyLabel, copyClass) => `
+    <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:12px 10px;background:#fff;color:#000;border-top:3px solid #ccc;border-bottom:3px solid #ccc;margin: 0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:22px; font-weight:900; color:rgba(0,0,0,0.055); letter-spacing:0.18em; white-space:nowrap; pointer-events:none; z-index:0;">ELITE HARDWARE</div>
+        
+        <div style="position:relative; z-index:1;">
+            <div class="${copyClass}" style="text-align:center; border:1px dashed #999; padding:3px; margin-bottom:8px; font-size:9px; font-weight:900; letter-spacing:0.2em; text-transform:uppercase;">${copyLabel}</div>
+            
+            <div style="text-align:center; font-size:14px; font-weight:900; letter-spacing:1px; text-transform:uppercase;">ELITE HARDWARE LTD</div>
+            <div style="text-align:center; font-size:9px; letter-spacing:2px; margin:2px 0; text-transform:uppercase;">${noteLabel}</div>
+            <div style="text-align:center; font-size:8px; color:#666;">PIN: A014661185V &nbsp;|&nbsp; NO CASH VALUE</div>
+            
+            <div style="border-top:1px dashed #999; margin:6px 0;"></div>
+
+            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
+            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>DATE:</span><span style="font-weight:900;">${now}</span></div>
+            
+            <div style="display:flex; justify-content:space-between; padding:3px 2px; margin:2px 0; border-top:1px solid #ddd; border-bottom:1px solid #ddd; background:#f5f5f5; font-size:11px;">
+                <span>CUSTOMER:</span><span style="font-weight:900; text-transform:uppercase;">${data.customerName || '—'}</span>
+            </div>
+            
+            ${data.originalReceipt ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>RECEIPT NO:</span><span style="font-weight:900;">${data.originalReceipt}</span></div>` : ''}
+            ${data.kraReceiptNo ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>KRA RECEIPT:</span><span style="font-weight:900;">${data.kraReceiptNo}</span></div>` : ''}
+            ${data.etimsNo ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>eTIMS NO:</span><span style="font-weight:900; color:#16a34a;">${data.etimsNo}</span></div>` : ''}
+            
+            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>REASON:</span><span style="font-weight:900; text-transform:uppercase;">${reason}</span></div>
+            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>SERVED BY:</span><span style="font-weight:900; text-transform:uppercase;">${servedBy}</span></div>
+
+            <div style="border-top:1px dashed #999; margin:6px 0;"></div>
+
+            <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px;">
+                <thead>
+                    <tr>
+                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:left;">Description</th>
+                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:center;">Qty</th>
+                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; font-weight:900; text-transform:uppercase;">${data.returnedItemName || '—'}</td>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:center;">${data.returnedQty}</td>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:right; color:#dc2626; font-weight:900;">RETURNED</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; font-weight:900; text-transform:uppercase;">${data.replacementItemName || '—'}</td>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:center;">${data.replacementQty}</td>
+                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:right; color:#16a34a; font-weight:900;">ISSUED</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            ${kraBlock}
+
+            <div style="border-top:1px solid #000; padding-top:10px; margin-top:6px; text-align:center;">
+                <p style="margin:10px 0; font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
+            </div>
+            <div style="margin-top:8px; border-top:1px dashed #999;"></div>
+        </div>
+    </div>`;
+
+    // 1. Show a single Customer Copy in the browser modal to keep it clean and scrollable
+    document.getElementById('voucherContent').innerHTML = voucherHTML('★ CUSTOMER COPY ★', '');
+
+    // 2. Prepare the full 2-Copy HTML string globally so the print function can grab it
+    window._creditNotePrintHTML = 
+        voucherHTML('★ CUSTOMER COPY ★', '') + 
+        '<div style="page-break-after:always;"></div>' + 
+        voucherHTML('★ SHOP COPY ★', 'color:#555;border-color:#aaa;');
+
+    document.getElementById('voucherModal').style.display = 'flex';
+}
+
+function printVoucher() {
+    silentPrintCreditNote();
+}
+
+async function silentPrintCreditNote() {
+    if (!LIVE_PRINT || !window._lastCreditNoteData) {
+        _browserPrintVoucher();
+        return;
+    }
+    try {
+        showPrintToast('🖨️ Sending credit note to printer...', false, true);
+        const res = await fetch(CREDIT_NOTE_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(window._lastCreditNoteData)
+        });
+        if (!res.ok) throw new Error('Print server error ' + res.status);
+        
+        // CHECK THE JSON RESPONSE FOR VIRTUAL FALLBACK URL
+        const result = await res.json();
+        if (result.url) {
+            window.open(result.url, '_blank');
+            showPrintToast('✅ Opened virtual credit note');
+        } else if (result.success) {
+            showPrintToast('✅ Credit note printed — 2 copies');
+        } else {
+            throw new Error('Print failed');
+        }
+
+    } catch (err) {
+        console.error('[CREDIT NOTE PRINT]', err.message);
+        showPrintToast('⚠️ v-printer offline — using browser print', true);
+        setTimeout(() => _browserPrintVoucher(), 800);
+    }
+}
+
+// ── BROWSER PRINT FALLBACK ENGINE ──
+function _browserPrintVoucher() {
+    if (!window._creditNotePrintHTML) return;
+    
+    const printArea = document.createElement('div');
+    printArea.id = 'tempPrintArea';
+    
+    printArea.innerHTML = window._creditNotePrintHTML + `
+        <style>
+            @media print { 
+                @page { size: 80mm auto; margin: 2mm; } 
+                body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
+                body:has(#tempPrintArea) #tempPrintArea,
+                body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
+                #tempPrintArea {
+                    position: absolute !important; left: 0 !important; top: 0 !important; 
+                    width: 80mm !important; max-width: 80mm !important;
+                    background: #fff !important; color: #000 !important;
+                    box-shadow: none !important; border: none !important; margin: 0 !important;
+                }
+            }
+        </style>`;
+        
+    document.body.appendChild(printArea);
+
+    // Wait for the QR code image to fully load before printing.
+    // The QR is fetched from api.qrserver.com and may not be ready in 250ms —
+    // same fix as inventory.html to prevent blank QR codes on printed receipts.
+    const qrImg = printArea.querySelector('img[alt="KRA QR"]');
+    const doPrint = () => {
+        window.print();
+        setTimeout(() => printArea.remove(), 1000);
+    };
+    if (qrImg && !qrImg.complete) {
+        qrImg.onload  = doPrint;
+        qrImg.onerror = doPrint; // print anyway if QR server is unreachable
+        // Safety net: print after 5s even if neither event fires
+        setTimeout(doPrint, 5000);
+    } else {
+        setTimeout(doPrint, 250); // already loaded (or no QR image on this return)
+    }
+}
+// ══════════════════════════════════════════════════════════════
+//  PRINT ENVIRONMENT — Credit Notes
+//  LIVE_PRINT = true  → sends to v-printer.js thermal server
+//  LIVE_PRINT = false → falls back to browser print dialog
+// ══════════════════════════════════════════════════════════════
+const LIVE_PRINT         = true;   // ✅ LIVE — sends to v-printer.js
+const CREDIT_NOTE_URL    = 'http://localhost:6789/print/credit-note';
+
+function showPrintToast(msg, isError = false, isInfo = false) {
+    let toast = document.getElementById('_cnPrintToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = '_cnPrintToast';
+        toast.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.4s;pointer-events:none;';
+        document.body.appendChild(toast);
+    }
+    toast.style.background = isError ? '#ef4444' : isInfo ? '#3b82f6' : '#00e5a0';
+    toast.style.color      = isError ? '#fff'    : isInfo ? '#fff'    : '#000';
+    toast.textContent      = msg;
+    toast.style.opacity    = '1';
+    clearTimeout(toast._t);
+    if (!isInfo) toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+async function silentPrintCreditNote() {
+    if (!LIVE_PRINT || !window._lastCreditNoteData) {
+        // Fallback: browser print dialog
+        document.body.classList.add('printing-voucher');
+        window.print();
+        document.body.classList.remove('printing-voucher');
+        return;
+    }
+    try {
+        showPrintToast('🖨️ Sending credit note to printer...', false, true);
+        const res = await fetch(CREDIT_NOTE_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(window._lastCreditNoteData)
+        });
+        if (!res.ok) throw new Error('Print server error ' + res.status);
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error || 'Print failed');
+        if (result.url) window.open(result.url, '_blank');
+        showPrintToast('✅ Credit note printed — 2 copies (CUSTOMER + SHOP)');
+    } catch (err) {
+        console.error('[CREDIT NOTE PRINT]', err.message);
+        showPrintToast('⚠️ v-printer offline — using browser print', true);
+        setTimeout(() => {
+            document.body.classList.add('printing-voucher');
+            window.print();
+            document.body.classList.remove('printing-voucher');
+        }, 800);
+    }
+}
+
+function printVoucher() {
+    silentPrintCreditNote();
+}
+
+function closeVoucher() {
+    document.getElementById('voucherModal').style.display = 'none';
+    document.body.classList.remove('printing-voucher');
+}
+
+function showError(msg) {
+    const el = document.getElementById('exchangeError');
+    el.textContent    = msg;
+    el.style.display  = 'block';
+    const btn = document.getElementById('submitExchangeBtn');
+    btn.textContent = 'Process Exchange';
+    btn.disabled    = false;
+}
+
+// ════════════════════════════════════════════════════════════
+//  SUPPLIER RETURNS
+// ════════════════════════════════════════════════════════════
+
+let _selectedPO         = null;
+let _supplierReturnPage = 1;
+
+async function loadSupplierReturns() {
+    const tbody = document.getElementById('supplierReturnsBody');
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">Loading...</td></tr>';
+    try {
+        const res  = await apiFetch(API + '/supplier-returns?page=' + _supplierReturnPage);
+        const data = await res.json();
+        const rows = data.returns || [];
+        let totalValue = 0, pendingValue = 0, pendingCount = 0, confirmedCount = 0;
+        rows.forEach(r => {
+            totalValue += parseFloat(r.total_return_value||0);
+            if (r.balance_adjusted) { confirmedCount++; }
+            else { pendingValue += parseFloat(r.total_return_value||0); pendingCount++; }
+        });
+        document.getElementById('skpiTotal').textContent        = data.totalCount || 0;
+        document.getElementById('skpiValue').textContent        = 'KES ' + totalValue.toLocaleString();
+        document.getElementById('skpiAdjusted').textContent     = confirmedCount;
+        document.getElementById('skpiPending').textContent      = pendingValue > 0 ? 'KES ' + pendingValue.toLocaleString() : 'KES 0';
+        document.getElementById('skpiPendingCount').textContent = pendingCount + ' item(s) awaiting credit note';
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">No supplier returns yet.</td></tr>';
+            return;
+        }
+        const reasonLabels = { damaged:'Damaged', wrong_item:'Wrong Item', short_delivery:'Short Delivery', other:'Other' };
+        const reasonColors = { damaged:'#ff4d6d', wrong_item:'#f59e0b', short_delivery:'#569cd6', other:'var(--muted)' };
+       tbody.innerHTML = rows.map(r => {
+            const date  = new Date(r.created_at).toLocaleDateString('en-KE', {day:'2-digit',month:'short',year:'numeric'});
+            const color = reasonColors[r.return_reason] || 'var(--muted)';
+            const isPending = !r.balance_adjusted;
+            
+            // FIX: Safely escape single and double quotes so they don't break the onclick handler
+            const safeItemName = (r.item_name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const safeTotalValue = r.total_return_value || 0;
+            
+            return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);${isPending ? 'opacity:0.75;' : ''}">
+                <td style="padding:12px 16px;font-size:12px;color:var(--muted);">${date}</td>
+                <td style="padding:12px 16px;font-weight:700;font-size:12px;">${r.supplier_name||'—'}</td>
+                <td style="padding:12px 16px;font-size:12px;">${r.item_name}</td>
+                <td style="padding:12px 16px;text-align:center;font-weight:700;">${r.qty_returned}</td>
+                <td style="padding:12px 16px;"><span style="background:rgba(255,255,255,0.05);color:${color};padding:2px 9px;border-radius:20px;font-size:9px;font-weight:900;text-transform:uppercase;">${reasonLabels[r.return_reason]||r.return_reason}</span></td>
+                <td style="padding:12px 16px;text-align:right;font-family:'Space Mono',monospace;font-size:12px;color:#ff4d6d;font-weight:700;">KES ${parseFloat(safeTotalValue).toLocaleString()}</td>
+                <td style="padding:12px 16px;font-size:11px;color:var(--green);font-family:'Space Mono',monospace;">${r.supplier_credit_note||'—'}</td>
+                <td style="padding:12px 16px;font-size:11px;color:var(--muted);">${r.processed_by||'—'}</td>
+                <td style="padding:12px 16px;">
+                    ${isPending
+                        ? `<span style="font-size:9px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:20px;">⏳ Pending</span>
+                           <button onclick="confirmSupplierReturn(${r.id},${r.supplier_id},${safeTotalValue},'${safeItemName}',${r.inventory_id||'null'},${r.qty_returned},'${r.return_reason||''}')"
+                             style="margin-left:6px;padding:3px 10px;border-radius:6px;border:none;background:var(--green);color:#000;font-size:9px;font-weight:900;cursor:pointer;">Confirm</button>`
+                        : '<span style="font-size:9px;font-weight:700;color:#00e5a0;">✓ Confirmed</span>'
+                    }
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:#ff4d6d;">Error loading data.</td></tr>';
+    }
+}
+
+function openSupplierReturnModal() {
+    _selectedPO = null;
+    document.getElementById('srSearchInput').value = '';
+    document.getElementById('srSearchResults').innerHTML = '';
+    document.getElementById('srItemsSection').style.display = 'none';
+    document.getElementById('srError').style.display = 'none';
+    document.getElementById('srCreditNote').value = '';
+    document.getElementById('srNotes').value = '';
+    document.getElementById('srAdjustBalance').checked = true;
+    document.getElementById('supplierReturnModal').style.display = 'flex';
+}
+
+function closeSupplierReturnModal() {
+    document.getElementById('supplierReturnModal').style.display = 'none';
+}
+
+async function searchPO() {
+    const q = document.getElementById('srSearchInput').value.trim();
+    if (!q) return;
+    const container = document.getElementById('srSearchResults');
+    container.innerHTML = '<p style="font-size:11px;color:var(--muted);padding:6px 0;">Searching...</p>';
+    try {
+        const res  = await apiFetch(API + '/supplier-returns/search-po?q=' + encodeURIComponent(q));
+        const data = await res.json();
+        if (!data.length) { container.innerHTML = '<p style="font-size:11px;color:#ff4d6d;">No received POs found.</p>'; return; }
+        window._poResultsMap = {};
+        container.innerHTML = data.map((po, idx) => {
+            window._poResultsMap[idx] = po;
+            const date = new Date(po.order_date).toLocaleDateString('en-KE', {day:'2-digit',month:'short',year:'numeric'});
+            return `<div onclick="selectPO(${idx})" style="padding:10px 12px;border-radius:9px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);margin-bottom:6px;cursor:pointer;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                <div style="display:flex;justify-content:space-between;"><span style="font-weight:700;font-size:12px;">${po.po_number}</span><span style="font-size:10px;color:#f59e0b;font-weight:700;">KES ${parseFloat(po.total_amount).toLocaleString()}</span></div>
+                <div style="font-size:10px;color:var(--muted);margin-top:3px;">${po.supplier_name} · ${date} · DN: ${po.delivery_note||'—'}</div>
+                <div style="font-size:9px;color:var(--green);margin-top:3px;">${po.purchase_order_items.length} item(s) returnable</div>
+            </div>`;
+        }).join('');
+    } catch(e) { container.innerHTML = '<p style="font-size:11px;color:#ff4d6d;">Search failed.</p>'; }
+}
+
+function selectPO(idx) {
+    _selectedPO = window._poResultsMap[idx];
+    document.getElementById('srSearchResults').innerHTML =
+        `<p style="font-size:10px;color:#00e5a0;padding:4px 0;">✓ PO selected: <b>${_selectedPO.po_number}</b> — ${_selectedPO.supplier_name}</p>`;
+    const itemsDiv = document.getElementById('srItemsList');
+    itemsDiv.innerHTML = _selectedPO.purchase_order_items.map((item, i) => `
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:10px;margin-bottom:8px;border:1px solid var(--border);">
+            <div>
+                <div style="font-weight:700;font-size:12px;">${item.item_name}</div>
+                <div style="font-size:10px;color:var(--muted);">Cost: KES ${parseFloat(item.unit_cost).toLocaleString()} · Returnable: <b style="color:#00e5a0;">${item.qty_returnable}</b></div>
+            </div>
+            <select id="srReason_${i}" style="padding:7px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;">
+                <option value="damaged">Damaged</option>
+                <option value="wrong_item">Wrong Item</option>
+                <option value="short_delivery">Short Delivery</option>
+                <option value="other">Other</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <label style="font-size:9px;color:var(--muted);font-weight:700;">QTY:</label>
+                <input type="number" id="srQty_${i}" min="0" max="${item.qty_returnable}" value="0"
+                    style="width:60px;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);text-align:center;font-weight:700;font-size:12px;">
+            </div>
+        </div>`).join('');
+    document.getElementById('srItemsSection').style.display = 'block';
+}
+
+async function confirmSupplierReturn(returnId, supplierId, totalValue, itemName, inventoryId, qty, reason) {
+    if (!confirm(`Confirm return of ${qty} x "${itemName}"?\n\nThis will:\n✓ Deduct ${qty} units from stock\n✓ Reduce supplier balance by KES ${parseFloat(totalValue).toLocaleString()}\n✓ Notify KRA`)) return;
+    try {
+        const res  = await apiFetch(API + '/supplier-returns/' + returnId + '/confirm', {
+            method: 'POST',
+            body:   JSON.stringify({ supplier_id: supplierId, inventory_id: inventoryId, qty, total_value: totalValue, item_name: itemName, reason })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { alert('Error: ' + (data.message||'Failed')); return; }
+        alert('✅ ' + data.message);
+        loadSupplierReturns();
+    } catch(e) { alert('Server error. Please try again.'); }
+}
+
+async function submitSupplierReturn() {
+    if (!_selectedPO) return;
+    const btn = document.getElementById('srSubmitBtn'), errEl = document.getElementById('srError');
+    if (btn.disabled) return;  // guard against double-click
+    errEl.style.display = 'none';
+    const items = _selectedPO.purchase_order_items.map((item, i) => ({
+        inventory_id: item.inventory_id || null,
+        item_name:    item.item_name,
+        qty_returned: parseFloat(document.getElementById('srQty_' + i)?.value || 0),
+        unit_cost:    item.unit_cost,
+        reason:       document.getElementById('srReason_' + i)?.value || 'damaged'
+    })).filter(i => i.qty_returned > 0);
+    if (!items.length) { errEl.textContent = 'Enter qty > 0 for at least one item.'; errEl.style.display = 'block'; return; }
+    for (let i = 0; i < _selectedPO.purchase_order_items.length; i++) {
+        const item = _selectedPO.purchase_order_items[i];
+        const qty  = parseFloat(document.getElementById('srQty_' + i)?.value || 0);
+        if (qty > item.qty_returnable) { errEl.textContent = `Cannot return ${qty} of "${item.item_name}" — only ${item.qty_returnable} returnable.`; errEl.style.display = 'block'; return; }
+    }
+    btn.textContent = 'Processing...'; btn.disabled = true;
+    try {
+        const res  = await apiFetch(API + '/supplier-returns', {
+            method: 'POST',
+            body: JSON.stringify({
+                po_id: _selectedPO.id, supplier_id: _selectedPO.supplier_id, supplier_name: _selectedPO.supplier_name,
+                items, return_reason: items[0].reason,
+                supplier_credit_note: document.getElementById('srCreditNote').value.trim() || null,
+                adjust_balance: document.getElementById('srAdjustBalance').checked,
+                notes: document.getElementById('srNotes').value.trim() || null
+            })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { errEl.textContent = data.message||'Failed.'; errEl.style.display='block'; return; }
+        closeSupplierReturnModal();
+        loadSupplierReturns();
+        alert('✅ ' + data.message);
+    } catch(e) { errEl.textContent = 'Server error.'; errEl.style.display = 'block'; }
+    finally { btn.textContent = 'Process Return'; btn.disabled = false; }
+}
+</script>
+
+<!-- ═══ EXCHANGE VOUCHER MODAL ═══ -->
+<div id="voucherModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);">
+    <div style="background:#fff;color:#000;border-radius:16px;width:100%;max-width:380px;max-height:90vh;overflow-y:auto;padding:24px;font-family:'Courier New',monospace;">
+        <div id="voucherContent"></div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;" class="no-print">
+            <button onclick="printVoucher()" style="width:100%;background:#dc2626;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">🖨️ PRINT CREDIT NOTE — 2 COPIES</button>
+            <button onclick="closeVoucher()" style="background:none;border:none;color:#64748b;font-weight:700;cursor:pointer;padding:6px;font-size:12px;">Close</button>
+        </div>
+    </div>
+</div>
+<!-- ═══ SUPPLIER RETURN MODAL ═══ -->
+<div id="supplierReturnModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.7);backdrop-filter:blur(3px);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;">
+
+    <!-- Header -->
+    <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1;">
+      <div>
+        <h2 style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:#f59e0b;margin:0;">🏭 Supplier Return</h2>
+        <p style="font-size:10px;color:var(--muted);margin:3px 0 0;">Return damaged/wrong goods to supplier</p>
+      </div>
+      <button onclick="closeSupplierReturnModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;">×</button>
+    </div>
+
+    <div style="padding:20px 22px;display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Step 1: Search PO -->
+      <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:14px;">
+        <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:#f59e0b;display:block;margin-bottom:8px;">① Search by Supplier Name, PO No. or Delivery Note</label>
+        <div style="display:flex;gap:8px;">
+          <input id="srSearchInput" type="text" placeholder="e.g. Buildmart, PO-20260322, DN-001..."
+            onkeydown="if(event.key==='Enter')searchPO()"
+            style="flex:1;padding:10px 13px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;">
+          <button onclick="searchPO()" style="padding:10px 18px;border-radius:9px;background:#f59e0b;color:#000;font-weight:900;font-size:11px;text-transform:uppercase;border:none;cursor:pointer;">Search</button>
+        </div>
+        <div id="srSearchResults" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Step 2: Items (shown after PO selected) -->
+      <div id="srItemsSection" style="display:none;">
+        <label style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:10px;">② Select Items &amp; Quantities to Return</label>
+        <div id="srItemsList"></div>
+
+        <!-- Credit Note + Options -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;">
+          <div>
+            <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:5px;">Supplier Credit Note No. <span style="font-weight:400;">(if issued)</span></label>
+            <input id="srCreditNote" type="text" placeholder="e.g. CN-2026-001"
+              style="width:100%;padding:9px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;">
+          </div>
+          <div>
+            <label style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:block;margin-bottom:5px;">Notes</label>
+            <input id="srNotes" type="text" placeholder="Optional notes..."
+              style="width:100%;padding:9px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;">
+          </div>
+        </div>
+
+        <!-- Adjust balance toggle -->
+        <div style="margin-top:14px;padding:12px 14px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.2);border-radius:10px;display:flex;align-items:center;gap:12px;">
+          <input type="checkbox" id="srAdjustBalance" checked style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+          <div>
+            <label for="srAdjustBalance" style="font-size:12px;font-weight:700;color:var(--text);cursor:pointer;">Supplier has confirmed return &amp; issued credit note</label>
+            <p style="font-size:10px;color:var(--muted);margin:2px 0 0;">
+              <b>Ticked:</b> Stock deducted, supplier balance reduced, KRA notified immediately.<br>
+              <b>Unticked:</b> Return recorded as pending only — no stock change, no balance change, no KRA sync until you confirm.
+            </p>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="srError" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:9px;font-size:12px;color:#ff4d6d;font-weight:700;"></div>
+
+        <!-- Submit -->
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+          <button onclick="closeSupplierReturnModal()" style="padding:10px 20px;border-radius:9px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:13px;">Cancel</button>
+          <button id="srSubmitBtn" onclick="submitSupplierReturn()"
+            style="padding:10px 26px;border-radius:9px;border:none;background:#f59e0b;color:#000;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;">
+            Process Return
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

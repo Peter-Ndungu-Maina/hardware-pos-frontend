@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="stock_movement.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stock Movement Report | Elite Hardware</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+        <div id="sidebarMount"></div>
+
+    <!-- SIDEBAR -->
+    <!-- MAIN -->
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+
+        <!-- MOBILE HEADER -->
+<!-- PAGE HEADER -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 no-print gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tight">Stock Movement Report</h1>
+                <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Opening Stock → Stock In → Sold → Closing Balance per Item</p>
+            </div>
+            <div class="flex gap-2 no-print">
+                <button onclick="exportCSV()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-emerald-700 transition">⬇ Export CSV</button>
+                <button onclick="generatePDF()" class="bg-slate-900 text-white px-6 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg hover:bg-slate-800 transition">📄 Export PDF</button>
+            </div>
+        </div>
+
+        <!-- FILTERS -->
+        <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 no-print items-end">
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Filter by Date</label>
+                <input type="date" id="filterFrom" onchange="fetchMovement()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">To Date</label>
+                <input type="date" id="filterTo" onchange="fetchMovement()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Monthly View</label>
+                <input type="month" id="monthFilter" onchange="applyMonth()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Annual View</label>
+                <div class="flex gap-2">
+                    <input type="number" id="annualFilter" placeholder="YYYY" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                    <button onclick="applyAnnual()" class="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase whitespace-nowrap hover:bg-slate-800 transition">Go</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Category</label>
+                <select id="filterCategory" onchange="applyFilters()" class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+                    <option value="all">All Categories</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-black uppercase text-slate-400 mb-1 ml-1">Search Item</label>
+                <input type="text" id="filterSearch" onkeyup="applyFilters()" placeholder="Search product..." class="w-full bg-slate-50 border-none rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 font-bold text-slate-800">
+            </div>
+            <div class="sm:col-span-2 lg:col-span-3 xl:col-span-5">
+                <!-- spacer -->
+            </div>
+            <div class="flex justify-end">
+                <button onclick="clearFilters()" class="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition">Reset</button>
+            </div>
+        </div>
+
+        <!-- PDF AREA -->
+        <div id="pdf-area">
+
+            <div id="pdf-header" class="hidden text-center pb-6 border-b-2 border-slate-100 mb-6">
+                <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tighter">Elite Hardware — Stock Movement Report</h2>
+                <p class="text-xs font-bold text-slate-400 mt-1" id="genDateLabel"></p>
+            </div>
+
+            <!-- SUMMARY CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-5 rounded-3xl border-t-4 border-blue-500 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Items Tracked</p>
+                    <h2 id="statItems" class="text-xl font-black text-blue-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border-t-4 border-emerald-500 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Stock In (Units)</p>
+                    <h2 id="statIn" class="text-xl font-black text-emerald-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border-t-4 border-orange-500 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Total Sold (Units)</p>
+                    <h2 id="statSold" class="text-xl font-black text-orange-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-3xl border-t-4 border-slate-700 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase mb-1">Closing Balance (Units)</p>
+                    <h2 id="statClosing" class="text-xl font-black text-slate-800">0</h2>
+                </div>
+            </div>
+
+            <!-- MOVEMENT TABLE -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Per-Item Movement Ledger</h3>
+                    <span id="tableCount" class="text-[10px] font-black text-slate-400 uppercase">0 items</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr class="text-[10px] font-black text-slate-400 uppercase">
+                                <th class="p-4">#</th>
+                                <th class="p-4">Product</th>
+                                <th class="p-4">Category</th>
+                                <th class="p-4">Unit</th>
+                                <th class="p-4 text-blue-600">Opening</th>
+                                <th class="p-4 text-emerald-600">Stock In</th>
+                                <th class="p-4 text-orange-600">Sold</th>
+                                <th class="p-4 text-purple-600">Adjustments</th>
+                                <th class="p-4 text-slate-800">Closing</th>
+                                <th class="p-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movementBody" class="text-sm divide-y divide-slate-100">
+                            <tr><td colspan="10" class="p-20 text-center text-slate-400 italic">Loading stock movement data...</td></tr>
+                        </tbody>
+                    </table>
+                <div class="no-print" style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid rgba(255,255,255,0.09);background:var(--surface,#252537);border-radius:0 0 12px 12px;">
+                    <span id="lbl_sm" style="font-size:10px;font-weight:700;color:#7a8394;text-transform:uppercase;letter-spacing:1px;font-family:'Space Mono',monospace;"></span>
+                    <div style="display:flex;gap:8px;">
+                        <button id="prev_sm" onclick="pg_sm(-1)" style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>← Prev</button>
+                        <button id="next_sm" onclick="pg_sm(1)"  style="padding:6px 16px;border-radius:8px;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#d4d4d4;font-size:10px;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;" disabled>Next →</button>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+        </div><!-- end pdf-area -->
+    </main>
+</div>
+
+<script>
+
+    // XSS guard — wrap all server-sourced strings before innerHTML insertion
+    function esc(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+    }
+// Fallback: ensure API vars are defined even if sidebar.js timing varies
+const API_URL  = window.API_URL  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+const API_BASE = window.API_BASE || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'https://hardware-pos-backend.onrender.com/api' : '/api');
+
+let allMovement = [];
+
+async function fetchMovement() {
+        const body = document.getElementById('movementBody');
+        body.innerHTML = `<tr><td colspan="10" class="p-20 text-center text-slate-400 italic">Loading...</td></tr>`;
+        try {
+            const from  = document.getElementById('filterFrom').value;
+            const to    = document.getElementById('filterTo').value;
+            const month = document.getElementById('monthFilter')?.value || '';
+            let url = `${API_URL}/reports/stock-movement`;
+            const params = [];
+            if (from)  params.push(`from=${from}`);
+            if (to)    params.push(`to=${to}`);
+            if (month && !from) {
+                // If month is set without explicit from/to, let server derive it
+                const [y, m] = month.split('-');
+                params.push(`month=${m}&year=${y}`);
+            }
+            if (params.length) url += '?' + params.join('&');
+
+            const res  = await apiFetch(url);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Server error');
+
+            allMovement = data;
+
+            // Populate category filter
+            const cats = [...new Set(data.map(d => d.category).filter(Boolean))].sort();
+            const sel  = document.getElementById('filterCategory');
+            sel.innerHTML = '<option value="all">All Categories</option>' +
+                cats.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            renderTable(allMovement);
+        } catch (err) {
+            console.error('Operation failed');
+            body.innerHTML = `<tr><td colspan="10" class="p-10 text-center text-red-500 font-bold">Error: ${err.message}</td></tr>`;
+        }
+    }
+
+    function renderTable(data) { _pg_sm_set(data); }
+    function _sm_renderRows(data) {
+        const body = document.getElementById('movementBody');
+        document.getElementById('tableCount').innerText = `${data.length} item${data.length !== 1 ? 's' : ''}`;
+        document.getElementById('genDateLabel').innerText = `Generated: ${new Date().toLocaleString()}`;
+
+        let totalIn = 0, totalSold = 0, totalClosing = 0;
+
+        if (!data.length) {
+            body.innerHTML = `<tr><td colspan="10" class="p-20 text-center text-slate-400 italic">No stock movement data found.</td></tr>`;
+            updateSummary(0, 0, 0, 0);
+            return;
+        }
+
+        body.innerHTML = data.map((item, i) => {
+            totalIn      += item.stock_in;
+            totalSold    += item.qty_sold;
+            totalClosing += item.closing_stock;
+
+            const closing = item.closing_stock;
+            let statusHtml;
+            if (closing <= 0)        statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-red-100 text-red-700 uppercase">Out of Stock</span>`;
+            else if (closing < 10)   statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-orange-100 text-orange-700 uppercase">Critical</span>`;
+            else if (closing < 30)   statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-yellow-100 text-yellow-700 uppercase">Low</span>`;
+            else                     statusHtml = `<span class="inline-block px-2 py-1 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-700 uppercase">Good</span>`;
+
+            const adjColor = item.adjustments > 0 ? 'text-emerald-600' : item.adjustments < 0 ? 'text-red-500' : 'text-slate-400';
+
+            return `
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 text-slate-400 font-bold text-xs">${i + 1}</td>
+                <td class="p-4">
+                    <div class="font-black text-slate-800 text-xs uppercase">${esc(item.item_name)}</div>
+                </td>
+                <td class="p-4 text-slate-500 font-bold text-xs">${esc(item.category)}</td>
+                <td class="p-4 text-slate-400 font-bold text-xs">${item.unit}</td>
+                <td class="p-4 font-black text-blue-600">${item.opening_stock}</td>
+                <td class="p-4 font-black text-emerald-600">+${item.stock_in}</td>
+                <td class="p-4 font-black text-orange-600">${item.qty_sold > 0 ? '-' : ''}${item.qty_sold}</td>
+                <td class="p-4 font-black ${adjColor}">${item.adjustments > 0 ? '+' : ''}${item.adjustments}</td>
+                <td class="p-4 font-black text-slate-800 text-base">${closing}</td>
+                <td class="p-4">${statusHtml}</td>
+            </tr>`;
+        }).join('');
+
+        // Totals now calculated from full dataset in _pg_sm_draw()
+    }
+
+    function updateSummary(items, stockIn, sold, closing) {
+        document.getElementById('statItems').innerText   = items;
+        document.getElementById('statIn').innerText      = stockIn.toLocaleString();
+        document.getElementById('statSold').innerText    = sold.toLocaleString();
+        document.getElementById('statClosing').innerText = closing.toLocaleString();
+    }
+
+    function applyFilters() {
+        const cat    = document.getElementById('filterCategory').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase().trim();
+
+        // Date filter re-fetches from server for accuracy
+        const from = document.getElementById('filterFrom').value;
+        const to   = document.getElementById('filterTo').value;
+
+        if (from || to) {
+            fetchMovement(); // re-fetch with date params
+            return;
+        }
+
+        let filtered = allMovement.filter(item => {
+            if (cat !== 'all' && item.category !== cat) return false;
+            if (search && !item.item_name.toLowerCase().includes(search)) return false;
+            return true;
+        });
+        renderTable(filtered);
+    }
+
+    function clearFilters() {
+        document.getElementById('filterFrom').value      = '';
+        document.getElementById('filterTo').value        = '';
+        document.getElementById('monthFilter').value     = '';
+        document.getElementById('annualFilter').value    = '';
+        document.getElementById('filterCategory').value  = 'all';
+        document.getElementById('filterSearch').value    = '';
+        fetchMovement();
+    }
+
+    function generatePDF() {
+        const el     = document.getElementById('pdf-area');
+        const header = document.getElementById('pdf-header');
+        header.classList.remove('hidden');
+        html2pdf().set({
+            margin: 0.3,
+            filename: `Elite_Stock_Movement_${new Date().toISOString().split('T')[0]}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+        }).from(el).save().then(() => header.classList.add('hidden'));
+    }
+
+    function applyMonth() {
+        const m = document.getElementById('monthFilter').value; // YYYY-MM
+        if (!m) return;
+        const [y, mo] = m.split('-');
+        const lastDay = new Date(y, parseInt(mo), 0).getDate();
+        document.getElementById('filterFrom').value    = `${y}-${mo}-01`;
+        document.getElementById('filterTo').value      = `${y}-${mo}-${String(lastDay).padStart(2,'0')}`;
+        document.getElementById('annualFilter').value  = '';
+        document.getElementById('filterCategory').value = 'all';
+        document.getElementById('filterSearch').value  = '';
+        fetchMovement();
+    }
+
+    function applyAnnual() {
+        const year = document.getElementById('annualFilter').value;
+        if (!year) return alert('Please enter a year.');
+        document.getElementById('filterFrom').value    = `${year}-01-01`;
+        document.getElementById('filterTo').value      = `${year}-12-31`;
+        document.getElementById('monthFilter').value   = '';
+        document.getElementById('filterCategory').value = 'all';
+        document.getElementById('filterSearch').value  = '';
+        fetchMovement();
+    }
+
+    function exportCSV() {
+        if (!_pg_sm_all || !_pg_sm_all.length) return alert('No data to export.');
+        const from = document.getElementById('filterFrom').value || '';
+        const to   = document.getElementById('filterTo').value   || '';
+        const label = from && to ? `${from}_to_${to}` : new Date().toISOString().split('T')[0];
+        let csv = 'Item Name,Category,Opening Stock,Stock In,Qty Sold,Closing Stock,Status\n';
+        _pg_sm_all.forEach(item => {
+            const name    = (item.item_name   || '').replace(/"/g, '""');
+            const cat     = (item.category    || '').replace(/"/g, '""');
+            const opening = item.opening_stock ?? 0;
+            const stockIn = item.stock_in      ?? 0;
+            const sold    = item.qty_sold      ?? 0;
+            const closing = item.closing_stock ?? 0;
+            const status  = closing === 0 ? 'Out of Stock' : closing < 5 ? 'Critical' : closing < 10 ? 'Low' : 'OK';
+            csv += `"${name}","${cat}","${opening}","${stockIn}","${sold}","${closing}","${status}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `Stock_Movement_${label}.csv`;
+        a.click();
+    }
+
+    document.addEventListener('eliteAuthReady', function() {
+        // Default to current month
+        const now = new Date();
+        const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('filterFrom').value = `${y}-${m}-01`;
+        document.getElementById('filterTo').value   = now.toISOString().split('T')[0];
+        fetchMovement();
+    });
+
+// ── Pagination [sm] ────────────────────────────────────────
+let _pg_sm_all  = [];
+let _pg_sm_page = 1;
+function _pg_sm_set(data) {
+    _pg_sm_all  = data;
+    _pg_sm_page = 1;
+    _pg_sm_draw();
+}
+function _pg_sm_draw() {
+    const total = _pg_sm_all.length;
+    const pages = Math.ceil(total / 10) || 1;
+    const slice = _pg_sm_all.slice((_pg_sm_page-1)*10, _pg_sm_page*10);
+    const lbl   = document.getElementById('lbl_sm');
+    const prev  = document.getElementById('prev_sm');
+    const nxt   = document.getElementById('next_sm');
+    if(lbl)  lbl.textContent  = 'Page '+_pg_sm_page+' of '+pages+' — '+total+' record(s)';
+    if(prev) prev.disabled    = _pg_sm_page <= 1;
+    if(nxt)  nxt.disabled     = _pg_sm_page >= pages;
+
+    // ── Calculate totals from FULL dataset, not just current page ──
+    let totalIn = 0, totalSold = 0, totalClosing = 0;
+    _pg_sm_all.forEach(function(item) {
+        totalIn      += item.stock_in      || 0;
+        totalSold    += item.qty_sold      || 0;
+        totalClosing += item.closing_stock || 0;
+    });
+    updateSummary(_pg_sm_all.length, totalIn, totalSold, totalClosing);
+
+    _sm_renderRows(slice);
+}
+function pg_sm(dir) {
+    const pages = Math.ceil(_pg_sm_all.length / 10) || 1;
+    _pg_sm_page = Math.max(1, Math.min(pages, _pg_sm_page + dir));
+    _pg_sm_draw();
+}
+
+</script>
+</body>
+</html>

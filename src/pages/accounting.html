@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="accounting.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Accounting | Elite Hardware Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        /* Shared component tokens used by inline JS-rendered elements */
+        :root {
+            --green:   #00e5a0;
+            --red:     #ff4d6d;
+            --amber:   #f59e0b;
+            --blue:    #3b82f6;
+            --purple:  #a855f7;
+            --muted:   #64748b;
+            --mono:    'Space Mono', monospace;
+        }
+        /* Balance sheet rows (rendered by JS) */
+        .bs-row  { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f1f5f9; font-size:13px; color:#374151; }
+        .bs-group{ font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:1.5px; color:#94a3b8; padding:10px 0 4px; margin-top:4px; }
+        .bs-total{ display:flex; justify-content:space-between; align-items:center; padding:12px 0 0; margin-top:6px; border-top:2px solid #e2e8f0; font-weight:900; font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:#0f172a; }
+        .num     { font-family:'Space Mono',monospace; font-size:13px; font-weight:700; }
+        /* Reconcile rows (rendered by JS) */
+        .match-row { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-radius:12px; border:1px solid #e2e8f0; gap:8px; }
+        /* Tab fade animation */
+        .tab-content { display:none; }
+        .tab-content.active { display:block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+</head>
+<body class="antialiased">
+
+<div class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto overflow-x-hidden custom-scrollbar">
+
+        <!-- ── Header ── -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div>
+                <p class="text-[9px] font-bold uppercase tracking-[2px] text-slate-400 font-mono mb-1">Elite Hardware Pro</p>
+                <h1 class="text-3xl font-black text-slate-900 tracking-tighter uppercase">📒 Accounting</h1>
+                <p class="text-xs text-slate-400 font-bold mt-1">Double-entry bookkeeping · Balance sheet · Journal · M-Pesa reconciliation</p>
+            </div>
+            <div class="flex gap-2 flex-wrap no-print items-center">
+                <select id="periodSelect" onchange="loadAll()"
+                    class="p-3 bg-white border border-slate-200 rounded-xl outline-none text-sm font-bold text-slate-700 focus:ring-2 ring-emerald-500 transition">
+                    <option value="month">This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="quarter">This Quarter</option>
+                    <option value="year">This Year</option>
+                </select>
+                <button onclick="window.print()"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-50 transition no-print">
+                    🖨 Print
+                </button>
+            </div>
+        </div>
+
+        <!-- ── KPI Row ── -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpiRow">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-emerald-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Assets</p>
+                <p id="kpiAssets" class="text-xl font-black font-mono text-emerald-600 leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Cash + Stock + Receivables</p>
+            </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-red-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Total Liabilities</p>
+                <p id="kpiLiab" class="text-xl font-black font-mono text-red-500 leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Supplier payables + VAT</p>
+            </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-purple-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Owner's Equity</p>
+                <p id="kpiEquity" class="text-xl font-black font-mono text-purple-600 leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Assets − Liabilities</p>
+            </div>
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-blue-400">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Net Profit (Period)</p>
+                <p id="kpiProfit" class="text-xl font-black font-mono text-blue-600 leading-none mb-2">—</p>
+                <p class="text-[10px] text-slate-400 font-bold">Revenue − COGS − Expenses</p>
+            </div>
+        </div>
+
+        <!-- ── Tab Bar ── -->
+        <div class="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-6 no-print w-fit">
+            <button onclick="switchTab('balance-sheet')" id="tabBtn-balance-sheet"
+                class="tab-nav-btn px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition bg-white text-slate-800 shadow-sm">
+                Balance Sheet
+            </button>
+            <button onclick="switchTab('reconcile')" id="tabBtn-reconcile"
+                class="tab-nav-btn px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition text-slate-500 hover:text-slate-700">
+                M-Pesa Reconcile
+            </button>
+            <button onclick="switchTab('income-stmt')" id="tabBtn-income-stmt"
+                class="tab-nav-btn px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition text-slate-500 hover:text-slate-700">
+                Income Statement
+            </button>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             TAB 1 — BALANCE SHEET
+        ══════════════════════════════════════════════════ -->
+        <div id="tab-balance-sheet" class="tab-content active">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Assets -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assets</p>
+                    <h2 class="text-lg font-black text-slate-800 mb-4">What We Own</h2>
+                    <div class="space-y-0">
+                        <div class="bs-group">Current Assets</div>
+                        <div class="bs-row"><span>Cash & Till Float</span><span class="num" id="bsCash">—</span></div>
+                        <div class="bs-row"><span>M-Pesa Balance (est.)</span><span class="num" id="bsMpesa">—</span></div>
+                        <div class="bs-row"><span>Trade Receivables (Debtors)</span><span class="num" id="bsDebtors">—</span></div>
+                        <div class="bs-row"><span>Stock / Inventory (at cost)</span><span class="num" id="bsStock">—</span></div>
+                        <div class="bs-group" style="margin-top:12px;">Non-Current Assets</div>
+                        <div class="bs-row"><span>Fixed Assets (manual)</span><span class="num" id="bsFixed">—</span></div>
+                    </div>
+                    <div class="bs-total mt-4">
+                        <span>TOTAL ASSETS</span>
+                        <span id="bsTotalAssets" class="font-mono font-black text-emerald-600">—</span>
+                    </div>
+                </div>
+
+                <!-- Liabilities + Equity -->
+                <div class="flex flex-col gap-5">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Liabilities</p>
+                        <h2 class="text-lg font-black text-slate-800 mb-4">What We Owe</h2>
+                        <div class="bs-group">Current Liabilities</div>
+                        <div class="bs-row"><span>Supplier Payables</span><span class="num" id="bsPayables">—</span></div>
+                        <div class="bs-row"><span>VAT Payable (collected)</span><span class="num" id="bsVat">—</span></div>
+                        <div class="bs-total mt-4">
+                            <span>TOTAL LIABILITIES</span>
+                            <span id="bsTotalLiab" class="font-mono font-black text-red-500">—</span>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Equity</p>
+                        <h2 class="text-lg font-black text-slate-800 mb-4">Owner's Interest</h2>
+                        <div class="bs-row"><span>Retained Earnings</span><span class="num" id="bsRetained">—</span></div>
+                        <div class="bs-row"><span>Current Period Profit</span><span class="num" id="bsCurProfit">—</span></div>
+                        <div class="bs-total mt-4">
+                            <span>TOTAL EQUITY</span>
+                            <span id="bsTotalEquity" class="font-mono font-black text-purple-600">—</span>
+                        </div>
+                    </div>
+                    <div id="bsCheck" class="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 text-xs font-bold text-center font-mono text-slate-400">
+                        Checking balance…
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             TAB 2 — M-PESA RECONCILIATION
+        ══════════════════════════════════════════════════ -->
+        <div id="tab-reconcile" class="tab-content">
+
+            <!-- Mini KPI row -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 border-l-4 border-l-emerald-400">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">M-Pesa Received (POS)</p>
+                    <p id="reconPOS" class="text-lg font-black font-mono text-emerald-600 leading-none mb-1">—</p>
+                    <p class="text-[9px] text-slate-400 font-bold">C2B + STK combined</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 border-l-4 border-l-amber-400">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Unreconciled</p>
+                    <p id="reconUnmatched" class="text-lg font-black font-mono text-amber-500 leading-none mb-1">—</p>
+                    <p id="reconUnmatchedVal" class="text-[9px] text-slate-400 font-bold">awaiting action</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 border-l-4 border-l-emerald-400">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Matched / Cleared</p>
+                    <p id="reconMatched" class="text-lg font-black font-mono text-emerald-600 leading-none mb-1">—</p>
+                    <p id="reconMatchedVal" class="text-[9px] text-slate-400 font-bold">linked to sales</p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 border-l-4 border-l-blue-400">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">STK Push</p>
+                    <p id="reconSTK" class="text-lg font-black font-mono text-blue-600 leading-none mb-1">—</p>
+                    <p class="text-[9px] text-slate-400 font-bold">auto-matched</p>
+                </div>
+            </div>
+
+            <!-- Reconcile card -->
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">M-Pesa Reconciliation</p>
+                        <h2 class="text-base font-black text-slate-800">Match M-Pesa payments to sales</h2>
+                    </div>
+                    <div class="flex gap-2 flex-wrap items-center no-print">
+                        <!-- Mode toggle -->
+                        <div class="flex gap-0.5 bg-slate-100 border border-slate-200 rounded-xl p-1">
+                            <button id="reconModeDay"   onclick="setReconMode('day')"
+                                class="px-3 py-1.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wide cursor-pointer bg-emerald-400 text-black font-mono">Daily</button>
+                            <button id="reconModeMonth" onclick="setReconMode('month')"
+                                class="px-3 py-1.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wide cursor-pointer bg-transparent text-slate-500 font-mono">Monthly</button>
+                            <button id="reconModeYear"  onclick="setReconMode('year')"
+                                class="px-3 py-1.5 rounded-lg border-none text-[10px] font-black uppercase tracking-wide cursor-pointer bg-transparent text-slate-500 font-mono">Yearly</button>
+                        </div>
+                        <input type="date"  id="reconDate"  onchange="loadReconcile()"
+                            class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold text-slate-700 w-40 focus:ring-2 ring-emerald-500">
+                        <input type="month" id="reconMonth" onchange="loadReconcile()" style="display:none;"
+                            class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold text-slate-700 w-40 focus:ring-2 ring-emerald-500">
+                        <select id="reconYear" onchange="loadReconcile()" style="display:none;"
+                            class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold text-slate-700 w-28 focus:ring-2 ring-emerald-500">
+                        </select>
+                        <select id="reconFilter" onchange="loadReconcile()"
+                            class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-xs font-bold text-slate-700 focus:ring-2 ring-emerald-500">
+                            <option value="all">All Payments</option>
+                            <option value="matched">Matched</option>
+                            <option value="unmatched">Unmatched</option>
+                            <option value="excess">Excess</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="reconcileList" class="flex flex-col gap-2 p-5">
+                    <p class="text-center py-10 text-slate-400 text-xs font-bold uppercase tracking-widest">Select a period to load M-Pesa transactions</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════
+             TAB 3 — INCOME STATEMENT
+        ══════════════════════════════════════════════════ -->
+        <div id="tab-income-stmt" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                <!-- Income statement -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Income Statement</p>
+                    <h2 class="text-lg font-black text-slate-800 mb-5">Profit & Loss — Period View</h2>
+
+                    <div class="bs-group">Revenue</div>
+                    <div class="bs-row"><span>Gross Sales</span><span class="num" id="isGross">—</span></div>
+                    <div class="bs-row"><span>Less: Unpaid (Credit)</span><span class="num text-red-500" id="isCredit">—</span></div>
+                    <div class="bs-row font-bold"><span>Net Revenue Received</span><span class="num" id="isNet">—</span></div>
+
+                    <div class="bs-group mt-4">Cost of Goods Sold</div>
+                    <div class="bs-row"><span>Opening Stock Value</span><span class="num" id="isCOGSOpen">—</span></div>
+                    <div class="bs-row"><span>+ Purchases (period)</span><span class="num" id="isCOGSPurch">—</span></div>
+                    <div class="bs-row"><span>− Closing Stock Value</span><span class="num" id="isCOGSClose">—</span></div>
+                    <div class="bs-row font-bold"><span>COGS</span><span class="num text-red-500" id="isCOGS">—</span></div>
+
+                    <div class="bs-total text-emerald-600 mt-4"><span>GROSS PROFIT</span><span id="isGrossProfit" class="font-mono font-black">—</span></div>
+
+                    <div class="bs-group mt-5">Operating Expenses</div>
+                    <div id="isExpenseRows"></div>
+                    <div class="bs-row font-bold"><span>Total Expenses</span><span class="num text-red-500" id="isTotalExp">—</span></div>
+
+                    <div class="bs-total mt-4"><span>NET PROFIT / (LOSS)</span><span id="isNetProfit" class="font-mono font-black">—</span></div>
+                </div>
+
+                <!-- Charts -->
+                <div class="flex flex-col gap-5">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Expense Breakdown</p>
+                        <canvas id="expenseChart" height="200"></canvas>
+                    </div>
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Revenue vs COGS vs Profit</p>
+                        <canvas id="incomeChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MATCH MODAL
+══════════════════════════════════════════════ -->
+<div id="matchModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm items-center justify-center p-4" style="display:none;">
+    <div class="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
+
+        <!-- Modal header -->
+        <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+            <div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">M-Pesa Reconciliation</p>
+                <p class="text-base font-black text-slate-800" id="matchModalTitle">KES —</p>
+            </div>
+            <button onclick="closeMatchModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none bg-slate-100 hover:bg-slate-200 rounded-full w-9 h-9 flex items-center justify-center transition font-bold">×</button>
+        </div>
+
+        <div class="p-6 flex flex-col gap-4">
+
+            <!-- Payment summary grid -->
+            <div class="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-3 text-xs" id="matchPaymentSummary"></div>
+
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">What is this payment for?</p>
+
+            <!-- Option A: Link to debtor -->
+            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <p class="text-xs font-black text-blue-600 mb-3">💳 Apply to customer debt</p>
+                <div class="flex gap-2">
+                    <input id="matchDebtorPhone" type="text" placeholder="Customer phone e.g. 0712345678"
+                        class="flex-1 p-3 bg-white border border-blue-200 rounded-xl outline-none text-xs font-bold focus:ring-2 ring-blue-400 transition">
+                    <button onclick="doMatchDebt()"
+                        class="px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-[10px] uppercase hover:bg-blue-700 transition whitespace-nowrap">
+                        Apply
+                    </button>
+                </div>
+                <p id="matchDebtResult" class="mt-2 text-xs"></p>
+            </div>
+
+            <!-- Option B: Mark as goods sale -->
+            <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                <p class="text-xs font-black text-emerald-700 mb-3">🛒 Mark as goods purchase (walk-in sale)</p>
+                <div class="flex gap-2 items-center">
+                    <input id="matchGoodsNote" type="text" placeholder="Optional note e.g. 'Cement bags walk-in'"
+                        class="flex-1 p-3 bg-white border border-emerald-200 rounded-xl outline-none text-xs font-bold focus:ring-2 ring-emerald-400 transition">
+                    <button onclick="doMatchGoods()"
+                        class="px-4 py-2 rounded-xl bg-emerald-500 text-black font-black text-[10px] uppercase hover:bg-emerald-400 transition whitespace-nowrap">
+                        Confirm
+                    </button>
+                </div>
+                <p id="matchGoodsResult" class="mt-2 text-xs"></p>
+            </div>
+
+            <!-- Option C: Ignore -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                <p class="text-xs font-black text-slate-500 mb-3">✕ Ignore / not our payment</p>
+                <div class="flex gap-2 items-center">
+                    <input id="matchIgnoreNote" type="text" placeholder="Reason e.g. 'Wrong paybill'"
+                        class="flex-1 p-3 bg-white border border-slate-200 rounded-xl outline-none text-xs font-bold focus:ring-2 ring-slate-400 transition">
+                    <button onclick="doMatchIgnore()"
+                        class="px-4 py-2 rounded-xl bg-slate-200 text-slate-600 font-black text-[10px] uppercase hover:bg-slate-300 transition whitespace-nowrap border border-slate-300">
+                        Ignore
+                    </button>
+                </div>
+                <p id="matchIgnoreResult" class="mt-2 text-xs"></p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  ACCOUNTING MODULE — Elite Hardware POS
+//  Double-entry bookkeeping powered by local Supabase tables
+// ══════════════════════════════════════════════════════════════
+const API = '/api';
+
+const escHtml = (s) => s == null ? '' : String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+
+const DEFAULT_ACCOUNTS = [
+    { code:'1000', name:'Cash in Hand',          type:'Asset',     balance:0 },
+    { code:'1010', name:'M-Pesa Float',           type:'Asset',     balance:0 },
+    { code:'1100', name:'Trade Debtors',          type:'Asset',     balance:0 },
+    { code:'1200', name:'Stock / Inventory',      type:'Asset',     balance:0 },
+    { code:'1500', name:'Fixed Assets',           type:'Asset',     balance:0 },
+    { code:'2000', name:'Supplier Payables',      type:'Liability', balance:0 },
+    { code:'2100', name:'VAT Payable',            type:'Liability', balance:0 },
+    { code:'3000', name:'Owner\'s Capital',       type:'Equity',    balance:0 },
+    { code:'3100', name:'Retained Earnings',      type:'Equity',    balance:0 },
+    { code:'4000', name:'Sales Revenue',          type:'Revenue',   balance:0 },
+    { code:'5000', name:'Cost of Goods Sold',     type:'Expense',   balance:0 },
+    { code:'5100', name:'Operating Expenses',     type:'Expense',   balance:0 },
+    { code:'5200', name:'Salaries & Wages',       type:'Expense',   balance:0 },
+    { code:'5300', name:'Utilities',              type:'Expense',   balance:0 },
+    { code:'5400', name:'Stock Write-offs',       type:'Expense',   balance:0 },
+    { code:'5500', name:'Damaged Goods',          type:'Expense',   balance:0 },
+];
+
+let allAccounts  = [];
+let expChart, incChart;
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-nav-btn').forEach(el => {
+        el.classList.remove('bg-white','text-slate-800','shadow-sm');
+        el.classList.add('text-slate-500');
+    });
+    document.getElementById('tab-' + id).classList.add('active');
+    const activeBtn = document.getElementById('tabBtn-' + id);
+    if (activeBtn) {
+        activeBtn.classList.add('bg-white','text-slate-800','shadow-sm');
+        activeBtn.classList.remove('text-slate-500');
+    }
+    if (id === 'reconcile')   loadReconcile();
+    if (id === 'income-stmt') loadIncomeStatement();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const fmt  = n => 'KES ' + Number(n || 0).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtN = n => Number(n || 0).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2});
+const qs   = id => document.getElementById(id);
+const set  = (id, v) => { const el = qs(id); if (el) el.textContent = v; };
+
+function getPeriodDates() {
+    const p = qs('periodSelect').value;
+    const now = new Date();
+    let from, to;
+    if (p === 'month') {
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        to   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (p === 'last_month') {
+        from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        to   = new Date(now.getFullYear(), now.getMonth(), 0);
+    } else if (p === 'quarter') {
+        const q = Math.floor(now.getMonth() / 3);
+        from = new Date(now.getFullYear(), q * 3, 1);
+        to   = new Date(now.getFullYear(), q * 3 + 3, 0);
+    } else {
+        from = new Date(now.getFullYear(), 0, 1);
+        to   = new Date(now.getFullYear(), 11, 31);
+    }
+    const iso = d => d.toISOString().split('T')[0];
+    return { from: iso(from), to: iso(to) };
+}
+
+async function loadAll() {
+    await loadAccounts();
+    await loadBalanceSheet();
+    await loadIncomeStatement();
+}
+
+async function loadAccounts() {
+    try {
+        const res  = await apiFetch(`${API}/accounting/accounts`);
+        const data = await res.json();
+        if (data.success && data.accounts.length > 0) {
+            allAccounts = data.accounts;
+        } else {
+            allAccounts = DEFAULT_ACCOUNTS;
+            await apiFetch(`${API}/accounting/accounts/seed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accounts: DEFAULT_ACCOUNTS })
+            });
+        }
+    } catch(e) {
+        allAccounts = DEFAULT_ACCOUNTS;
+    }
+}
+
+async function loadBalanceSheet() {
+    try {
+        const res = await apiFetch(`${API}/accounting/balance-sheet`);
+        const d   = await res.json();
+        if (!d.success) return;
+        const bs = d.data;
+
+        set('bsCash',       fmt(bs.cash));
+        set('bsMpesa',      fmt(bs.mpesa));
+        set('bsDebtors',    fmt(bs.debtors));
+        set('bsStock',      fmt(bs.stock));
+        set('bsFixed',      fmt(bs.fixed_assets));
+        set('bsPayables',   fmt(bs.payables));
+        set('bsVat',        fmt(bs.vat_payable));
+        set('bsRetained',   fmt(bs.retained_earnings));
+        set('bsCurProfit',  fmt(bs.current_profit));
+
+        const totalAssets = (bs.cash||0) + (bs.mpesa||0) + (bs.debtors||0) + (bs.stock||0) + (bs.fixed_assets||0);
+        const totalLiab   = (bs.payables||0) + (bs.vat_payable||0);
+        const totalEquity = totalAssets - totalLiab;
+        const balanced    = Math.abs(totalAssets - (totalLiab + totalEquity)) < 1;
+
+        set('bsTotalAssets', fmt(totalAssets));
+        set('bsTotalLiab',   fmt(totalLiab));
+        set('bsTotalEquity', fmt(totalEquity));
+
+        set('kpiAssets',  fmt(totalAssets));
+        set('kpiLiab',    fmt(totalLiab));
+        set('kpiEquity',  fmt(totalEquity));
+        set('kpiProfit',  fmt(bs.current_profit));
+
+        const checkEl = qs('bsCheck');
+        if (balanced) {
+            checkEl.className = 'bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-3 text-xs font-bold text-center font-mono text-emerald-700';
+            checkEl.textContent = '✓ Balance sheet is balanced — Assets = Liabilities + Equity';
+        } else {
+            checkEl.className = 'bg-red-50 border border-red-200 rounded-2xl px-5 py-3 text-xs font-bold text-center font-mono text-red-600';
+            checkEl.textContent = '⚠ Balance sheet is OUT of balance — check journal entries';
+        }
+    } catch(e) { console.error('[BS]', e.message); }
+}
+
+async function loadIncomeStatement() {
+    const { from, to } = getPeriodDates();
+    try {
+        const res = await apiFetch(`${API}/accounting/income-statement?from=${from}&to=${to}`);
+        const d   = await res.json();
+        if (!d.success) return;
+        const s = d.data;
+
+        set('isGross',     fmt(s.gross_sales));
+        set('isCredit',   '(' + fmt(s.credit_unpaid) + ')');
+        set('isNet',       fmt(s.net_revenue));
+        set('isCOGSOpen',  fmt(s.opening_stock));
+        set('isCOGSPurch', fmt(s.purchases));
+        set('isCOGSClose', '(' + fmt(s.closing_stock) + ')');
+        set('isCOGS',     '(' + fmt(s.cogs) + ')');
+
+        const gp = qs('isGrossProfit');
+        gp.textContent = fmt(s.gross_profit);
+        gp.style.color = s.gross_profit >= 0 ? '#00e5a0' : '#ff4d6d';
+
+        const expRows = qs('isExpenseRows');
+        if (expRows && s.expenses_by_cat) {
+            expRows.innerHTML = Object.entries(s.expenses_by_cat).map(([cat, amt]) =>
+                `<div class="bs-row"><span>${cat}</span><span class="num">(${fmt(amt)})</span></div>`
+            ).join('');
+        }
+        set('isTotalExp', '(' + fmt(s.total_expenses) + ')');
+
+        const np = qs('isNetProfit');
+        np.textContent = fmt(s.net_profit);
+        np.style.color = s.net_profit >= 0 ? '#00e5a0' : '#ff4d6d';
+
+        renderExpenseChart(s.expenses_by_cat || {});
+        renderIncomeChart(s);
+    } catch(e) { console.error('[IS]', e.message); }
+}
+
+function renderExpenseChart(cats) {
+    const ctx = qs('expenseChart');
+    if (!ctx) return;
+    if (expChart) expChart.destroy();
+    const labels = Object.keys(cats);
+    const vals   = Object.values(cats);
+    expChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data: vals, backgroundColor: ['#ff4d6d','#f59e0b','#a855f7','#3b82f6','#00e5a0','#ec4899'], borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: '#64748b', font: { size: 10 } } } }
+        }
+    });
+}
+
+function renderIncomeChart(s) {
+    const ctx = qs('incomeChart');
+    if (!ctx) return;
+    if (incChart) incChart.destroy();
+    incChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Revenue', 'COGS', 'Expenses', 'Net Profit'],
+            datasets: [{
+                data: [s.net_revenue, s.cogs, s.total_expenses, s.net_profit],
+                backgroundColor: ['#00e5a0','#ff4d6d','#f59e0b', s.net_profit >= 0 ? '#00e5a0' : '#ff4d6d'],
+                borderRadius: 6, borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.04)' } },
+                y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,.04)' } }
+            }
+        }
+    });
+}
+
+// ── M-Pesa Reconciliation ────────────────────────────────────────────────────
+let reconMode = 'day';
+
+function setReconMode(mode) {
+    reconMode = mode;
+    ['day','month','year'].forEach(m => {
+        const btn = qs(`reconMode${m.charAt(0).toUpperCase()+m.slice(1)}`);
+        if (btn) {
+            btn.style.background = m === mode ? 'var(--green)' : 'transparent';
+            btn.style.color      = m === mode ? '#000' : 'var(--muted)';
+        }
+    });
+    qs('reconDate').style.display  = mode === 'day'   ? '' : 'none';
+    qs('reconMonth').style.display = mode === 'month' ? '' : 'none';
+    qs('reconYear').style.display  = mode === 'year'  ? '' : 'none';
+    loadReconcile();
+}
+
+function getReconDateRange() {
+    if (reconMode === 'day') {
+        const d = qs('reconDate').value;
+        if (!d) return null;
+        return { from: d, to: d };
+    }
+    if (reconMode === 'month') {
+        const m = qs('reconMonth').value;
+        if (!m) return null;
+        const [y, mo] = m.split('-').map(Number);
+        const last = new Date(y, mo, 0).getDate();
+        return { from: `${m}-01`, to: `${m}-${String(last).padStart(2,'0')}` };
+    }
+    if (reconMode === 'year') {
+        const y = qs('reconYear').value;
+        if (!y) return null;
+        return { from: `${y}-01-01`, to: `${y}-12-31` };
+    }
+    return null;
+}
+
+async function loadReconcile() {
+    const range  = getReconDateRange();
+    const filter = qs('reconFilter').value;
+    const list   = qs('reconcileList');
+
+    if (!range) {
+        list.innerHTML = '<p class="text-center py-10 text-slate-400 text-xs font-bold uppercase tracking-widest">Select a period to load M-Pesa transactions</p>';
+        return;
+    }
+    list.innerHTML = '<p class="text-center py-8 text-slate-400 text-xs font-bold uppercase tracking-widest">Loading…</p>';
+
+    try {
+        const res = await apiFetch(`${API}/accounting/reconcile?from=${range.from}&to=${range.to}&filter=${filter}`);
+        const d   = await res.json();
+        if (!d.success) { list.innerHTML = '<p class="py-5 text-center text-red-500 text-xs font-bold">Error loading reconciliation data</p>'; return; }
+
+        const txns = d.transactions || [];
+        txns.forEach(t => { _txnMap[t.id] = t; });
+
+        const unmatched    = txns.filter(t => ['unmatched','excess'].includes(t.status));
+        const matched      = txns.filter(t => ['matched','debt_cleared','goods_purchase','debt_payment','completed'].includes(t.status));
+        const stk          = txns.filter(t => t.source === 'STK');
+        const unmatchedVal = unmatched.reduce((s,t) => s + parseFloat(t.amount||0), 0);
+        const matchedVal   = matched.reduce((s,t)   => s + parseFloat(t.amount||0), 0);
+
+        set('reconPOS',           fmt(d.total_mpesa_pos));
+        set('reconUnmatched',     unmatched.length + ' txns');
+        set('reconUnmatchedVal',  fmt(unmatchedVal) + ' awaiting action');
+        set('reconMatched',       matched.length + ' txns');
+        set('reconMatchedVal',    fmt(matchedVal) + ' linked');
+        set('reconSTK',           stk.length + ' txns');
+
+        if (!txns.length) {
+            list.innerHTML = '<p class="text-center py-10 text-slate-400 text-xs font-bold uppercase tracking-widest">No M-Pesa transactions found for this period</p>';
+            return;
+        }
+
+        const statusLabel = {
+            matched:'✓ Matched', unmatched:'⚠ Unmatched', excess:'↑ Excess',
+            debt_cleared:'✓ Debt Cleared', debt_payment:'✓ Debt Payment',
+            goods_purchase:'✓ Goods Sale', completed:'✓ Goods Sale', ignored:'— Ignored'
+        };
+        const statusColor = {
+            matched:'#00e5a0', unmatched:'#f59e0b', excess:'#3b82f6',
+            debt_cleared:'#00e5a0', debt_payment:'#00e5a0',
+            goods_purchase:'#00e5a0', completed:'#00e5a0', ignored:'#64748b'
+        };
+
+        list.innerHTML = txns.map(t => {
+            const isPending = ['unmatched','excess'].includes(t.status);
+            const sColor    = statusColor[t.status] || '#64748b';
+            const sLabel    = statusLabel[t.status] || t.status;
+            const rowStyle  = isPending
+                ? 'border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04);'
+                : t.status === 'ignored'
+                    ? 'opacity:0.5;border-color:#e2e8f0;'
+                    : 'border-color:rgba(0,229,160,.2);background:rgba(0,229,160,.02);';
+            const matchBtn = isPending
+                ? `<button onclick="openMatchModal(${t.id})"
+                    style="padding:6px 14px;border-radius:8px;border:none;background:#f59e0b;color:#000;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;white-space:nowrap;margin-left:12px;">
+                    Match →</button>` : '';
+            return `
+            <div class="match-row" style="${rowStyle}">
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-size:13px;font-weight:700;">${escHtml(t.customer_name || 'Unknown')}</span>
+                        <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;background:#f1f5f9;color:#64748b;">${t.source}</span>
+                    </div>
+                    <div style="font-size:11px;color:#64748b;margin-top:3px;">
+                        ${escHtml(t.phone||'')}${t.phone && t.mpesa_code?' · ':''}${escHtml(t.mpesa_code||'—')}
+                        · ${t.created_at?.slice(0,19).replace('T',' ')||''}
+                    </div>
+                    ${t.account_ref ? `<div style="font-size:10px;color:#3b82f6;margin-top:2px;">Ref: ${escHtml(t.account_ref)}</div>` : ''}
+                </div>
+                <div style="display:flex;align-items:center;flex-shrink:0;margin-left:12px;">
+                    <div style="text-align:right;">
+                        <div style="font-family:'Space Mono',monospace;font-weight:900;font-size:14px;">${fmt(t.amount)}</div>
+                        <div style="font-size:10px;color:${sColor};font-weight:700;margin-top:2px;">${sLabel}</div>
+                        ${t.amount_excess > 0 ? `<div style="font-size:10px;color:#f59e0b;">Excess: ${fmt(t.amount_excess)}</div>` : ''}
+                    </div>
+                    ${matchBtn}
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        list.innerHTML = `<p class="py-5 text-center text-red-500 text-xs font-bold">Error: ${escHtml(e.message)}</p>`;
+    }
+}
+
+// ── Match Modal ───────────────────────────────────────────────────────────────
+let _matchTxn = null;
+const _txnMap = {};
+
+function openMatchModal(id) {
+    const txn = _txnMap[id];
+    if (!txn) return;
+    _matchTxn = txn;
+    ['matchDebtResult','matchGoodsResult','matchIgnoreResult'].forEach(id => {
+        const el = qs(id); if (el) { el.textContent = ''; el.style.color = ''; }
+    });
+    qs('matchDebtorPhone').value = txn.phone || '';
+    qs('matchGoodsNote').value   = '';
+    qs('matchIgnoreNote').value  = '';
+    set('matchModalTitle', `${fmt(txn.amount)} from ${txn.customer_name || txn.phone || 'Unknown'}`);
+    qs('matchPaymentSummary').innerHTML = [
+        ['Phone', txn.phone || '—'],['M-Pesa Ref', txn.mpesa_code || '—'],
+        ['Amount', fmt(txn.amount)],['Source', txn.source],
+        ['Account Ref', txn.account_ref || '—'],['Time', txn.created_at?.slice(0,19).replace('T',' ') || '—'],
+    ].map(([k,v]) => `
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.8px;">${escHtml(k)}</div>
+        <div style="font-weight:700;font-size:12px;">${escHtml(String(v))}</div>
+    `).join('');
+    qs('matchModal').style.display = 'flex';
+}
+
+function closeMatchModal() {
+    qs('matchModal').style.display = 'none';
+    _matchTxn = null;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = qs('matchModal');
+    if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeMatchModal(); });
+});
+
+async function doMatchDebt() {
+    if (!_matchTxn) return;
+    const phone  = qs('matchDebtorPhone').value.trim();
+    const result = qs('matchDebtResult');
+    if (!phone) { result.textContent = 'Enter customer phone number.'; result.style.color = '#ff4d6d'; return; }
+    result.textContent = 'Applying…'; result.style.color = '#94a3b8';
+    try {
+        const res  = await apiFetch(`/api/c2b/resolve-debt`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ c2bId: _matchTxn.id, debtorPhone: phone }) });
+        const data = await res.json();
+        if (!res.ok || !data.success) { result.textContent = data.message || 'Failed.'; result.style.color = '#ff4d6d'; return; }
+        result.textContent = `✅ ${fmt(data.applied)} applied to ${phone}'s debt.` + (data.remaining > 0 ? ` ${fmt(data.remaining)} remaining.` : ' Fully cleared!');
+        result.style.color = '#00e5a0';
+        setTimeout(() => { closeMatchModal(); loadReconcile(); }, 1800);
+    } catch(e) { result.textContent = 'Server error. Try again.'; result.style.color = '#ff4d6d'; }
+}
+
+async function doMatchGoods() {
+    if (!_matchTxn) return;
+    const notes  = qs('matchGoodsNote').value.trim();
+    const result = qs('matchGoodsResult');
+    result.textContent = 'Saving…'; result.style.color = '#94a3b8';
+    try {
+        const res  = await apiFetch(`/api/c2b/resolve-goods`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ c2bId: _matchTxn.id, notes: notes || 'Walk-in goods purchase', amountApplied: parseFloat(_matchTxn.amount) }) });
+        const data = await res.json();
+        if (!res.ok || !data.success) { result.textContent = data.message || 'Failed.'; result.style.color = '#ff4d6d'; return; }
+        result.textContent = '✅ Marked as goods sale.'; result.style.color = '#00e5a0';
+        setTimeout(() => { closeMatchModal(); loadReconcile(); }, 1400);
+    } catch(e) { result.textContent = 'Server error. Try again.'; result.style.color = '#ff4d6d'; }
+}
+
+async function doMatchIgnore() {
+    if (!_matchTxn) return;
+    const notes  = qs('matchIgnoreNote').value.trim();
+    const result = qs('matchIgnoreResult');
+    if (!notes) { result.textContent = 'Please enter a reason before ignoring.'; result.style.color = '#ff4d6d'; return; }
+    result.textContent = 'Saving…'; result.style.color = '#94a3b8';
+    try {
+        const res  = await apiFetch(`/api/c2b/resolve-ignore`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ c2bId: _matchTxn.id, notes }) });
+        const data = await res.json();
+        if (!res.ok || !data.success) { result.textContent = data.message || 'Failed.'; result.style.color = '#ff4d6d'; return; }
+        result.textContent = '✅ Payment ignored and noted.'; result.style.color = '#00e5a0';
+        setTimeout(() => { closeMatchModal(); loadReconcile(); }, 1400);
+    } catch(e) { result.textContent = 'Server error. Try again.'; result.style.color = '#ff4d6d'; }
+}
+
+// ── Init reconcile controls ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const today    = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    if (qs('reconDate'))  qs('reconDate').value  = todayStr;
+    if (qs('reconMonth')) qs('reconMonth').value = todayStr.slice(0,7);
+    const yearSel = qs('reconYear');
+    if (yearSel) {
+        const curYear = today.getFullYear();
+        for (let y = curYear; y >= curYear - 4; y--) {
+            const opt = document.createElement('option');
+            opt.value = y; opt.textContent = y;
+            yearSel.appendChild(opt);
+        }
+    }
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+function bootWhenReady() {
+    if (typeof window.apiFetch === 'function') { loadAll(); }
+    else { setTimeout(bootWhenReady, 60); }
+}
+document.addEventListener('DOMContentLoaded', bootWhenReady);
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+
+
+        // Disable all resolve/match action buttons rendered dynamically via innerHTML.
+        // Override openMatchModal so it shows a read-only alert instead of the modal.
+        window._origOpenMatchModal = window.openMatchModal;
+        window.openMatchModal = function() {
+            alert('🔒 POS is read-only. Resolving C2B payments requires an active subscription.');
+        };
+        document.querySelectorAll('button').forEach(b => {
+            if (/resolve|match|apply|confirm/i.test(b.textContent)) {
+                b.disabled=true; b.style.opacity='0.35'; b.style.cursor='not-allowed';
+            }
+        });
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+</script>
+</body>
+</html>

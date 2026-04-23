@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="returns_statement.html"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Returns & Exchanges Statement | Elite Hardware</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <style>
+        /* Base Theme */
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg, #0a0f1e); color: var(--text, #f1f5f9); }
+        .finput { width: 100%; padding: 10px 14px; border-radius: 10px; background: var(--surface2, #1e293b); border: 1px solid rgba(255,255,255,0.1); color: var(--text, #fff); outline: none; font-size: 13px; }
+        .finput:focus { border-color: #00e5a0; }
+        
+        /* Print Styles */
+        @media print {
+            body { background: white !important; color: black !important; }
+            .no-print, #sidebarMount { display: none !important; }
+            main { margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+            
+            #statementPreview {
+                box-shadow: none !important; border: none !important;
+                width: 100% !important; max-width: 100% !important;
+                margin: 0 !important; padding: 10mm !important;
+            }
+           .print-table th { background: #f1f5f9 !important; color: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .print-table td, .print-table th { border: 1px solid #cbd5e1 !important; color: #000 !important; }
+            .badge-print { border: 1px solid #94a3b8 !important; color: #0f172a !important; }
+        }
+
+        /* Statement A4 Paper Look */
+        #statementPreview {
+            background: #ffffff; color: #0f172a;
+            max-width: 210mm; min-height: 297mm;
+            margin: 0 auto; padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            border-radius: 8px;
+        }
+        .print-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+        .print-table th { background: #f8fafc; padding: 10px; text-align: left; font-weight: 700; text-transform: uppercase; border: 1px solid #e2e8f0; color: #475569; }
+        .print-table td { padding: 10px; border: 1px solid #e2e8f0; vertical-align: top; }
+        
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; }
+        .b-dam { background: #ffe4e6; color: #e11d48; }
+        .b-wrg { background: #fef3c7; color: #d97706; }
+        .b-oth { background: #e0f2fe; color: #0284c7; }
+        
+        .b-pend { background: #fef3c7; color: #d97706; }
+        .b-conf { background: #dcfce7; color: #16a34a; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        <div style="padding:28px 32px;">
+
+            <div class="no-print">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+                    <div>
+                        <h1 style="font-size:24px;font-weight:900;color:var(--text);">Returns & Exchanges Statement</h1>
+                        <p style="font-size:12px;color:var(--muted);margin-top:4px;">Generate formal audit statements and export to CSV</p>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="exportToCSV()" style="padding:10px 20px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:700;font-size:12px;cursor:pointer;">
+                            ⬇️ Export CSV
+                        </button>
+                        <button onclick="window.print()" style="padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#00e5a0,#0891b2);color:#000;font-weight:900;font-size:12px;cursor:pointer;text-transform:uppercase;">
+                            🖨️ Print Statement
+                        </button>
+                    </div>
+                </div>
+
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px;">
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:16px;align-items:end;">
+                        <div>
+                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Statement Type</label>
+                            <select id="sType" class="finput">
+                                <option value="customer">Customer Exchanges (Retail)</option>
+                                <option value="supplier">Supplier Returns (B2B)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">From Date</label>
+                            <input type="date" id="sFrom" class="finput">
+                        </div>
+                        <div>
+                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">To Date</label>
+                            <input type="date" id="sTo" class="finput">
+                        </div>
+                        <div>
+                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Search Name / Ref No.</label>
+                            <input type="text" id="sSearch" placeholder="Optional..." class="finput">
+                        </div>
+                        <div>
+                            <button onclick="generateStatement()" id="genBtn" style="width:100%;padding:11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:#fff;font-weight:900;font-size:12px;cursor:pointer;text-transform:uppercase;">
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="statementPreview">
+                <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:20px;margin-bottom:24px;">
+                    <h1 style="font-family:'Space Mono',monospace;font-size:24px;font-weight:900;color:#0f172a;margin:0;letter-spacing:2px;">ELITE HARDWARE LTD</h1>
+                    <p style="font-size:12px;color:#475569;margin:6px 0 0;text-transform:uppercase;letter-spacing:1px;" id="docTitle">Returns Audit Statement</p>
+                    <p style="font-size:10px;color:#94a3b8;margin:6px 0 0;">KRA PIN: A014661185V</p>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;margin-bottom:24px;font-size:12px;color:#334155;">
+                    <div>
+                        <p><strong>Date Generated:</strong> <span id="lblGenDate"></span></p>
+                        <p><strong>Generated By:</strong> <span id="lblGenBy"></span></p>
+                    </div>
+                    <div style="text-align:right;">
+                        <p><strong>Period:</strong> <span id="lblPeriod"></span></p>
+                        <p><strong>Entity Filter:</strong> <span id="lblEntity">All</span></p>
+                    </div>
+                </div>
+
+                <div id="summaryBlocks" style="display:flex;gap:16px;margin-bottom:24px;">
+                    </div>
+
+                <table class="print-table">
+                    <thead id="tblHead">
+                        </thead>
+                    <tbody id="tblBody">
+                        <tr><td colspan="10" style="text-align:center;padding:40px;color:#94a3b8;font-style:italic;">Configure parameters and click Generate to view statement.</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:40px;border-top:1px solid #cbd5e1;padding-top:16px;font-size:10px;color:#94a3b8;text-align:center;">
+                    <p>This is a system-generated audit report. All financial values correspond to physical stock movements and localized cost expenses.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+        let currentData = [];
+        let currentType = 'customer';
+
+        // Wait for auth before initializing
+        window.addEventListener('DOMContentLoaded', () => {
+            const poll = setInterval(() => {
+                if (typeof window.apiFetch === 'function') {
+                    clearInterval(poll);
+                    initPage();
+                }
+            }, 50);
+        });
+
+        function initPage() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('sFrom').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('sTo').value   = today.toISOString().split('T')[0];
+            document.getElementById('lblGenDate').textContent = today.toLocaleString('en-KE');
+            document.getElementById('lblGenBy').textContent   = window.EliteAuth?.name || 'Administrator';
+        }
+
+        async function fetchAllPages(endpoint) {
+            let allResults = [];
+            let page = 1;
+            let totalPages = 1;
+            
+            do {
+                const res = await apiFetch(`${endpoint}&page=${page}`);
+                const data = await res.json();
+                
+                if (data.returns) {
+                    allResults = allResults.concat(data.returns);
+                    totalPages = data.totalPages || 1;
+                } else {
+                    break;
+                }
+                page++;
+            } while (page <= totalPages);
+            
+            return allResults;
+        }
+
+        async function generateStatement() {
+            const type   = document.getElementById('sType').value;
+            const from   = document.getElementById('sFrom').value;
+            const to     = document.getElementById('sTo').value;
+            const search = document.getElementById('sSearch').value.trim();
+            const btn    = document.getElementById('genBtn');
+
+            currentType = type;
+            btn.textContent = 'Fetching...';
+            btn.disabled = true;
+
+            document.getElementById('lblPeriod').textContent = (from ? from : 'Start') + ' to ' + (to ? to : 'Present');
+            document.getElementById('lblEntity').textContent = search ? search : 'All';
+            document.getElementById('docTitle').textContent  = type === 'customer' ? 'CUSTOMER EXCHANGES STATEMENT' : 'SUPPLIER RETURNS STATEMENT';
+
+            try {
+                if (type === 'customer') {
+                    let endpoint = `${API}/returns?from=${from || ''}&to=${to || ''}&search=${encodeURIComponent(search)}`;
+                    currentData = await fetchAllPages(endpoint);
+                    renderCustomerStatement(currentData);
+                } else {
+                    let endpoint = `${API}/supplier-returns?from=${from || ''}&to=${to || ''}`;
+                    if (search) endpoint += `&q=${encodeURIComponent(search)}`; // Note: The supplier endpoint might not natively support text search fully on paginated, but we can filter client-side
+                    
+                    let rawData = await fetchAllPages(endpoint);
+                    
+                    // Client-side fallback filter for supplier search since the backend relies on exact supplier_id usually
+                    if (search) {
+                        const q = search.toLowerCase();
+                        rawData = rawData.filter(r => 
+                            (r.supplier_name && r.supplier_name.toLowerCase().includes(q)) ||
+                            (r.po_id && String(r.po_id).includes(q)) ||
+                            (r.supplier_credit_note && r.supplier_credit_note.toLowerCase().includes(q))
+                        );
+                    }
+                    currentData = rawData;
+                    renderSupplierStatement(currentData);
+                }
+            } catch (err) {
+                alert("Failed to fetch statement data: " + err.message);
+            } finally {
+                btn.textContent = 'Generate';
+                btn.disabled = false;
+            }
+        }
+
+        function fmt(n) { return 'KES ' + parseFloat(n || 0).toLocaleString('en-KE', {minimumFractionDigits: 2}); }
+
+        function renderCustomerStatement(data) {
+            let totalExchanges = data.length;
+            let totalWriteoff = 0;
+            let damageCount = 0;
+
+            const tbody = data.map(r => {
+                const date = new Date(r.created_at).toLocaleDateString('en-KE');
+                const cost = parseFloat(r.cost_price_written_off || 0);
+                totalWriteoff += cost;
+                
+                let badge = 'b-oth';
+                if (r.return_reason === 'damaged') { badge = 'b-dam'; damageCount++; }
+                if (r.return_reason === 'wrong_item') badge = 'b-wrg';
+
+                return `
+                    <tr>
+                        <td style="white-space:nowrap;">${date}</td>
+                        <td><strong>${r.customer_name || 'Walk-in'}</strong></td>
+                        <td style="font-family:monospace;color:#3b82f6;">${r.original_receipt || '—'}</td>
+                        <td>${r.returned_item_name} <span style="color:#64748b;">(x${r.returned_quantity})</span></td>
+                        <td><span class="badge ${badge}">${r.return_reason}</span></td>
+                        <td>${r.replacement_item_name} <span style="color:#64748b;">(x${r.replacement_quantity})</span></td>
+                        <td style="text-align:right;font-family:monospace;font-weight:bold;color:${cost > 0 ? '#e11d48' : '#0f172a'}">${cost > 0 ? cost.toLocaleString() : '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('summaryBlocks').innerHTML = `
+                <div style="flex:1;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Total Exchanges</div>
+                    <div style="font-size:20px;font-weight:900;color:#0f172a;">${totalExchanges}</div>
+                </div>
+                <div style="flex:1;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Damaged Returns</div>
+                    <div style="font-size:20px;font-weight:900;color:#e11d48;">${damageCount}</div>
+                </div>
+                <div style="flex:1;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Total Absorbed Expense</div>
+                    <div style="font-size:20px;font-weight:900;color:#0f172a;font-family:monospace;">${fmt(totalWriteoff)}</div>
+                </div>
+            `;
+
+            document.getElementById('tblHead').innerHTML = `
+                <tr>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Receipt No.</th>
+                    <th>Returned Item</th>
+                    <th>Reason</th>
+                    <th>Replacement Issued</th>
+                    <th style="text-align:right;">Write-Off (KES)</th>
+                </tr>
+            `;
+
+            document.getElementById('tblBody').innerHTML = tbody || '<tr><td colspan="7" style="text-align:center;">No records found for this period.</td></tr>';
+        }
+
+        function renderSupplierStatement(data) {
+            let totalReturns = data.length;
+            let totalValue = 0;
+            let pendingValue = 0;
+
+            const tbody = data.map(r => {
+                const date = new Date(r.created_at).toLocaleDateString('en-KE');
+                const val = parseFloat(r.total_return_value || 0);
+                totalValue += val;
+                
+                if (!r.balance_adjusted) pendingValue += val;
+
+                const statusBadge = r.balance_adjusted ? '<span class="badge b-conf">Confirmed</span>' : '<span class="badge b-pend">Pending</span>';
+
+                return `
+                    <tr>
+                        <td style="white-space:nowrap;">${date}</td>
+                        <td><strong>${r.supplier_name || '—'}</strong></td>
+                        <td style="font-family:monospace;color:#3b82f6;">PO-${r.po_id || '—'}</td>
+                        <td>${r.item_name}</td>
+                        <td style="text-align:center;">${r.qty_returned}</td>
+                        <td style="font-family:monospace;color:#d97706;">${r.supplier_credit_note || '—'}</td>
+                        <td style="text-align:right;font-family:monospace;font-weight:bold;">${val.toLocaleString()}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('summaryBlocks').innerHTML = `
+                <div style="flex:1;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Items Returned</div>
+                    <div style="font-size:20px;font-weight:900;color:#0f172a;">${totalReturns}</div>
+                </div>
+                <div style="flex:1;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <div style="font-size:10px;color:#64748b;text-transform:uppercase;">Total Value Claimed</div>
+                    <div style="font-size:20px;font-weight:900;color:#0f172a;font-family:monospace;">${fmt(totalValue)}</div>
+                </div>
+                <div style="flex:1;padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+                    <div style="font-size:10px;color:#d97706;text-transform:uppercase;">Pending Resolution</div>
+                    <div style="font-size:20px;font-weight:900;color:#d97706;font-family:monospace;">${fmt(pendingValue)}</div>
+                </div>
+            `;
+
+            document.getElementById('tblHead').innerHTML = `
+                <tr>
+                    <th>Date</th>
+                    <th>Supplier</th>
+                    <th>Ref (PO)</th>
+                    <th>Item Description</th>
+                    <th style="text-align:center;">Qty</th>
+                    <th>Credit Note</th>
+                    <th style="text-align:right;">Value (KES)</th>
+                    <th>Status</th>
+                </tr>
+            `;
+
+            document.getElementById('tblBody').innerHTML = tbody || '<tr><td colspan="8" style="text-align:center;">No records found for this period.</td></tr>';
+        }
+
+        function exportToCSV() {
+            if (!currentData || currentData.length === 0) {
+                alert("No data to export. Please generate a statement first.");
+                return;
+            }
+
+            let csv = '';
+            const safe = (str) => `"${String(str || '').replace(/"/g, '""')}"`;
+
+            if (currentType === 'customer') {
+                csv += 'Date,Customer,Receipt Number,Returned Item,Qty,Reason,Replacement Issued,Replacement Qty,Write-Off (KES)\n';
+                currentData.forEach(r => {
+                    const date = new Date(r.created_at).toLocaleDateString('en-KE');
+                    csv += [
+                        safe(date),
+                        safe(r.customer_name || 'Walk-in'),
+                        safe(r.original_receipt),
+                        safe(r.returned_item_name),
+                        r.returned_quantity,
+                        safe(r.return_reason),
+                        safe(r.replacement_item_name),
+                        r.replacement_quantity,
+                        parseFloat(r.cost_price_written_off || 0)
+                    ].join(',') + '\n';
+                });
+            } else {
+                csv += 'Date,Supplier,PO Ref,Item Description,Qty Returned,Reason,Supplier Credit Note,Total Value (KES),Status\n';
+                currentData.forEach(r => {
+                    const date = new Date(r.created_at).toLocaleDateString('en-KE');
+                    const status = r.balance_adjusted ? 'Confirmed' : 'Pending';
+                    csv += [
+                        safe(date),
+                        safe(r.supplier_name),
+                        safe(`PO-${r.po_id}`),
+                        safe(r.item_name),
+                        r.qty_returned,
+                        safe(r.return_reason),
+                        safe(r.supplier_credit_note),
+                        parseFloat(r.total_return_value || 0),
+                        safe(status)
+                    ].join(',') + '\n';
+                });
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Returns_Statement_${currentType}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

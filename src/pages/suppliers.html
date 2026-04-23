@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Suppliers — Elite HW POS</title>
+<link rel="stylesheet" href="/src/tailwind.css">
+<script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+<script src="/src/pages/sidebar.js" data-active="suppliers.html"></script>
+</head>
+
+<body style="display:flex;min-height:100vh;">
+
+<!-- ── Sidebar mount ── -->
+<div id="sidebarMount"></div>
+
+<!-- ── Main content ── -->
+<main class="page-main" style="flex:1;padding:28px 24px;overflow-x:hidden;padding-top:70px;" id="mainContent">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+    <div>
+      <h1 style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text);">🏭 Supplier Management</h1>
+      <p style="font-size:12px;color:var(--muted);margin-top:3px;">Manage your hardware suppliers, contacts &amp; purchase history</p>
+    </div>
+    <button onclick="openModal()" id="addBtn"
+      style="background:var(--green);color:#000;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:10px 18px;border-radius:10px;border:none;cursor:pointer;">
+      ➕ Add Supplier
+    </button>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px;" id="statsRow">
+    <div class="stat-card" id="statTotal"><div class="stat-val">—</div><div class="stat-lbl">Total Suppliers</div></div>
+    <div class="stat-card" id="statActive"><div class="stat-val">—</div><div class="stat-lbl">Active</div></div>
+    <div class="stat-card" id="statInactive"><div class="stat-val">—</div><div class="stat-lbl">Inactive</div></div>
+    <div class="stat-card" id="statCategories"><div class="stat-val">—</div><div class="stat-lbl">Categories</div></div>
+  </div>
+
+  <!-- Search + filter bar -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+    <input id="searchInput" type="text" placeholder="Search suppliers…" oninput="filterTable()"
+      style="flex:1;min-width:200px;padding:9px 13px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);font-size:13px;" />
+    <select id="statusFilter" onchange="filterTable()"
+      style="padding:9px 13px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);font-size:13px;min-width:130px;">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+    </select>
+    <select id="catFilter" onchange="filterTable()"
+      style="padding:9px 13px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);font-size:13px;min-width:160px;">
+      <option value="">All Categories</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div style="background:var(--surface);border-radius:14px;border:1px solid var(--border);overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;" id="supplierTable">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.04);">
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Supplier</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">KRA PIN</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Category</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Contact</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Phone</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Status</th>
+            <th style="padding:12px 14px;text-align:left;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Balance (KES)</th>
+            <th style="padding:12px 14px;text-align:center;color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:1px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">Loading suppliers…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════════════
+     ADD / EDIT MODAL
+══════════════════════════════════════════════ -->
+<div id="supplierModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;margin:16px;">
+    <div style="padding:20px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-family:var(--mono);font-size:15px;color:var(--green);" id="modalTitle">Add Supplier</h2>
+      <button onclick="closeModal()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <form id="supplierForm" onsubmit="saveSupplier(event)" style="padding:22px;display:flex;flex-direction:column;gap:16px;">
+      <input type="hidden" id="supplierId" />
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div style="grid-column:1/-1;">
+          <label class="lbl">Company / Supplier Name *</label>
+          <input id="fName" required placeholder="e.g. Buildmart Kenya Ltd" class="finput" />
+        </div>
+        <div>
+          <label class="lbl">KRA PIN <span style="color:var(--green);font-size:9px;">— for input VAT</span></label>
+          <input id="fKraPin" placeholder="e.g. A012345678B" class="finput" style="text-transform:uppercase;letter-spacing:1px;" />
+        </div>
+        <div>
+          <label class="lbl">Contact Person</label>
+          <input id="fContact" placeholder="e.g. James Mwangi" class="finput" />
+        </div>
+        <div>
+          <label class="lbl">Category *</label>
+          <input id="fCategory" required placeholder="e.g. Electrical, Plumbing…" class="finput" list="catList" />
+          <datalist id="catList"></datalist>
+        </div>
+        <div>
+          <label class="lbl">Phone</label>
+          <input id="fPhone" placeholder="0712345678" class="finput" />
+        </div>
+        <div>
+          <label class="lbl">Email</label>
+          <input id="fEmail" type="email" placeholder="supplier@email.com" class="finput" />
+        </div>
+        <div>
+          <label class="lbl">Location / Town</label>
+          <input id="fLocation" placeholder="e.g. Nairobi CBD" class="finput" />
+        </div>
+        <div>
+          <label class="lbl">Payment Terms</label>
+          <select id="fTerms" class="finput">
+            <option value="">Select…</option>
+            <option>Cash on delivery</option>
+            <option>Net 7</option>
+            <option>Net 14</option>
+            <option>Net 30</option>
+            <option>Net 60</option>
+            <option>Prepaid</option>
+          </select>
+        </div>
+        <div>
+          <label class="lbl">Status</label>
+          <select id="fStatus" class="finput">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div style="grid-column:1/-1;">
+          <label class="lbl">Notes</label>
+          <textarea id="fNotes" rows="3" placeholder="Any additional notes…" class="finput" style="resize:vertical;"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px;">
+        <button type="button" onclick="closeModal()"
+          style="padding:10px 20px;border-radius:9px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:13px;">Cancel</button>
+        <button type="submit" id="saveBtn"
+          style="padding:10px 24px;border-radius:9px;border:none;background:var(--green);color:#000;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     VIEW / DETAIL MODAL
+══════════════════════════════════════════════ -->
+<div id="viewModal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.65);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;margin:16px;">
+    <div style="padding:20px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-family:var(--mono);font-size:15px;color:var(--blue);" id="viewTitle">Supplier Details</h2>
+      <button onclick="closeView()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="viewBody" style="padding:22px;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     DELETE CONFIRM MODAL
+══════════════════════════════════════════════ -->
+<div id="deleteModal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:360px;margin:16px;padding:28px 24px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:12px;">⚠️</div>
+    <h3 style="color:var(--red);font-family:var(--mono);font-size:14px;margin-bottom:8px;">Delete Supplier?</h3>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:22px;" id="deleteMsg">This action cannot be undone.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button onclick="closeDelete()"
+        style="padding:10px 22px;border-radius:9px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;">Cancel</button>
+      <button onclick="confirmDelete()" id="confirmDelBtn"
+        style="padding:10px 22px;border-radius:9px;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     EXTRA STYLES
+══════════════════════════════════════════════ -->
+<style>
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .stat-val { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--green); }
+  .stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+  .lbl { display: block; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .finput { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); font-size: 13px; background: var(--surface2); color: var(--text); }
+  .finput:focus { outline: none; border-color: var(--green); }
+  .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; }
+  .badge-active   { background:rgba(0,229,160,0.15); color:var(--green); }
+  .badge-inactive { background:rgba(255,77,109,0.13); color:var(--red); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  td { padding: 12px 14px; color: var(--text); vertical-align: middle; }
+  @media(max-width:768px) {
+    #mainContent { padding-top: 80px !important; }
+    .stat-val { font-size: 20px; }
+  }
+</style>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+var API          = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+var allSuppliers = [];
+var deleteTarget = null;
+var isAdmin      = false; // Default to false
+
+// 1. Wait for Auth to be ready before doing anything
+document.addEventListener('DOMContentLoaded', function() {
+    // ── READ-ONLY SUBSCRIPTION LOCK ──────────────────────────────────────────
+    if (window.EliteAuth && window.EliteAuth.readOnly) {
+        (function() {
+            const _isLT = window.EliteAuth.subPlan === 'lifetime';
+            const _thing = _isLT ? 'annual service fee' : 'subscription';
+            const _days  = window.EliteAuth.daysUntilExpiry;
+            const _dAgo  = _days !== null ? Math.abs(_days) : '?';
+            const _bar   = document.createElement('div');
+            _bar.id = 'pageSubBanner';
+            _bar.innerHTML = '<span style="font-size:18px">🔒</span><span><strong>READ-ONLY MODE</strong> — ' + _thing + ' expired ' + _dAgo + ' day(s) ago. Viewing and exporting data is still available.</span><button onclick="window.location.href=\'/\'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>';
+            _bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+            const _hdr = document.querySelector('header') || document.querySelector('.page-header') || document.querySelector('main') || document.body;
+            if (_hdr && _hdr !== document.body) _hdr.parentNode ? _hdr.parentNode.insertBefore(_bar, _hdr.nextSibling) : _hdr.prepend(_bar);
+            else document.body.insertBefore(_bar, document.body.firstChild);
+        })();
+    const _rb0 = document.getElementById('saveBtn');
+    if (_rb0) { _rb0.disabled=true; _rb0.style.opacity='0.35'; _rb0.style.cursor='not-allowed'; _rb0.title='POS is read-only — subscription expired'; }
+
+        document.querySelectorAll('button').forEach(b => {
+            const t = b.textContent.trim().toLowerCase();
+            if (t.includes('add supplier') || t.includes('delete') || t.includes('record payment') || t.includes('save')) {
+                b.disabled=true; b.style.opacity='0.35'; b.style.cursor='not-allowed';
+            }
+        });
+    
+    }
+    // ── END READ-ONLY LOCK ────────────────────────────────────────────────────
+
+
+    if (document.body.classList.contains('auth-ready')) {
+        initSuppliers();
+    } else {
+        // Watch for auth.js to finish
+        const observer = new MutationObserver(() => {
+            if (document.body.classList.contains('auth-ready')) {
+                initSuppliers();
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    }
+});
+
+// 2. Initialize variables and UI once Auth is confirmed
+function initSuppliers() {
+    // Now EliteAuth is guaranteed to be populated
+    isAdmin = window.EliteAuth && (window.EliteAuth.isAdmin || window.EliteAuth.isManager);
+    
+    // ── Role guard — hide add button if not admin/manager ──────────────────────────
+    var addBtn = document.getElementById('addBtn');
+    if (addBtn) {
+        addBtn.style.display = isAdmin ? 'block' : 'none';
+    }
+
+    loadSuppliers();
+}
+
+// 3. Your existing loadSuppliers function
+async function loadSuppliers() {
+    const main = document.getElementById('mainContent');
+    try {
+        // Since we are now sure auth is ready, window.apiFetch is available
+        const res = await window.apiFetch('/suppliers');
+        if (!res) return;
+        
+        const data = await res.json();
+        allSuppliers = data;
+        renderSuppliers(data);
+    } catch (err) {
+        console.error("Load error:", err);
+    }
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function headers() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token };
+}
+
+function fmt(n) {
+  return Number(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function toast(msg, type) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;color:#fff;background:' +
+    (type === 'error' ? 'var(--red)' : 'var(--green)') + ';box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 3200);
+}
+
+// ── Fetch all suppliers ──────────────────────────────────────────────────────
+// Backend route: GET /api/suppliers  (requireAuth)
+async function loadSuppliers() {
+  try {
+    // FIX: Use window.apiFetch instead of fetch()
+    var res  = await window.apiFetch(API + '/suppliers'); 
+    
+    // apiFetch already handles the 401 redirect, 
+    // so we just handle the data here.
+    if (!res) return; 
+
+    var data = await res.json();
+    allSuppliers = Array.isArray(data) ? data : (data.data || []);
+    renderStats();
+    populateCategoryFilter();
+    filterTable();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('tableBody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red);">⚠️ ' + err.message + '</td></tr>';
+  }
+}
+
+// ── Stats ────────────────────────────────────────────────────────────────────
+function renderStats() {
+  var active   = allSuppliers.filter(function (s) { return s.status === 'active'; }).length;
+  var inactive = allSuppliers.length - active;
+  var cats     = new Set(allSuppliers.map(function (s) { return s.category; }).filter(Boolean)).size;
+  document.getElementById('statTotal').querySelector('.stat-val').textContent    = allSuppliers.length;
+  document.getElementById('statActive').querySelector('.stat-val').textContent   = active;
+  document.getElementById('statInactive').querySelector('.stat-val').textContent = inactive;
+  document.getElementById('statCategories').querySelector('.stat-val').textContent = cats;
+}
+
+// ── Category filter datalist ─────────────────────────────────────────────────
+function populateCategoryFilter() {
+  var cats = Array.from(new Set(allSuppliers.map(function (s) { return s.category; }).filter(Boolean))).sort();
+  var sel  = document.getElementById('catFilter');
+  sel.innerHTML = '<option value="">All Categories</option>';
+  cats.forEach(function (c) {
+    sel.innerHTML += '<option value="' + c + '">' + c + '</option>';
+  });
+  // Also populate datalist in form
+  var dl = document.getElementById('catList');
+  dl.innerHTML = cats.map(function (c) { return '<option value="' + c + '">'; }).join('');
+}
+
+// ── Filter + render table ────────────────────────────────────────────────────
+function filterTable() {
+  var q      = (document.getElementById('searchInput').value || '').toLowerCase();
+  var status = document.getElementById('statusFilter').value;
+  var cat    = document.getElementById('catFilter').value;
+
+  var filtered = allSuppliers.filter(function (s) {
+    var matchQ = !q ||
+      (s.name       || '').toLowerCase().includes(q) ||
+      (s.contact    || '').toLowerCase().includes(q) ||
+      (s.phone      || '').toLowerCase().includes(q) ||
+      (s.email      || '').toLowerCase().includes(q) ||
+      (s.location   || '').toLowerCase().includes(q);
+    var matchStatus = !status || (s.status || 'active') === status;
+    var matchCat    = !cat    || s.category === cat;
+    return matchQ && matchStatus && matchCat;
+  });
+
+  renderTable(filtered);
+}
+
+function renderTable(rows) {
+  var tb = document.getElementById('tableBody');
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted);">No suppliers found.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map(function (s) {
+    var statusClass = (s.status === 'inactive') ? 'badge-inactive' : 'badge-active';
+    var statusText  = (s.status || 'active');
+    var balance     = parseFloat(s.balance || 0);
+    var balColor    = balance > 0 ? 'var(--red)' : balance < 0 ? 'var(--amber)' : 'var(--muted)';
+    return '<tr>' +
+      '<td><strong style="color:var(--text);">' + esc(s.name) + '</strong>' +
+        (s.location ? '<br><span style="font-size:11px;color:var(--muted);">📍 ' + esc(s.location) + '</span>' : '') +
+      '</td>' +
+      '<td><span style="font-family:var(--mono);font-size:11px;color:var(--amber);">' + esc(s.kra_pin || '—') + '</span></td>' +
+      '<td><span style="background:var(--blue-dim);color:var(--blue);padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;">' + esc(s.category || '—') + '</span></td>' +
+      '<td>' + esc(s.contact || '—') + '</td>' +
+      '<td>' + (s.phone ? '<a href="tel:' + esc(s.phone) + '" style="color:var(--green);text-decoration:none;">' + esc(s.phone) + '</a>' : '—') + '</td>' +
+      '<td><span class="badge ' + statusClass + '">' + statusText + '</span></td>' +
+      '<td style="font-family:var(--mono);font-size:12px;color:' + balColor + ';">' + fmt(balance) + '</td>' +
+      '<td style="text-align:center;white-space:nowrap;">' +
+        '<button onclick="viewSupplier(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" title="View" style="background:var(--blue-dim);color:var(--blue);border:none;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px;">👁</button>' +
+        (isAdmin ? '<button onclick="editSupplier(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" title="Edit" style="background:var(--green-dim);color:var(--green);border:none;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;margin-right:4px;">✏️</button>' +
+        '<button onclick="deleteSupplier(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" title="Delete" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:5px 10px;cursor:pointer;font-size:12px;">🗑</button>' : '') +
+      '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Modal helpers ────────────────────────────────────────────────────────────
+function openModal(supplier) {
+  document.getElementById('supplierForm').reset();
+  document.getElementById('supplierId').value = '';
+  document.getElementById('modalTitle').textContent = 'Add Supplier';
+  if (supplier) {
+    document.getElementById('modalTitle').textContent = 'Edit Supplier';
+    document.getElementById('supplierId').value  = supplier.id;
+    document.getElementById('fName').value       = supplier.name     || '';
+    document.getElementById('fKraPin').value     = supplier.kra_pin  || '';
+    document.getElementById('fContact').value    = supplier.contact  || '';
+    document.getElementById('fCategory').value   = supplier.category || '';
+    document.getElementById('fPhone').value      = supplier.phone    || '';
+    document.getElementById('fEmail').value      = supplier.email    || '';
+    document.getElementById('fLocation').value   = supplier.location || '';
+    document.getElementById('fTerms').value      = supplier.payment_terms || '';
+    document.getElementById('fStatus').value     = supplier.status   || 'active';
+    document.getElementById('fNotes').value      = supplier.notes    || '';
+  }
+  document.getElementById('supplierModal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('supplierModal').style.display = 'none'; }
+
+function editSupplier(s) { openModal(s); }
+
+// ── View detail ──────────────────────────────────────────────────────────────
+async function viewSupplier(s) {
+  document.getElementById('viewTitle').textContent = s.name;
+  var balance  = parseFloat(s.balance || 0);
+  var balColor = balance > 0 ? 'var(--red)' : balance < 0 ? 'var(--amber)' : 'var(--green)';
+  document.getElementById('viewBody').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:12px;">' +
+    row('🏭 Company',       s.name) +
+    row('🔑 KRA PIN',       s.kra_pin ? '<span style="font-family:var(--mono);color:var(--amber);">' + esc(s.kra_pin) + '</span>' : '<span style="color:var(--muted);font-size:11px;">Not set — input VAT cannot be claimed</span>') +
+    row('👤 Contact',       s.contact) +
+    row('🏷️ Category',      s.category) +
+    row('📞 Phone',         s.phone ? '<a href="tel:' + esc(s.phone) + '" style="color:var(--green);">' + esc(s.phone) + '</a>' : null) +
+    row('📧 Email',         s.email ? '<a href="mailto:' + esc(s.email) + '" style="color:var(--blue);">' + esc(s.email) + '</a>' : null) +
+    row('📍 Location',      s.location) +
+    row('💳 Payment Terms', s.payment_terms) +
+    row('📊 Status',        '<span class="badge ' + ((s.status === 'inactive') ? 'badge-inactive' : 'badge-active') + '">' + (s.status || 'active') + '</span>') +
+    row('💰 Balance',       '<span style="font-family:var(--mono);color:' + balColor + ';">KES ' + fmt(balance) + '</span>') +
+    row('🗒️ Notes',         s.notes) +
+    row('📅 Added',         s.created_at ? new Date(s.created_at).toLocaleDateString('en-KE', {day:'2-digit',month:'short',year:'numeric'}) : null) +
+    '</div>' +
+    // Timeline placeholder — filled async below
+    '<div id="supplierTimeline" style="margin-top:16px;">' +
+      '<div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Activity Timeline</div>' +
+      '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">Loading activity…</div>' +
+    '</div>' +
+    (isAdmin ? '<div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">' +
+      '<button onclick="closeView();editSupplier(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" style="padding:9px 18px;border-radius:9px;background:var(--green-dim);color:var(--green);border:none;cursor:pointer;font-weight:700;font-size:12px;">✏️ Edit</button>' +
+      '<button onclick="closeView();deleteSupplier(' + JSON.stringify(s).replace(/"/g, '&quot;') + ')" style="padding:9px 18px;border-radius:9px;background:var(--red-dim);color:var(--red);border:none;cursor:pointer;font-weight:700;font-size:12px;">🗑 Delete</button>' +
+    '</div>' : '');
+  document.getElementById('viewModal').style.display = 'flex';
+  // Load timeline asynchronously
+  loadSupplierTimeline(s.name, s.id);
+}
+
+async function loadSupplierTimeline(supplierName, supplierId) {
+  var el = document.getElementById('supplierTimeline');
+  if (!el) return;
+  try {
+    var res  = await fetch(API + '/suppliers/' + supplierId + '/activity', { headers: headers() });
+    var data = await res.json();
+    if (!res.ok || !data.length) {
+      el.innerHTML =
+        '<div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Activity Timeline</div>' +
+        '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px;background:var(--surface2);border-radius:8px;">No activity recorded yet.</div>';
+      return;
+    }
+    var icons = {
+      'SUPPLIER_ADDED':            { icon:'➕', color:'var(--green)' },
+      'SUPPLIER_UPDATED':          { icon:'✏️', color:'var(--blue)'  },
+      'SUPPLIER_BALANCE_ADJUSTED': { icon:'💰', color:'var(--amber)' },
+      'SUPPLIER_PAYMENT':          { icon:'💳', color:'var(--green)' },
+      'PO_CREATED':                { icon:'📋', color:'var(--muted)' },
+      'PO_UPDATED':                { icon:'🔄', color:'var(--blue)'  },
+      'PO_RECEIVED':               { icon:'📦', color:'var(--amber)' },
+      'PO_STATUS_UPDATED':         { icon:'📊', color:'var(--blue)'  },
+      'PO_EMAILED':                { icon:'✉️', color:'var(--blue)'  },
+      'PO_DELETED':                { icon:'🗑️', color:'var(--red)'   },
+    };
+    el.innerHTML =
+      '<div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Activity Timeline <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-size:10px;">('+data.length+' events)</span></div>' +
+      '<div style="display:flex;flex-direction:column;gap:0;max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;overflow:hidden;">' +
+      data.map(function(log, idx) {
+        var meta    = icons[log.action] || { icon:'📌', color:'var(--muted)' };
+        var dt      = new Date(log.timestamp);
+        var dateStr = dt.toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'numeric'});
+        var timeStr = dt.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit'});
+        // Extract a clean summary from details
+        var summary = log.details || log.action;
+        // Shorten long details — show first 100 chars
+        if (summary.length > 120) summary = summary.substring(0, 120) + '…';
+        return '<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:'+(idx%2===0?'var(--surface2)':'var(--surface)')+';border-bottom:1px solid var(--border);">' +
+          '<div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;">'+meta.icon+'</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
+              '<span style="font-size:11px;font-weight:700;color:'+meta.color+';text-transform:uppercase;letter-spacing:0.5px;">'+log.action.replace(/_/g,' ')+'</span>' +
+              '<span style="font-size:10px;color:var(--muted);white-space:nowrap;">'+dateStr+' '+timeStr+'</span>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.4;">'+esc(summary)+'</div>' +
+            '<div style="font-size:10px;color:var(--muted);margin-top:3px;opacity:0.7;">By: '+esc(log.performed_by)+'</div>' +
+          '</div>' +
+        '</div>';
+      }).join('') +
+      '</div>';
+  } catch(err) {
+    if (el) el.innerHTML = '<div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Activity Timeline</div>' +
+      '<div style="color:var(--red);font-size:12px;">Could not load activity: '+esc(err.message)+'</div>';
+  }
+}
+
+function row(label, val) {
+  if (!val && val !== 0) return '';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+    '<span style="font-size:12px;color:var(--muted);">' + label + '</span>' +
+    '<span style="font-size:13px;color:var(--text);text-align:right;max-width:260px;">' + val + '</span>' +
+    '</div>';
+}
+
+function closeView() { document.getElementById('viewModal').style.display = 'none'; }
+
+// ── Delete ───────────────────────────────────────────────────────────────────
+function deleteSupplier(s) {
+  deleteTarget = s;
+  document.getElementById('deleteMsg').textContent = 'Delete "' + s.name + '"? This cannot be undone.';
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function closeDelete() {
+  deleteTarget = null;
+  document.getElementById('deleteModal').style.display = 'none';
+}
+
+async function confirmDelete() {
+  if (!deleteTarget) return;
+  var btn = document.getElementById('confirmDelBtn');
+  btn.textContent = 'Deleting…'; btn.disabled = true;
+  try {
+    // Backend route: DELETE /api/suppliers/:id  (requireAuth, requireRole admin/manager)
+  var res = await window.apiFetch(API + '/suppliers/' + deleteTarget.id, { method: 'DELETE' });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Delete failed');
+    toast('Supplier deleted', 'success');
+    closeDelete();
+    loadSuppliers();
+  } catch (err) {
+    toast(err.message, 'error');
+    btn.textContent = 'Delete'; btn.disabled = false;
+  }
+}
+
+// ── Save (add / edit) ────────────────────────────────────────────────────────
+async function saveSupplier(e) {
+  e.preventDefault();
+  var btn = document.getElementById('saveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  var id = document.getElementById('supplierId').value;
+  var payload = {
+    name:          document.getElementById('fName').value.trim(),
+    kra_pin:       (document.getElementById('fKraPin').value.trim().toUpperCase()) || null,
+    contact:       document.getElementById('fContact').value.trim(),
+    category:      document.getElementById('fCategory').value.trim(),
+    phone:         document.getElementById('fPhone').value.trim(),
+    email:         document.getElementById('fEmail').value.trim(),
+    location:      document.getElementById('fLocation').value.trim(),
+    payment_terms: document.getElementById('fTerms').value,
+    status:        document.getElementById('fStatus').value,
+    notes:         document.getElementById('fNotes').value.trim(),
+  };
+
+  try {
+    var url    = id ? API + '/suppliers/' + id : API + '/suppliers';
+    var method = id ? 'PUT' : 'POST';
+
+    // FIX: Use window.apiFetch. 
+    // You no longer need headers: headers() as the helper injects the JWT automatically.
+    var res = await window.apiFetch(url, { 
+      method: method, 
+      body: JSON.stringify(payload) 
+    });
+
+    // Check if the request was blocked or failed before parsing JSON
+    if (!res) return; 
+
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Save failed');
+    
+    toast(id ? 'Supplier updated ✓' : 'Supplier added ✓', 'success');
+    closeModal();
+    loadSuppliers();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.textContent = 'Save'; btn.disabled = false;
+  }
+}
+// ── Role guard — hide add/edit/delete for non-admins ──────────────────────────
+if (!isAdmin) {
+  var addBtn = document.getElementById('addBtn');
+  if (addBtn) addBtn.style.display = 'none';
+}
+
+// ── Close modals on backdrop click ───────────────────────────────────────────
+['supplierModal','viewModal','deleteModal'].forEach(function (id) {
+  document.getElementById(id).addEventListener('click', function (e) {
+    if (e.target === this) {
+      this.style.display = 'none';
+      if (id === 'deleteModal') deleteTarget = null;
+    }
+  });
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // If auth.js is already done, load immediately
+  if (document.body.classList.contains('auth-ready')) {
+    loadSuppliers();
+  } else {
+    // Otherwise, wait for auth.js to signal it is ready
+    const observer = new MutationObserver((mutations) => {
+      if (document.body.classList.contains('auth-ready')) {
+        loadSuppliers();
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }
+});
+</script>
+</body>
+</html>
