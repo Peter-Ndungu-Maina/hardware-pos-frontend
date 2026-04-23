@@ -1,0 +1,23 @@
+/inventory             /src/pages/inventory.html             200
+/debt_status           /src/pages/debt_status.html           200
+/payments_report       /src/pages/payments_report.html       200
+/suppliers             /src/pages/suppliers.html             200
+/supplier_statement    /src/pages/supplier_statement.html    200
+/purchase_orders       /src/pages/purchase_orders.html       200
+/add_product           /src/pages/add_product.html           200
+/stock_audit           /src/pages/stock_audit.html           200
+/stock_movement        /src/pages/stock_movement.html        200
+/debtors_report        /src/pages/debtors_report.html        200
+/returns_audit         /src/pages/returns_audit.html         200
+/returns_statement     /src/pages/returns_statement.html     200
+/customer_statement    /src/pages/customer_statement.html    200
+/accounting            /src/pages/accounting.html            200
+/expenses              /src/pages/expenses.html              200
+/stock_valuation       /src/pages/stock_valuation.html       200
+/profit_loss           /src/pages/profit_loss.html           200
+/reports               /src/pages/reports.html               200
+/debts_repayment       /src/pages/debts_repayment.html       200
+/billing               /src/pages/billing.html               200
+
+# Fallback for the root just in case
+/index.html            /index.html                           200
