@@ -268,7 +268,9 @@
 
     window.apiFetch = async function (url, options) {
         options = options || {};
-        if (url.startsWith('http') && !url.startsWith(window.location.origin)) {
+        
+        // Trust the Netlify origin AND the Render backend URL
+        if (url.startsWith('http') && !url.startsWith(window.location.origin) && !url.startsWith(window.API_BASE)) {
             throw new Error('Security Block: External API calls are not permitted.');
         }
 
