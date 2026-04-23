@@ -364,7 +364,7 @@ async function fetchPayments(type) {
             a.click();
     }
 
-window.addEventListener('load', () => {
+function initReport() {
     const userRole = window.EliteAuth?.role?.toLowerCase();
     const userName = window.EliteAuth?.name || localStorage.getItem('userName') || '';
     const isCashier = userRole === 'cashier';
@@ -386,8 +386,14 @@ window.addEventListener('load', () => {
 
     document.getElementById('accessLevelLabel').innerText = (isCashier ? 'MY PAYMENTS — ' : '') + userRole.toUpperCase();
     fetchPayments();
+}
+
+// Safely wait for auth.js to finish talking to the Render backend
+document.addEventListener('eliteAuthReady', initReport);
+window.addEventListener('load', () => {
+    // Fallback just in case auth finished before the page finished loading
+    if (window.EliteAuth) initReport();
 });
-    
 // ── Pagination [pr] ────────────────────────────────────────
 let _pg_pr_all  = [];
 let _pg_pr_page = 1;

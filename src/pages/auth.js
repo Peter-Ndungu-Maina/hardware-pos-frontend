@@ -128,8 +128,15 @@
     // We trust ONLY the role the server returns — never localStorage role.
     // ─────────────────────────────────────────────────────────────────────────
     var _serverRole;
+    var _sessionData = {}; // Store session data locally to bypass errors
+    
     try {
-      var verifyRes = await fetch('https://hardware-pos-backend.onrender.com/api/verify-session', {
+        // If the browser knows it is completely offline, skip the fetch attempt entirely
+        if (!navigator.onLine) {
+            throw new Error('OFFLINE_MODE');
+        }
+
+        var verifyRes = await fetch('https://hardware-pos-backend.onrender.com/api/verify-session', {
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + _token,
@@ -139,20 +146,37 @@
 
         if (!verifyRes.ok) throw new Error('Session invalid');
 
-        var sessionData = await verifyRes.json();
-        _serverRole = (sessionData.role || '').toLowerCase();
+        _sessionData = await verifyRes.json();
+        _serverRole = (_sessionData.role || '').toLowerCase();
 
         // Keep localStorage in sync with server truth
-        if (sessionData.role) {
-            localStorage.setItem('userRole', sessionData.role);
+        if (_sessionData.role) {
+            localStorage.setItem('userRole', _sessionData.role);
         }
 
     } catch (err) {
-        console.error('[auth.js] Session verification failed:', err.message);
-        localStorage.clear();
-        document.cookie = 'authToken=; path=/; SameSite=Strict; max-age=0';
-        window.location.replace('/');
-        return;
+        // ── OFFLINE FIX ──
+        // If the error is because we are offline OR the network fetch failed, trust the local token
+        if (err.message === 'OFFLINE_MODE' || err.message === 'Failed to fetch') {
+            console.warn('[auth.js] Offline mode detected. Trusting local session.');
+            _serverRole = (localStorage.getItem('userRole') || '').toLowerCase();
+            
+            // Mock the basic session data so STEP 9 doesn't crash
+            _sessionData = {
+                readOnly: false,
+                gracePeriod: false,
+                daysUntilExpiry: null,
+                subStatus: 'active',
+                subPlan: 'monthly'
+            };
+        } else {
+            // A genuine authentication error (like an expired token)
+            console.error('[auth.js] Session verification failed:', err.message);
+            localStorage.clear();
+            document.cookie = 'authToken=; path=/; SameSite=Strict; max-age=0';
+            window.location.replace('/');
+            return;
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -175,12 +199,12 @@
         isManager:    (_serverRole === 'admin' || _serverRole === 'manager'),
         isPrivileged: (_serverRole === 'admin' || _serverRole === 'manager'),
         // ── Subscription ──────────────────────────────────────────────────────
-        readOnly:        sessionData.readOnly        || false,
-        gracePeriod:     sessionData.gracePeriod     || false,
-        daysUntilExpiry: sessionData.daysUntilExpiry ?? null,
-        paidUntil:       sessionData.paidUntil       || null,
-        subStatus:       sessionData.subStatus       || 'active',
-        subPlan:         sessionData.subPlan         || 'monthly',
+        readOnly:        _sessionData.readOnly        || false,
+        gracePeriod:     _sessionData.gracePeriod     || false,
+        daysUntilExpiry: _sessionData.daysUntilExpiry ?? null,
+        paidUntil:       _sessionData.paidUntil       || null,
+        subStatus:       _sessionData.subStatus       || 'active',
+        subPlan:         _sessionData.subPlan         || 'monthly',
     };
 
     // ── Subscription banner ──────────────────────────────────────────────────

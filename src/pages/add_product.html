@@ -1050,7 +1050,17 @@ document.getElementById('stockSearch').addEventListener('input', () => {
     }, 150);
 });
 
-loadExistingItems();
+// Wait for auth.js to finish verifying the session and building apiFetch before loading data
+document.addEventListener('eliteAuthReady', () => {
+    loadExistingItems();
+});
+
+// Fallback just in case auth finished before the listener was registered
+window.addEventListener('load', () => {
+    if (typeof window.apiFetch === 'function' && allInventoryItems.length === 0) {
+        loadExistingItems();
+    }
+});
     async function quickPriceUpdate(id) {
     const newPrice = document.getElementById(`standalone-price-${id}`).value;
     const userName = window.EliteAuth?.name || 'Admin';
