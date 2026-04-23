@@ -1,0 +1,13 @@
+# Dependency directories
+# Netlify will run 'npm install' and create its own version
+node_modules/
+
+# Local configuration and logs
+.env
+.DS_Store
+npm-debug.log*
+
+# Optional: Build outputs
+# Netlify will regenerate output.css using your build command
+# You can uncomment the line below if you want to keep GitHub clean
+# src/output.css
