@@ -24,29 +24,42 @@
         : null; // null = any authenticated user is allowed
 
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2 — Hide body immediately to prevent content flash on role mismatch.
+   // ─────────────────────────────────────────────────────────────────────────
+    // STEP 2 — Show a professional loading overlay instead of a blank white screen
     // ─────────────────────────────────────────────────────────────────────────
     function _applyHide() {
+        if (document.getElementById('elite-auth-loader')) return;
+
+        var loader = document.createElement('div');
+        loader.id = 'elite-auth-loader';
+        // Solid dark background matching your theme, covers everything
+        loader.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#090a0f;z-index:999999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#00e5a0;font-family:"Space Mono", monospace;transition:opacity 0.2s ease;';
+        
+        loader.innerHTML = 
+            '<div style="font-size:48px;margin-bottom:20px;animation: authPulse 1.2s infinite ease-in-out;">🛠️</div>' +
+            '<div style="font-size:14px;font-weight:900;letter-spacing:3px;text-transform:uppercase;">Connecting...</div>' +
+            '<style>@keyframes authPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } } body { overflow: hidden; }</style>';
+            
         if (document.body) {
-            document.body.style.opacity    = '0';
-            document.body.style.visibility = 'hidden';
+            document.body.appendChild(loader);
+        } else {
+            // If body isn't parsed yet, wait for it
+            document.addEventListener('DOMContentLoaded', function() { document.body.appendChild(loader); }, { once: true });
         }
     }
 
     function _reveal() {
-        if (document.body) {
-            document.body.style.opacity    = '';
-            document.body.style.visibility = '';
-            document.body.classList.add('auth-ready');
+        var loader = document.getElementById('elite-auth-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            // Wait for the fade out to finish before removing it completely
+            setTimeout(function() { 
+                if (loader.parentNode) loader.parentNode.removeChild(loader); 
+                document.body.style.overflow = ''; // Restore scrolling
+            }, 200);
         }
+        if (document.body) document.body.classList.add('auth-ready');
     }
-
-    if (document.body) {
-        _applyHide();
-    } else {
-        document.addEventListener('DOMContentLoaded', _applyHide, { once: true });
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 3 — Login page: reveal and exit immediately
     // ─────────────────────────────────────────────────────────────────────────
