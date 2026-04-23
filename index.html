@@ -2983,8 +2983,8 @@ window.onload = () => {
         showDashboard(role, name);
         // Re-fetch subscription state on reload so the banner is always fresh
         const tok = localStorage.getItem('authToken');
-        if (tok) {
-            fetch('/api/verify-session', {
+       if (tok) {
+            fetch(API_BASE + '/verify-session', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json' }
             }).then(r => r.ok ? r.json() : null).then(d => {
