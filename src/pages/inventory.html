@@ -2920,21 +2920,20 @@ function closeReceipt() {
         setTimeout(() => toast.classList.add('hidden'), 4000);
     }
 
-    async function syncPendingSales() {
+   async function syncPendingSales() {
         if (!isOnline) return;
         let pending;
         try { pending = await OfflineQueue.getAll(); } catch(e) { return; }
         if (!pending || pending.length === 0) return;
 
         let synced = 0, failed = 0;
-        const failedItems = []; // collect customer names so cashier knows which ones failed
+        const failedItems = []; 
+        const failedIds = []; // Track IDs so we can let the user delete stuck sales
 
         for (const sale of pending) {
             try {
                 // Extract the isBulkCart flag to determine the endpoint
                 const { offline_id, queued_at, sync_status, isBulkCart, offlineReceipt, ...payload } = sale;
-
-                // If it's a cart, hit /sell/cart. If it's an old single item, hit /sell.
                 const endpoint = isBulkCart ? `${API_URL}/sell/cart` : `${API_URL}/sell`;
 
                 const res = await apiFetch(endpoint, {
@@ -2943,17 +2942,38 @@ function closeReceipt() {
                     body: JSON.stringify(payload)
                 });
 
-                const data = await res.json();
+                if (!res) {
+                    failed++;
+                    failedItems.push(`• ${sale.customerName || 'Unknown'} — Session expired or blocked`);
+                    failedIds.push(offline_id);
+                    continue;
+                }
+
+                // Safely parse the response to prevent crashes on 502 Bad Gateway HTML pages
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseErr) {
+                    failed++;
+                    failedItems.push(`• ${sale.customerName || 'Unknown'} — Server error (${res.status})`);
+                    failedIds.push(offline_id);
+                    continue;
+                }
+
                 if (data.success) {
                     await OfflineQueue.remove(offline_id);
                     synced++;
                 } else {
                     failed++;
                     failedItems.push(`• ${sale.customerName || 'Unknown'} (${offlineReceipt || offline_id}) — ${data.message || 'Server rejected'}`);
+                    failedIds.push(offline_id);
                 }
             } catch(e) {
                 failed++;
-                failedItems.push(`• ${sale.customerName || 'Unknown'} — network error`);
+                // Show the ACTUAL error message instead of hardcoding "network error"
+                failedItems.push(`• ${sale.customerName || 'Unknown'} — ${e.message || 'Failed to reach server'}`);
+                failedIds.push(sale.offline_id);
             }
         }
 
@@ -2963,18 +2983,26 @@ function closeReceipt() {
             fetchRecentSales();
         }
 
-        // ── Surface failures clearly so the cashier can act on them ──
+        // ── Surface failures clearly and offer an escape hatch ──
         if (failed > 0) {
             const detail = failedItems.join('\n');
-            alert(
+            // Ask the cashier if they want to clear the stuck items
+            const confirmClear = confirm(
                 `⚠️ ${failed} offline sale${failed > 1 ? 's' : ''} could NOT be synced and remain queued:\n\n${detail}\n\n` +
-                `These sales are still saved locally. Check stock levels and contact your manager if this persists.`
+                `Do you want to permanently DELETE these failed sales from your device?\n` +
+                `(Click OK to delete them, or Cancel to keep them and try again later)`
             );
+            
+            if (confirmClear) {
+                for (const id of failedIds) {
+                    await OfflineQueue.remove(id);
+                }
+                alert('Stuck sales have been cleared from the queue.');
+            }
         }
 
         updatePendingBadge();
     }
-
     // Listen for online/offline events
     window.addEventListener('online',  () => { isOnline = true;  updateOfflineBanner(); syncPendingSales(); });
     window.addEventListener('offline', () => { isOnline = false; updateOfflineBanner(); });
