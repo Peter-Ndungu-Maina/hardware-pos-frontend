@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Orders & Quotes | Elite Hardware</title>
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/sidebar.js" data-active="sales_orders.html"></script>
+    <style>
+        :root {
+            --bg: #090a0fd0; --surface: #14171f; --surface2: #1e222d;
+            --border: rgba(255,255,255,0.08); --text: #f8fafc; --muted: #94a3b8;
+            --green: #10b981; --blue: #3b82f6; --amber: #f59e0b; --red: #ef4444;
+        }
+        body.light {
+            --bg: #eceff1e8; --surface: #fff; --surface2: #f8fafc;
+            --border: rgba(15,23,42,0.15); --text: #0f172a; --muted: #475569;
+        }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+        .finput { width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); outline:none; }
+        .finput:focus { border-color:var(--green); }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .badge-Quote { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .badge-Confirmed { background: rgba(59,130,246,0.15); color: var(--blue); }
+        .badge-Fulfilled { background: rgba(16,185,129,0.15); color: var(--green); }
+        .badge-Cancelled { background: rgba(239,68,68,0.15); color: var(--red); }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; background: white; color: #000; padding: 20px; }
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 p-6 overflow-y-auto" style="padding-top: 70px;">
+        <div class="flex justify-between items-end mb-6">
+            <div>
+                <h1 class="text-2xl font-black tracking-tight" style="font-family:'Space Mono',monospace;">📝 Sales Orders / Quotes</h1>
+                <p class="text-xs mt-1" style="color:var(--muted);">Issue Proforma Invoices and reserve stock for future delivery.</p>
+            </div>
+            <button onclick="openCreateModal()" class="px-5 py-2.5 rounded-xl font-black text-xs tracking-wider uppercase bg-emerald-500 text-black hover:bg-emerald-400 transition-colors shadow-lg">
+                + Create Quote
+            </button>
+        </div>
+
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+            <table class="w-full text-left text-sm">
+                <thead style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:1px;">
+                    <tr>
+                        <th class="p-4">SO Number</th>
+                        <th class="p-4">Date</th>
+                        <th class="p-4">Customer</th>
+                        <th class="p-4 text-right">Total (KES)</th>
+                        <th class="p-4 text-center">Status</th>
+                        <th class="p-4 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="soTableBody" class="divide-y divide-white/5">
+                    <tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">Loading quotes...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column;">
+            <div class="p-5 flex justify-between items-center" style="border-bottom:1px solid var(--border);">
+                <h2 class="font-black text-emerald-500 uppercase tracking-widest text-sm">New Quotation</h2>
+                <button onclick="closeCreateModal()" class="text-2xl leading-none" style="color:var(--muted);">&times;</button>
+            </div>
+            
+            <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Customer Name *</label>
+                    <input type="text" id="cName" class="finput" placeholder="Enter customer name"></div>
+                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Phone Number</label>
+                    <input type="text" id="cPhone" class="finput" placeholder="Optional"></div>
+                </div>
+
+                <div class="border border-white/10 rounded-xl p-4" style="background:var(--surface2);">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-[10px] font-bold uppercase" style="color:var(--muted);">Order Items *</label>
+                        <button onclick="addItemRow()" class="text-emerald-500 font-black text-[10px] uppercase bg-emerald-500/10 px-3 py-1 rounded-lg">+ Add Item</button>
+                    </div>
+                    <div id="itemRows" class="flex flex-col gap-2"></div>
+                    <div class="mt-4 pt-3 text-right" style="border-top:1px solid var(--border);">
+                        <span class="text-xs font-bold" style="color:var(--muted);">GRAND TOTAL:</span>
+                        <span class="text-xl font-black text-emerald-500 ml-2 font-mono">KES <span id="grandTotal">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 flex justify-end gap-3" style="border-top:1px solid var(--border);">
+                <button onclick="closeCreateModal()" class="px-5 py-2.5 rounded-xl font-bold text-xs" style="background:var(--surface2); color:var(--text);">Cancel</button>
+                <button onclick="saveQuote()" id="saveBtn" class="px-6 py-2.5 rounded-xl font-black text-xs uppercase bg-emerald-500 text-black">Save Quote</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="printArea" style="display:none;"></div>
+
+    <script>
+        const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+        let allInventory = [];
+        let rowCount = 0;
+
+        document.addEventListener('eliteAuthReady', () => {
+            loadInventory();
+            loadSalesOrders();
+        });
+
+        function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.EliteAuth.token }; }
+        function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
+
+        async function loadInventory() {
+            try {
+                const res = await fetch(API + '/inventory', { headers: hdr() });
+                allInventory = await res.json();
+            } catch (e) {}
+        }
+
+        async function loadSalesOrders() {
+            try {
+                const res = await fetch(API + '/sales-orders', { headers: hdr() });
+                const data = await res.json();
+                const tb = document.getElementById('soTableBody');
+                
+                if (!data.length) { tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; return; }
+
+                tb.innerHTML = data.map(so => `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-4 font-mono font-bold" style="color:var(--blue);">${so.so_number}</td>
+                        <td class="p-4 text-xs" style="color:var(--muted);">${new Date(so.order_date).toLocaleDateString()}</td>
+                        <td class="p-4 font-bold uppercase">${so.customer_name}<br><span class="text-[10px] font-normal" style="color:var(--muted);">${so.customer_phone || ''}</span></td>
+                        <td class="p-4 text-right font-mono font-black">KES ${fmt(so.total_amount)}</td>
+                        <td class="p-4 text-center"><span class="badge badge-${so.status}">${so.status}</span></td>
+                        <td class="p-4 text-center">
+                            <button onclick='printProforma(${JSON.stringify(so).replace(/'/g, "&#39;")})' class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-[10px] font-black uppercase">🖨️ Print Quote</button>
+                            ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id}, 'Confirmed')" class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">Confirm</button>` : ''}
+                            ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">🛒 Fulfill</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {}
+        }
+
+        // CREATE MODAL LOGIC
+        function openCreateModal() {
+            document.getElementById('cName').value = '';
+            document.getElementById('cPhone').value = '';
+            document.getElementById('itemRows').innerHTML = '';
+            rowCount = 0;
+            addItemRow();
+            document.getElementById('createModal').classList.remove('hidden');
+            document.getElementById('createModal').classList.add('flex');
+        }
+        function closeCreateModal() { document.getElementById('createModal').classList.add('hidden'); document.getElementById('createModal').classList.remove('flex'); }
+
+        function addItemRow() {
+            rowCount++;
+            const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
+            const row = document.createElement('div');
+            row.id = `row-${rowCount}`;
+            row.className = "flex gap-2 items-center";
+            row.innerHTML = `
+                <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
+                <input type="number" id="qty-${rowCount}" placeholder="Qty" min="1" value="1" oninput="calcTotal()" class="finput w-20 text-center" style="font-size:12px;">
+                <input type="number" id="price-${rowCount}" placeholder="Price" oninput="calcTotal()" class="finput w-28 text-right" style="font-size:12px;">
+                <button onclick="document.getElementById('row-${rowCount}').remove(); calcTotal();" class="bg-red-500/20 text-red-500 w-8 h-8 rounded flex items-center justify-center font-bold">&times;</button>
+            `;
+            document.getElementById('itemRows').appendChild(row);
+        }
+
+        function setPrice(id) {
+            const sel = document.getElementById(`sel-${id}`);
+            const opt = sel.options[sel.selectedIndex];
+            if(opt.value) document.getElementById(`price-${id}`).value = opt.dataset.price;
+            calcTotal();
+        }
+
+        function calcTotal() {
+            let sum = 0;
+            document.querySelectorAll('[id^="row-"]').forEach(r => {
+                const id = r.id.split('-')[1];
+                const q = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+                const p = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+                sum += (q * p);
+            });
+            document.getElementById('grandTotal').innerText = fmt(sum);
+        }
+
+        async function saveQuote() {
+            const name = document.getElementById('cName').value.trim();
+            if (!name) return alert("Customer Name is required.");
+
+            const items = [];
+            document.querySelectorAll('[id^="row-"]').forEach(r => {
+                const id = r.id.split('-')[1];
+                const sel = document.getElementById(`sel-${id}`);
+                const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
+                const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
+                if (sel.value && qty > 0) {
+                    items.push({ inventory_id: parseInt(sel.value), item_name: sel.options[sel.selectedIndex].text.split(' (')[0], qty_ordered: qty, unit_price: price });
+                }
+            });
+
+            if (!items.length) return alert("Add at least one valid item.");
+
+            document.getElementById('saveBtn').innerText = "Saving...";
+            try {
+                const res = await fetch(API + '/sales-orders', {
+                    method: 'POST', headers: hdr(),
+                    body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
+                });
+                if (res.ok) { closeCreateModal(); loadSalesOrders(); }
+            } catch (e) { alert("Error saving quote."); }
+            finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
+        }
+
+        async function updateStatus(id, status) {
+            await fetch(API + `/sales-orders/${id}/status`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ status }) });
+            loadSalesOrders();
+        }
+
+        // FULFILLMENT -> Transfers the SO items to the POS Cart.
+        function fulfillOrder(id) {
+            alert("To fulfill, items will be loaded into your POS Cart.");
+            window.location.href = `/inventory.html?fulfill_so=${id}`;
+        }
+
+        // PRINT PROFORMA INVOICE
+        function printProforma(so) {
+            const pa = document.getElementById('printArea');
+            pa.style.display = 'block';
+            
+            const rows = so.sales_order_items.map(i => `
+                <tr style="border-bottom:1px solid #ddd;">
+                    <td style="padding:10px 4px;">${i.item_name}</td>
+                    <td style="padding:10px 4px;text-align:center;">${i.qty_ordered}</td>
+                    <td style="padding:10px 4px;text-align:right;">${fmt(i.unit_price)}</td>
+                    <td style="padding:10px 4px;text-align:right;font-weight:bold;">${fmt(i.line_total)}</td>
+                </tr>
+            `).join('');
+
+            pa.innerHTML = `
+                <div style="max-width:800px; margin:0 auto; font-family:Arial, sans-serif;">
+                    <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:16px; margin-bottom:24px;">
+                        <h1 style="font-size:24px; font-weight:900; margin:0; letter-spacing:2px;">ELITE HARDWARE LTD</h1>
+                        <h2 style="font-size:16px; color:#555; margin:4px 0; letter-spacing:4px;">PROFORMA INVOICE</h2>
+                        <p style="font-size:12px; color:#777;">PIN: A014661185V</p>
+                    </div>
+                    
+                    <div style="display:flex; justify-content:space-between; margin-bottom:32px; font-size:14px;">
+                        <div>
+                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Customer</p>
+                            <p style="margin:0; font-weight:bold; font-size:16px; text-transform:uppercase;">${so.customer_name}</p>
+                            <p style="margin:4px 0 0; color:#555;">${so.customer_phone || ''}</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Quote Reference</p>
+                            <p style="margin:0; font-weight:bold; font-size:16px;">${so.so_number}</p>
+                            <p style="margin:4px 0 0; color:#555;">Date: ${new Date(so.order_date).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+
+                    <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:32px;">
+                        <thead>
+                            <tr style="background:#000; color:#fff;">
+                                <th style="padding:10px 4px; text-align:left;">Description</th>
+                                <th style="padding:10px 4px; text-align:center;">Qty</th>
+                                <th style="padding:10px 4px; text-align:right;">Unit Price (KES)</th>
+                                <th style="padding:10px 4px; text-align:right;">Total (KES)</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+
+                    <div style="text-align:right; margin-bottom:40px;">
+                        <p style="font-size:12px; color:#666; margin:0 0 4px; text-transform:uppercase; letter-spacing:1px;">Grand Total</p>
+                        <p style="font-size:24px; font-weight:900; margin:0;">KES ${fmt(so.total_amount)}</p>
+                    </div>
+
+                    <div style="border-top:1px solid #000; padding-top:16px; font-size:11px; color:#555; text-align:center;">
+                        <p>This is a quotation, not a tax invoice. Stock is subject to availability at the time of payment.</p>
+                        <p>Valid for 7 Days. Thank you for choosing Elite Hardware!</p>
+                    </div>
+                </div>
+            `;
+            window.print();
+            setTimeout(() => { pa.style.display = 'none'; }, 1000);
+        }
+    </script>
+</body>
+</html>
