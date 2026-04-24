@@ -1,4 +1,5 @@
 /inventory             /src/pages/inventory.html             200
+/sales_orders          /src/pages/sales_orders.html          200
 /debt_status           /src/pages/debt_status.html           200
 /payments_report       /src/pages/payments_report.html       200
 /suppliers             /src/pages/suppliers.html             200

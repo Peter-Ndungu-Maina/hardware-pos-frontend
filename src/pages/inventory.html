@@ -34,7 +34,7 @@
 
     /* --- PROFESSIONAL PRINT FIXES --- */
     @media print {
-        /* ── THERMAL PRINTER: 80mm roll paper ── */
+        /* ── Default: 80mm thermal for receipts; DN overrides via tempPrintArea style ── */
         @page { size: 80mm auto; margin: 2mm 1mm; }
 
         /* If combined print area exists, hide body and show ONLY that area */
@@ -62,6 +62,12 @@
             font-family: 'Courier New', monospace !important;
             font-size: 11px !important;
             opacity: 1 !important;
+        }
+
+        /* DN tempPrintArea overrides — full A4 browser page */
+        #tempPrintArea.dn-print {
+            width: 100% !important;
+            max-width: 100% !important;
         }
 
         /* Hide non-print elements */
@@ -768,9 +774,9 @@ const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/a
 //  Set LIVE_PRINT = true  when thermal printer is connected
 //  Set LIVE_PRINT = false to use browser print dialog (testing)
 // ══════════════════════════════════════════════════════════════
-const LIVE_PRINT        = true;                // ✅ LIVE — sends to v-printer.js
-const PRINT_SERVER_URL  = 'http://localhost:6789/print';
-const GRN_SERVER_URL    = 'http://localhost:6789/print/grn';
+const LIVE_PRINT        = true;
+const PRINT_SERVER_URL  = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
+const GRN_SERVER_URL    = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
 
 /**
  * silentPrint(data)
@@ -787,7 +793,10 @@ async function silentPrint(data) {
         showPrintToast('🖨️ Sending to printer...', false, true);
         const res = await fetch(PRINT_SERVER_URL, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true' 
+            },
             body:    JSON.stringify({ ...data, copies: 2 })
         });
         if (!res.ok) throw new Error('Print server error ' + res.status);
@@ -809,10 +818,13 @@ async function silentPrintGRN(itemName, qty, dnRef) {
     try {
         const res = await fetch(GRN_SERVER_URL, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
             body:    JSON.stringify({ itemName, qty, dnRef, servedBy: userName })
         });
-        const result = await res.json();
+                const result = await res.json();
         if (!result.success) throw new Error(result.error);
         showPrintToast('✅ GRN printed');
     } catch (err) {
@@ -2351,32 +2363,17 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
 
     const buttonContainer = document.getElementById('receiptButtons');
     
-    // UPDATED BUTTONS to ensure they call the corrected print functions
-    if (method === 'Credit') {
-        buttonContainer.innerHTML = `
-            <button type="button" onclick="printAllCombined();" 
-                class="w-full bg-emerald-600 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg mb-2 animate-pulse">
-                🖨️ PRINT ALL (INVOICE + DN)
-            </button>
-            <div class="flex gap-2 mb-2">
-                <button type="button" onclick="printTwoCopies();" class="flex-1 bg-slate-900 text-white py-3 rounded-xl font-bold uppercase text-[10px]">
-                    🖨️ PRINT 2 COPIES
-                </button>
-                <button type="button" onclick="printDeliveryNote();" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold uppercase text-[10px]">
-                    PRINT DN
-                </button>
-            </div>
-        `;
-    } else {
-        buttonContainer.innerHTML = `
-            <button type="button" onclick="printTwoCopies();" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase mb-2">
-                🖨️ ${mainButtonLabel} (2 COPIES)
-            </button>
-        `;
-    }
-
-    buttonContainer.innerHTML += `
-        <button type="button" onclick="closeReceipt();" class="w-full bg-gray-100 py-3 rounded-xl text-gray-500 font-bold uppercase">CLOSE</button>
+    // Removed "PRINT ALL" and made "PRINT DN" available for ALL payment methods
+    buttonContainer.innerHTML = `
+        <button type="button" onclick="printTwoCopies();" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg mb-2 hover:bg-black transition-all">
+            🖨️ ${mainButtonLabel} (2 COPIES)
+        </button>
+        <button type="button" onclick="printDeliveryNote();" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all mb-2">
+            PRINT DELIVERY NOTE (BROWSER)
+        </button>
+        <button type="button" onclick="closeReceipt();" class="w-full bg-gray-100 border border-gray-200 py-3 rounded-xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">
+            CLOSE
+        </button>
     `;
 
     document.getElementById('receiptModal').classList.remove('hidden');
@@ -2415,36 +2412,8 @@ async function silentPrintDN(data) {
     }
 }
 
-async function printAllCombined() {
-    if (LIVE_PRINT && window._lastReceiptData) {
-        const btns = document.querySelectorAll('#receiptButtons button');
-        btns.forEach(b => b.disabled = true);
-        try {
-            showPrintToast('🖨️ Printing invoice + DN...', false, true);
-            const res = await fetch('http://localhost:6789/print/all', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ ...window._lastReceiptData, copies: 2 })
-            });
-            if (!res.ok) throw new Error('Server error ' + res.status);
-            showPrintToast('✅ Invoice + DN printed');
-        } catch (err) {
-            console.error('[PRINT ALL ERROR]', err);
-            showPrintToast('⚠️ v-printer offline — using browser print', true);
-            setTimeout(() => _browserPrintFallback(window._lastReceiptData, false, true), 800);
-        } finally {
-            btns.forEach(b => b.disabled = false);
-        }
-        return;
-    }
-    _browserPrintFallback(window._lastReceiptData, false, true);
-}
-
 function printDeliveryNote() {
-    if (LIVE_PRINT && window._lastReceiptData) {
-        silentPrintDN(window._lastReceiptData);
-        return;
-    }
+    // Always use browser print for DN — never thermal printer
     _browserPrintFallback(window._lastReceiptData, true, false);
 }
 
@@ -2489,7 +2458,7 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
         </div>`;
 
     const makeDnCopy = (label, copyClass) => `
-        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;">
+        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:20px 24px;color:#000;background:#fff;max-width:700px;margin:0 auto;page-break-after:always;">
             <span class="copy-badge ${copyClass}">${label}</span>
             <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
                 <h1 style="font-size:15px;font-weight:900;margin:0;letter-spacing:.15em;">ELITE HARDWARE LTD</h1>
@@ -2540,9 +2509,12 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
 
     const printArea = document.createElement('div');
     printArea.id = 'tempPrintArea';
+    if (onlyDN) printArea.classList.add('dn-print');
+    // DN uses browser default (A4) page; invoice copies use 80mm thermal
+    const pageSize = onlyDN ? 'A4' : '80mm auto';
     printArea.innerHTML = htmlString + `<style>
         @media print { 
-            @page { size: 80mm auto; margin: 2mm; } 
+            @page { size: ${pageSize}; margin: 2mm; } 
             .receipt-watermark::before {
                 content: 'ELITE HARDWARE';
                 position: absolute; top: 50%; left: 50%;
@@ -2584,147 +2556,6 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
         setTimeout(doPrint, 5000);
     } else {
         setTimeout(doPrint, 250); // already loaded (or no QR image)
-    }
-}
-
-async function printAllCombined() {
-    if (LIVE_PRINT && window._lastReceiptData) {
-        const btns = document.querySelectorAll('#receiptButtons button');
-        btns.forEach(b => b.disabled = true);
-        try {
-            showPrintToast('🖨️ Printing invoice + DN...', false, true);
-            // Single request — server prints invoice then DN sequentially in one
-            // queued job so the USB port is never double-opened.
-            const res = await fetch('http://localhost:6789/print/all', {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ ...window._lastReceiptData, copies: 2 })
-            });
-            if (!res.ok) throw new Error('Server error ' + res.status);
-            const result = await res.json();
-            if (result.url) {
-                window.open(result.url, '_blank'); // This forces the browser to open the tab!
-                showPrintToast('✅ Opened combined virtual receipt');
-            } else if (result.success) {
-                showPrintToast('✅ Invoice + DN printed');
-            } else {
-                // Hardware unavailable — browser-print invoice then DN
-                showPrintToast('⚠️ Printer busy — using browser print', true);
-                await new Promise(r => setTimeout(r, 700));
-                const header  = document.getElementById('receiptDate').innerHTML;
-                const content = document.getElementById('receiptContent').innerHTML;
-                const total   = document.getElementById('receiptTotal').innerHTML;
-                const invoiceArea = document.createElement('div');
-                invoiceArea.id = 'tempPrintArea';
-                invoiceArea.innerHTML = `
-                    <div style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;page-break-after:always;">
-                        ${header}${content}${total}
-                        <p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:.1em;">*** CUSTOMER COPY — INVOICE ***</p>
-                    </div>
-                    <style>@media print { @page { size: 80mm auto; margin: 2mm; } }</style>`;
-                document.body.appendChild(invoiceArea);
-                window.print();
-                invoiceArea.remove();
-                setTimeout(() => _browserPrintDN(window._lastReceiptData), 800);
-            }
-        } catch (err) {
-            showPrintToast('⚠️ v-printer offline — using browser print', true);
-            setTimeout(() => _browserPrintDN(window._lastReceiptData), 800);
-        } finally {
-            btns.forEach(b => b.disabled = false);
-        }
-        return;
-    }
-
-    // Fallback browser print — Invoice page then DN page
-    const header  = document.getElementById('receiptDate').innerHTML;
-    const content = document.getElementById('receiptContent').innerHTML;
-    const total   = document.getElementById('receiptTotal').innerHTML;
-
-    // Build invoice page
-    const invoicePrintArea = document.createElement('div');
-    invoicePrintArea.id = 'tempPrintArea';
-    invoicePrintArea.innerHTML = `
-        <div style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;page-break-after:always;">
-            ${header}
-            ${content}
-            ${total}
-            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:.1em;">*** CUSTOMER COPY — INVOICE ***</p>
-        </div>
-        <style>@media print { @page { size: 80mm auto; margin: 2mm; } }</style>
-    `;
-    document.body.appendChild(invoicePrintArea);
-    window.print();
-    invoicePrintArea.remove();
-
-    // Short delay then print the DN
-    setTimeout(() => _browserPrintDN(window._lastReceiptData), 800);
-}
-function printTwoCopies() {
-    // LIVE MODE: send directly to thermal printer, no dialog
-    if (LIVE_PRINT && window._lastReceiptData) {
-        silentPrint(window._lastReceiptData);
-        return;
-    }
-    // TEST MODE: browser print with 2-copy layout
-    const header  = document.getElementById('receiptDate').innerHTML;
-    const content = document.getElementById('receiptContent').innerHTML;
-    const total   = document.getElementById('receiptTotal').innerHTML;
-
-    const copyBlock = (copyLabel, copyClass) => `
-        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;">
-            <span class="copy-badge ${copyClass}">${copyLabel}</span>
-            ${header}
-            ${content}
-            ${total}
-        </div>`;
-
-    const printArea = document.createElement('div');
-    printArea.id = 'tempPrintArea';
-    printArea.innerHTML =
-        copyBlock('★ CUSTOMER COPY ★', 'copy-badge-customer') +
-        '<div class="print-copy-break"></div>' +
-        copyBlock('★ SHOP COPY ★',     'copy-badge-shop') +
-        `<style>
-            @media print {
-                @page { size: 80mm auto; margin: 2mm; }
-                .print-copy-break { page-break-after: always; break-after: page; }
-                .receipt-watermark::before {
-                    content: 'ELITE HARDWARE';
-                    position: absolute; top: 50%; left: 50%;
-                    transform: translate(-50%,-50%) rotate(-35deg);
-                    font-size: 22px; font-weight: 900;
-                    color: rgba(0,0,0,0.07);
-                    letter-spacing: 0.18em; text-transform: uppercase;
-                    white-space: nowrap; pointer-events: none;
-                    font-family: 'Courier New', monospace;
-                }
-                .receipt-watermark { position: relative; }
-                .receipt-watermark > * { position: relative; z-index: 1; }
-                .copy-badge {
-                    display: block !important; text-align: center;
-                    font-family: 'Courier New', monospace;
-                    font-size: 8px; font-weight: 900;
-                    letter-spacing: 0.2em; text-transform: uppercase;
-                    border: 1px dashed #999; padding: 3px 6px; margin-bottom: 6px;
-                }
-            }
-        </style>`;
-
-    document.body.appendChild(printArea);
-
-    // Wait for the QR code image before printing (same fix as _browserPrintFallback)
-    const qrImg2 = printArea.querySelector('img[alt="KRA eTIMS QR"]');
-    const doPrint2 = () => {
-        window.print();
-        setTimeout(() => printArea.remove(), 1000);
-    };
-    if (qrImg2 && !qrImg2.complete) {
-        qrImg2.onload  = doPrint2;
-        qrImg2.onerror = doPrint2;
-        setTimeout(doPrint2, 5000);
-    } else {
-        setTimeout(doPrint2, 250);
     }
 }
 
@@ -3050,7 +2881,7 @@ function closeReceipt() {
         </button>
         
         <button onclick="printDeliveryNote()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all">
-            PRINT DELIVERY NOTE
+            PRINT DELIVERY NOTE (BROWSER)
         </button>
         
         <button onclick="closeReceipt()" class="w-full bg-white border border-gray-200 py-3 rounded-2xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">

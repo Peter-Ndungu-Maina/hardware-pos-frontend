@@ -39,12 +39,13 @@ var NAV = [
    { href: '/',                  icon: '🏠', label: 'Dashboard',           roles: null },
     { href: '/inventory',         icon: '📦', label: 'Inventory & POS',     roles: null },
 
-    // ── Customer & Sales Flow (Post-Sale Actions) ──────────────────────────────
+    // ── Customer & Sales Flow (Pre & Post-Sale Actions) ────────────────────────
+    { href: '/sales_orders',      icon: '📝', label: 'Quotes / Sales Orders', roles: null }, // <--- ADDED HERE
     { href: '/customer_statement',icon: '👥', label: 'Customer Statements', roles: ['admin','manager'] },
     { href: '/debt_status',       icon: '⚠️', label: 'Debt Status',         roles: null },
     { href: '/payments_report',   icon: '💳', label: 'Payments Audit',      roles: null },
     { href: '/returns_audit',     icon: '🔄', label: 'Returns & Exchanges', roles: ['admin','manager'] },
-    { href: '/returns_statement', icon: '📄', label: 'Returns Statements',  roles: ['admin','manager'] }, // <--- ADDED NEW FILE HERE
+    { href: '/returns_statement', icon: '📄', label: 'Returns Statements',  roles: ['admin','manager'] }, 
 
     // ── Supply Chain & Inventory Flow (Inbound Logistics) ────────────────────
     { href: '/suppliers',         icon: '🏭', label: 'Suppliers',           roles: ['admin','manager'] },
@@ -65,8 +66,8 @@ var NAV = [
 
     // ── System Administration ──────────────────────────────────────────────────
     { href: '/billing',           icon: '💳', label: 'Billing',             roles: ['admin'] },
-
 ];
+
 
 // ── 4. INJECT CSS
 // ── 4. INJECT CSS

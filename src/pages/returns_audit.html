@@ -1790,8 +1790,8 @@ function _browserPrintVoucher() {
 //  LIVE_PRINT = true  → sends to v-printer.js thermal server
 //  LIVE_PRINT = false → falls back to browser print dialog
 // ══════════════════════════════════════════════════════════════
-const LIVE_PRINT         = true;   // ✅ LIVE — sends to v-printer.js
-const CREDIT_NOTE_URL    = 'http://localhost:6789/print/credit-note';
+const LIVE_PRINT         = true;
+const CREDIT_NOTE_URL    = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/credit-note';
 
 function showPrintToast(msg, isError = false, isInfo = false) {
     let toast = document.getElementById('_cnPrintToast');
@@ -1819,9 +1819,12 @@ async function silentPrintCreditNote() {
     }
     try {
         showPrintToast('🖨️ Sending credit note to printer...', false, true);
-        const res = await fetch(CREDIT_NOTE_URL, {
+       const res = await fetch(CREDIT_NOTE_URL, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
             body:    JSON.stringify(window._lastCreditNoteData)
         });
         if (!res.ok) throw new Error('Print server error ' + res.status);
