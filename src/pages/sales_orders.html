@@ -114,23 +114,29 @@
             loadSalesOrders();
         });
 
-        function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.EliteAuth.token }; }
         function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
 
         async function loadInventory() {
             try {
-                const res = await fetch(API + '/inventory', { headers: hdr() });
-                allInventory = await res.json();
-            } catch (e) {}
+                const res = await window.apiFetch(API + '/inventory');
+                if (!res || !res.ok) return;
+                const data = await res.json();
+                // Guard: server may return an object on error — always ensure array
+                allInventory = Array.isArray(data) ? data : [];
+            } catch (e) { allInventory = []; }
         }
 
         async function loadSalesOrders() {
             try {
-                const res = await fetch(API + '/sales-orders', { headers: hdr() });
+                const res = await window.apiFetch(API + '/sales-orders');
+                if (!res || !res.ok) return;
                 const data = await res.json();
                 const tb = document.getElementById('soTableBody');
-                
-                if (!data.length) { tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; return; }
+
+                if (!Array.isArray(data) || !data.length) {
+                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`;
+                    return;
+                }
 
                 tb.innerHTML = data.map(so => `
                     <tr class="hover:bg-white/5 transition-colors">
@@ -146,7 +152,7 @@
                         </td>
                     </tr>
                 `).join('');
-            } catch (e) {}
+            } catch (e) { console.error('[loadSalesOrders]', e); }
         }
 
         // CREATE MODAL LOGIC
@@ -163,6 +169,7 @@
 
         function addItemRow() {
             rowCount++;
+            // allInventory is guaranteed to be an array — safe to .map()
             const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
             const row = document.createElement('div');
             row.id = `row-${rowCount}`;
@@ -213,17 +220,17 @@
 
             document.getElementById('saveBtn').innerText = "Saving...";
             try {
-                const res = await fetch(API + '/sales-orders', {
-                    method: 'POST', headers: hdr(),
+                const res = await window.apiFetch(API + '/sales-orders', {
+                    method: 'POST',
                     body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
                 });
-                if (res.ok) { closeCreateModal(); loadSalesOrders(); }
+                if (res && res.ok) { closeCreateModal(); loadSalesOrders(); }
             } catch (e) { alert("Error saving quote."); }
             finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
         }
 
         async function updateStatus(id, status) {
-            await fetch(API + `/sales-orders/${id}/status`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ status }) });
+            await window.apiFetch(API + `/sales-orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
             loadSalesOrders();
         }
 

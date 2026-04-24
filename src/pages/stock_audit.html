@@ -114,8 +114,11 @@ async function loadAuditLogs() {
         document.getElementById('loadingState').classList.remove('hidden');
         document.getElementById('auditLogBody').innerHTML = '';
         
-        const res = await apiFetch(`${API_URL}/inventory/audit-logs`);
-        _allLogs = await res.json();
+        const res = await window.apiFetch(`${API_URL}/inventory/audit-logs`);
+        if (!res || !res.ok) throw new Error(`Server error: ${res ? res.status : "no response"}`);
+
+        const _data = await res.json();
+        _allLogs = Array.isArray(_data) ? _data : [];
         
         applyFilters();
     } catch (err) {
@@ -390,14 +393,17 @@ function exportPDF() {
     doc.save(`Stock_Audit_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
-// Event Listeners
+// Event Listeners — filter controls wired on DOM ready
 window.addEventListener('load', () => {
     document.getElementById('auditSearch').addEventListener('input', applyFilters);
     document.getElementById('filterAction').addEventListener('change', applyFilters);
     document.getElementById('quickDate').addEventListener('change', handleQuickDateChange);
     document.getElementById('filterFrom').addEventListener('change', applyFilters);
     document.getElementById('filterTo').addEventListener('change', applyFilters);
-    
+});
+
+// Data load — must wait for auth.js to finish setting up window.apiFetch
+document.addEventListener('eliteAuthReady', () => {
     loadAuditLogs();
 });
 </script>
