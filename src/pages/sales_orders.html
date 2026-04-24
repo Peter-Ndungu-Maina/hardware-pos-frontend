@@ -156,7 +156,7 @@
 
     <div id="printArea" style="display:none;"></div>
 
-    <script>
+   <script>
         const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
         let allInventory = [];
         let rowCount = 0;
@@ -166,23 +166,37 @@
             loadSalesOrders();
         });
 
-        function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.EliteAuth.token }; }
         function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
 
         async function loadInventory() {
             try {
-                const res = await fetch(API + '/inventory', { headers: hdr() });
-                allInventory = await res.json();
-            } catch (e) {}
+                // FIX 1: Use window.apiFetch instead of manual fetch headers
+                const res = await window.apiFetch(API + '/inventory');
+                if (!res || !res.ok) {
+                    allInventory = []; 
+                    return; 
+                }
+                const data = await res.json();
+                // FIX 2: Safely ensure it's an array, accounting for paginated object responses
+                allInventory = Array.isArray(data) ? data : (data.items || []);
+            } catch (e) {
+                allInventory = [];
+                console.error("Failed to load inventory:", e);
+            }
         }
 
         async function loadSalesOrders() {
             try {
-                const res = await fetch(API + '/sales-orders', { headers: hdr() });
+                const res = await window.apiFetch(API + '/sales-orders');
+                if (!res || !res.ok) return;
+                
                 const data = await res.json();
                 const tb = document.getElementById('soTableBody');
                 
-                if (!data.length) { tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; return; }
+                if (!data || !data.length) { 
+                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; 
+                    return; 
+                }
 
                 tb.innerHTML = data.map(so => `
                     <tr class="hover:bg-white/5 transition-colors">
@@ -198,7 +212,9 @@
                         </td>
                     </tr>
                 `).join('');
-            } catch (e) {}
+            } catch (e) {
+                console.error("Failed to load sales orders:", e);
+            }
         }
 
         // CREATE MODAL LOGIC
@@ -215,10 +231,10 @@
 
         function addItemRow() {
             rowCount++;
+            // allInventory is now guaranteed to be an array
             const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
             const row = document.createElement('div');
             row.id = `row-${rowCount}`;
-            // Responsive flex wrapper for the item row
             row.className = "flex flex-col md:flex-row gap-2 items-stretch md:items-center bg-black/10 md:bg-transparent p-3 md:p-0 rounded-xl md:rounded-none";
             row.innerHTML = `
                 <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput md:flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
@@ -268,24 +284,40 @@
 
             document.getElementById('saveBtn').innerText = "Saving...";
             try {
-                const res = await fetch(API + '/sales-orders', {
-                    method: 'POST', headers: hdr(),
+                const res = await window.apiFetch(API + '/sales-orders', {
+                    method: 'POST',
                     body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
                 });
-                if (res.ok) { closeCreateModal(); loadSalesOrders(); }
-            } catch (e) { alert("Error saving quote."); }
-            finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
+                if (res && res.ok) { 
+                    closeCreateModal(); 
+                    loadSalesOrders(); 
+                } else {
+                    const data = await res.json();
+                    alert(data.message || "Error saving quote.");
+                }
+            } catch (e) { 
+                alert("Error connecting to server."); 
+            } finally { 
+                document.getElementById('saveBtn').innerText = "Save Quote"; 
+            }
         }
 
         async function updateStatus(id, status) {
-            await fetch(API + `/sales-orders/${id}/status`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ status }) });
-            loadSalesOrders();
+            try {
+                await window.apiFetch(API + `/sales-orders/${id}/status`, { 
+                    method: 'PUT', 
+                    body: JSON.stringify({ status }) 
+                });
+                loadSalesOrders();
+            } catch (e) {
+                console.error("Failed to update status", e);
+            }
         }
 
         // FULFILLMENT -> Transfers the SO items to the POS Cart.
         function fulfillOrder(id) {
             alert("To fulfill, items will be loaded into your POS Cart.");
-            window.location.href = `/inventory.html?fulfill_so=${id}`;
+            window.location.href = `/inventory?fulfill_so=${id}`;
         }
 
         // PRINT PROFORMA INVOICE
