@@ -926,9 +926,11 @@ document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
 function waitForAuthThenLoad() {
     // If auth.js already finished (normal case), fire immediately
     if (typeof window.apiFetch === 'function') {
-        fetchBusinessInfo(); // start fetching KRA PIN early — receipt will await it
-        fetchStock().then(() => processC2BInventoryTask());
-        fetchRecentSales();
+        fetchBusinessInfo(); 
+        fetchStock().then(() => {
+            processC2BInventoryTask();
+            processSalesOrderFulfillment(); // <--- ADDED HERE
+        });
         
     // ── READ-ONLY SUBSCRIPTION LOCK ─────────────────────────────────────────
     if (window.EliteAuth && window.EliteAuth.readOnly) {
@@ -981,12 +983,18 @@ function waitForAuthThenLoad() {
         if (typeof window.apiFetch === 'function') {
             clearInterval(poll);
             fetchBusinessInfo(); // start fetching KRA PIN early — receipt will await it
-            fetchStock().then(() => processC2BInventoryTask());
+          fetchStock().then(() => {
+                processC2BInventoryTask();
+                processSalesOrderFulfillment(); // <--- ADDED HERE
+            });
             fetchRecentSales();
         } else if (attempts >= MAX_ATTEMPTS) {
             clearInterval(poll);
             console.warn('[Auth] apiFetch not ready after 3 s — loading from cache');
-            fetchStock().then(() => processC2BInventoryTask());
+            fetchStock().then(() => {
+                processC2BInventoryTask();
+                processSalesOrderFulfillment(); // <--- ADDED HERE
+            });
         }
     }, 50);
 }
@@ -2855,6 +2863,61 @@ function closeReceipt() {
     updateOfflineBanner();
     // Try to sync any leftover pending sales on page load
     if (isOnline) syncPendingSales();
+    // ── SALES ORDER FULFILLMENT CATCHER ──────────────────────────────────────────
+async function processSalesOrderFulfillment() {
+    const qp = new URLSearchParams(window.location.search);
+    const soId = qp.get('fulfill_so');
+    if (!soId) return;
+
+    try {
+        // 1. Fetch the specific Sales Order
+        const res = await apiFetch(`${API_URL}/sales-orders/${soId}`);
+        if (!res || !res.ok) throw new Error('Could not load Sales Order');
+        const so = await res.json();
+
+        // 2. Populate the Customer Name & Phone in the POS
+        document.getElementById('cartCustomer').value = so.customer_name || '';
+        const phoneField = document.getElementById('cartMpesaId');
+        if (phoneField && so.customer_phone) {
+            phoneField.value = so.customer_phone;
+        }
+
+        // 3. Push items into the POS Cart
+        so.sales_order_items.forEach(item => {
+            // Check if item already exists in cart to avoid duplicates if they clicked twice
+            const existing = cart.find(i => String(i.itemId) === String(item.inventory_id));
+            if (existing) {
+                existing.quantity += parseInt(item.qty_ordered);
+            } else {
+                cart.push({
+                    itemId: item.inventory_id,
+                    itemName: item.item_name,
+                    price: parseFloat(item.unit_price), // Uses the locked-in Quote price
+                    quantity: parseInt(item.qty_ordered)
+                });
+            }
+        });
+
+        // 4. Render the cart and show it
+        renderCart();
+
+        // 5. Silently update the SO status to 'Fulfilled' so it stops showing as pending
+        apiFetch(`${API_URL}/sales-orders/${soId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'Fulfilled' })
+        }).catch(()=>{});
+
+        // 6. Clean the URL so refreshing the page doesn't duplicate the items
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        showPrintToast(`✅ Quote ${so.so_number} loaded into Cart!`);
+
+    } catch (err) {
+        console.error('[SO FULFILL ERROR]', err);
+        alert('Failed to load Sales Order items into the cart.');
+    }
+}
 
     </script>
     <div id="printContainer" class="hidden"></div>
