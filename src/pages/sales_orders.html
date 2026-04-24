@@ -6,7 +6,7 @@
     <title>Sales Orders & Quotes | Elite Hardware</title>
     <link rel="stylesheet" href="/src/tailwind.css">
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
-    <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
+    <script src="/src/pages/auth.js" data-roles="admin,manager,cashier"></script>
     <script src="/src/pages/sidebar.js" data-active="sales_orders.html"></script>
     <style>
         :root {
@@ -65,9 +65,11 @@
         @media (min-width: 768px) {
             .desktop-table { display: block; }
             .mobile-cards  { display: none; }
-            .page-header   { padding: 20px 24px; }
+            .page-header   { padding: 20px 24px; left: 260px; right: 0; }
             .page-title    { font-size: 20px; }
-            main { padding-top: 72px !important; }
+            main { padding-top: 72px !important; margin-left: 260px; }
+            body { display: flex; }
+            #sidebarMount { flex-shrink: 0; width: 260px; }
         }
 
         /* ── Mobile cards ── */
@@ -236,7 +238,7 @@
         </button>
     </header>
 
-    <main style="padding-top:0;">
+    <main style="padding-top:0; flex:1; min-width:0; width:100%;">
 
         <!-- ── MOBILE CARD LIST ── -->
         <div class="mobile-cards" id="mobileCardList">
