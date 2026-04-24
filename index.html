@@ -947,12 +947,13 @@ const NAV = [
     { href: '/',                  icon: '🏠', label: 'Dashboard',           roles: null },
     { href: '/inventory',         icon: '📦', label: 'Inventory & POS',     roles: null },
 
-    // ── Customer & Sales Flow (Post-Sale Actions) ──────────────────────────────
+    // ── Customer & Sales Flow (Pre & Post-Sale Actions) ────────────────────────
+    { href: '/sales_orders',      icon: '📝', label: 'Quotes / Sales Orders', roles: null }, // <--- ADDED HERE
     { href: '/customer_statement',icon: '👥', label: 'Customer Statements', roles: ['admin','manager'] },
     { href: '/debt_status',       icon: '⚠️', label: 'Debt Status',         roles: null },
     { href: '/payments_report',   icon: '💳', label: 'Payments Audit',      roles: null },
     { href: '/returns_audit',     icon: '🔄', label: 'Returns & Exchanges', roles: ['admin','manager'] },
-    { href: '/returns_statement', icon: '📄', label: 'Returns Statements',  roles: ['admin','manager'] }, // <--- ADDED NEW FILE HERE
+    { href: '/returns_statement', icon: '📄', label: 'Returns Statements',  roles: ['admin','manager'] }, 
 
     // ── Supply Chain & Inventory Flow (Inbound Logistics) ────────────────────
     { href: '/suppliers',         icon: '🏭', label: 'Suppliers',           roles: ['admin','manager'] },
@@ -2409,15 +2410,17 @@ const VAT_RATE     = 0.16;                        // 16% VAT, back-calculated as
 // ══════════════════════════════════════════════════════════════
 //  PRINT SETTINGS — set LIVE_PRINT=true to use v-printer.js
 // ══════════════════════════════════════════════════════════════
-const LIVE_PRINT       = true;                 // ✅ sends to v-printer.js
-const PRINT_SERVER_URL = 'http://localhost:6789/print';
-
+const LIVE_PRINT       = true;
+const PRINT_SERVER_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
 async function silentPrint(data) {
     try {
         showPrintToastIdx('🖨️ Sending to printer...', false, true);
-        const res = await fetch(PRINT_SERVER_URL, {
+       const res = await fetch(PRINT_SERVER_URL, {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
             body:    JSON.stringify({ ...data, copies: 2 })
         });
         if (!res.ok) throw new Error('Print server ' + res.status);
@@ -2668,27 +2671,29 @@ function printDebtSilent() {
     if (!d) { window.print(); return; }
 
     // FIX: Send to /print/debt-payment — separate from sales receipts
-    const DEBT_PRINT_URL = 'http://localhost:6789/print/debt-payment';
+    const DEBT_PRINT_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/debt-payment';
     (async () => {
         try {
             showPrintToastIdx('🖨️ Sending to printer...', false, true);
             const res = await fetch(DEBT_PRINT_URL, {
-                method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({
-                    customer:      d.customer,
-                    method:        d.method,
-                    // FIX: Pass actual amount, not 0
-                    total:         d.total,
-                    amount:        d.total,
-                    code:          d.code || '',
-                    receiptNumber: d.receiptNumber,
-                    servedBy:      d.servedBy,
-                    date:          d.date,
-                    items:         d.items,
-                    copies:        2
-                })
-            });
+            method:  'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body:    JSON.stringify({
+                customer:      d.customer,
+                method:        d.method,
+                total:         d.total,
+                amount:        d.total,
+                code:          d.code || '',
+                receiptNumber: d.receiptNumber,
+                servedBy:      d.servedBy,
+                date:          d.date,
+                items:         d.items,
+                copies:        2
+            })
+        });
             if (!res.ok) throw new Error('Print server ' + res.status);
             const result = await res.json();
             if (!result.success) throw new Error(result.error || 'Print failed');
