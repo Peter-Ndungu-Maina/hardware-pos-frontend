@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sales Orders & Quotes | Elite Hardware</title>
     <link rel="stylesheet" href="/src/tailwind.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap" rel="stylesheet">
     <script src="/src/pages/auth.js" data-roles="admin,manager"></script>
     <script src="/src/pages/sidebar.js" data-active="sales_orders.html"></script>
     <style>
@@ -17,15 +18,201 @@
             --bg: #eceff1e8; --surface: #fff; --surface2: #f8fafc;
             --border: rgba(15,23,42,0.15); --text: #0f172a; --muted: #475569;
         }
-        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
-        .finput { width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); outline:none; }
-        .finput:focus { border-color:var(--green); }
-        
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .badge-Quote { background: rgba(148,163,184,0.15); color: #94a3b8; }
-        .badge-Confirmed { background: rgba(59,130,246,0.15); color: var(--blue); }
-        .badge-Fulfilled { background: rgba(16,185,129,0.15); color: var(--green); }
-        .badge-Cancelled { background: rgba(239,68,68,0.15); color: var(--red); }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+
+        /* ── Inputs ── */
+        .finput {
+            width: 100%; padding: 12px 14px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface2);
+            color: var(--text); outline: none; font-size: 15px;
+            -webkit-appearance: none; appearance: none;
+            transition: border-color .15s;
+        }
+        .finput:focus { border-color: var(--green); }
+        select.finput { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+
+        /* ── Badges ── */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+        .badge-Quote     { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .badge-Confirmed { background: rgba(59,130,246,0.15);  color: var(--blue); }
+        .badge-Fulfilled { background: rgba(16,185,129,0.15);  color: var(--green); }
+        .badge-Cancelled { background: rgba(239,68,68,0.15);   color: var(--red); }
+
+        /* ── Header ── */
+        .page-header {
+            position: sticky; top: 0; z-index: 30;
+            background: var(--bg);
+            padding: 16px 16px 12px;
+            display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(12px);
+        }
+        .page-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; line-height: 1.2; }
+        .page-subtitle { font-size: 10px; color: var(--muted); margin-top: 2px; }
+        .btn-create {
+            display: flex; align-items: center; gap: 6px;
+            padding: 10px 16px; border-radius: 12px;
+            background: var(--green); color: #000;
+            font-weight: 900; font-size: 12px; text-transform: uppercase; letter-spacing: .05em;
+            border: none; cursor: pointer; white-space: nowrap;
+            transition: opacity .15s; flex-shrink: 0;
+        }
+        .btn-create:active { opacity: .8; }
+
+        /* ── Desktop table (md+) ── */
+        .desktop-table { display: none; }
+        @media (min-width: 768px) {
+            .desktop-table { display: block; }
+            .mobile-cards  { display: none; }
+            .page-header   { padding: 20px 24px; }
+            .page-title    { font-size: 20px; }
+            main { padding-top: 72px !important; }
+        }
+
+        /* ── Mobile cards ── */
+        .mobile-cards { padding: 12px 12px 80px; display: flex; flex-direction: column; gap: 10px; }
+
+        .so-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 10px;
+            animation: fadeUp .2s ease both;
+        }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+        .so-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .so-number   { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--blue); }
+        .so-date     { font-size: 10px; color: var(--muted); margin-top: 2px; }
+        .so-customer { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .02em; }
+        .so-phone    { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+        .so-card-mid { display: flex; align-items: center; justify-content: space-between; }
+        .so-total    { font-family: 'Space Mono', monospace; font-size: 17px; font-weight: 700; color: var(--green); }
+
+        .so-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-action {
+            padding: 9px 14px; border-radius: 10px;
+            font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .04em;
+            border: none; cursor: pointer; transition: opacity .15s;
+            display: flex; align-items: center; gap: 5px; white-space: nowrap;
+        }
+        .btn-action:active { opacity: .75; }
+        .btn-print   { background: rgba(59,130,246,0.15);  color: var(--blue); }
+        .btn-confirm { background: rgba(16,185,129,0.15);  color: var(--green); }
+        .btn-fulfill { background: rgba(245,158,11,0.15);  color: var(--amber); }
+
+        /* ── Empty / loading state ── */
+        .state-msg {
+            text-align: center; padding: 60px 20px;
+            color: var(--muted); font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+        }
+
+        /* ── FAB (mobile Create button) ── */
+        .fab {
+            display: flex;
+            position: fixed; bottom: 20px; right: 16px; z-index: 40;
+            width: 56px; height: 56px; border-radius: 50%;
+            background: var(--green); color: #000;
+            font-size: 26px; font-weight: 900;
+            align-items: center; justify-content: center;
+            border: none; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(16,185,129,.4);
+            transition: transform .15s, box-shadow .15s;
+        }
+        .fab:active { transform: scale(.93); box-shadow: 0 2px 10px rgba(16,185,129,.3); }
+        @media (min-width: 768px) { .fab { display: none; } }
+
+        /* ── Modal ── */
+        #createModal {
+            position: fixed; inset: 0; z-index: 50;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+            display: none; align-items: flex-end; /* slide up from bottom on mobile */
+            padding: 0;
+        }
+        #createModal.open { display: flex; }
+        @media (min-width: 768px) {
+            #createModal { align-items: center; padding: 16px; }
+            .modal-sheet { border-radius: 20px !important; max-height: 90vh !important; max-width: 800px !important; margin: auto; }
+        }
+
+        .modal-sheet {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px 20px 0 0;
+            width: 100%; max-height: 92dvh;
+            display: flex; flex-direction: column;
+            animation: slideUp .25s cubic-bezier(.32,1,.4,1) both;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+        .modal-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 10px auto 0; flex-shrink: 0; }
+        .modal-header { padding: 14px 20px 14px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .modal-title  { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: .08em; }
+        .modal-close  { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: none; color: var(--muted); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .modal-body   { padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px; -webkit-overflow-scrolling: touch; }
+        .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0; }
+
+        /* ── Form labels ── */
+        .flabel { display: block; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 5px; }
+
+        /* ── Item row (mobile: stacked card) ── */
+        .item-row-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex; flex-direction: column; gap: 8px;
+            position: relative;
+        }
+        .item-row-top   { display: flex; gap: 8px; }
+        .item-row-nums  { display: flex; gap: 8px; }
+        .item-row-nums .finput { text-align: center; }
+        .btn-remove-row {
+            position: absolute; top: 8px; right: 8px;
+            width: 26px; height: 26px; border-radius: 50%;
+            background: rgba(239,68,68,.15); color: var(--red);
+            border: none; font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; line-height: 1;
+        }
+
+        .grand-total-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 14px; border-radius: 12px;
+            background: rgba(16,185,129,.07); border: 1px solid rgba(16,185,129,.2);
+            margin-top: 4px;
+        }
+        .grand-total-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+        .grand-total-value { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--green); }
+
+        .btn-full {
+            flex: 1; padding: 14px; border-radius: 12px;
+            font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em;
+            border: none; cursor: pointer; transition: opacity .15s;
+        }
+        .btn-full:active { opacity: .8; }
+        .btn-cancel { background: var(--surface2); color: var(--muted); }
+        .btn-save   { background: var(--green); color: #000; }
+        .btn-add-item {
+            width: 100%; padding: 11px; border-radius: 10px;
+            border: 1px dashed rgba(16,185,129,.35); background: transparent;
+            color: var(--green); font-size: 12px; font-weight: 900;
+            text-transform: uppercase; letter-spacing: .06em; cursor: pointer;
+            transition: background .15s;
+        }
+        .btn-add-item:active { background: rgba(16,185,129,.07); }
+
+        /* ── Desktop table styles ── */
+        .dt-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin: 0 24px 24px; }
+        table.dt { width: 100%; text-align: left; font-size: 13px; border-collapse: collapse; }
+        table.dt thead { background: rgba(255,255,255,0.03); }
+        table.dt thead th { padding: 14px 16px; font-size: 10px; text-transform: uppercase; color: var(--muted); letter-spacing: 1px; border-bottom: 1px solid var(--border); font-weight: 700; }
+        table.dt tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+        table.dt tbody tr:hover { background: rgba(255,255,255,.025); }
+        table.dt tbody td { padding: 14px 16px; vertical-align: middle; }
 
         @media print {
             body * { visibility: hidden; }
@@ -34,70 +221,93 @@
         }
     </style>
 </head>
-<body class="flex min-h-screen">
+<body>
     <div id="sidebarMount"></div>
 
-    <main class="flex-1 p-6 overflow-y-auto" style="padding-top: 70px;">
-        <div class="flex justify-between items-end mb-6">
-            <div>
-                <h1 class="text-2xl font-black tracking-tight" style="font-family:'Space Mono',monospace;">📝 Sales Orders / Quotes</h1>
-                <p class="text-xs mt-1" style="color:var(--muted);">Issue Proforma Invoices and reserve stock for future delivery.</p>
-            </div>
-            <button onclick="openCreateModal()" class="px-5 py-2.5 rounded-xl font-black text-xs tracking-wider uppercase bg-emerald-500 text-black hover:bg-emerald-400 transition-colors shadow-lg">
-                + Create Quote
-            </button>
+    <!-- ── STICKY PAGE HEADER ── -->
+    <header class="page-header">
+        <div>
+            <div class="page-title">📝 Quotes / Orders</div>
+            <div class="page-subtitle">Proforma invoices & stock reservations</div>
+        </div>
+        <!-- Desktop create button (hidden on mobile — FAB used instead) -->
+        <button onclick="openCreateModal()" class="btn-create" style="display:none;" id="headerCreateBtn">
+            + New Quote
+        </button>
+    </header>
+
+    <main style="padding-top:0;">
+
+        <!-- ── MOBILE CARD LIST ── -->
+        <div class="mobile-cards" id="mobileCardList">
+            <div class="state-msg">Loading quotes...</div>
         </div>
 
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
-            <table class="w-full text-left text-sm">
-                <thead style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:1px;">
-                    <tr>
-                        <th class="p-4">SO Number</th>
-                        <th class="p-4">Date</th>
-                        <th class="p-4">Customer</th>
-                        <th class="p-4 text-right">Total (KES)</th>
-                        <th class="p-4 text-center">Status</th>
-                        <th class="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="soTableBody" class="divide-y divide-white/5">
-                    <tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">Loading quotes...</td></tr>
-                </tbody>
-            </table>
+        <!-- ── DESKTOP TABLE ── -->
+        <div class="desktop-table" style="padding-top:80px;">
+            <div class="dt-wrap">
+                <table class="dt">
+                    <thead>
+                        <tr>
+                            <th>SO Number</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th class="text-right" style="text-align:right">Total (KES)</th>
+                            <th style="text-align:center">Status</th>
+                            <th style="text-align:center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="soTableBody">
+                        <tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);padding:32px;text-align:center;">Loading quotes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     </main>
 
-    <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column;">
-            <div class="p-5 flex justify-between items-center" style="border-bottom:1px solid var(--border);">
-                <h2 class="font-black text-emerald-500 uppercase tracking-widest text-sm">New Quotation</h2>
-                <button onclick="closeCreateModal()" class="text-2xl leading-none" style="color:var(--muted);">&times;</button>
-            </div>
-            
-            <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Customer Name *</label>
-                    <input type="text" id="cName" class="finput" placeholder="Enter customer name"></div>
-                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Phone Number</label>
-                    <input type="text" id="cPhone" class="finput" placeholder="Optional"></div>
-                </div>
+    <!-- ── FAB (mobile) ── -->
+    <button class="fab" onclick="openCreateModal()" aria-label="Create new quote">+</button>
 
-                <div class="border border-white/10 rounded-xl p-4" style="background:var(--surface2);">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-[10px] font-bold uppercase" style="color:var(--muted);">Order Items *</label>
-                        <button onclick="addItemRow()" class="text-emerald-500 font-black text-[10px] uppercase bg-emerald-500/10 px-3 py-1 rounded-lg">+ Add Item</button>
-                    </div>
-                    <div id="itemRows" class="flex flex-col gap-2"></div>
-                    <div class="mt-4 pt-3 text-right" style="border-top:1px solid var(--border);">
-                        <span class="text-xs font-bold" style="color:var(--muted);">GRAND TOTAL:</span>
-                        <span class="text-xl font-black text-emerald-500 ml-2 font-mono">KES <span id="grandTotal">0.00</span></span>
-                    </div>
-                </div>
+    <!-- ── CREATE / QUOTE MODAL ── -->
+    <div id="createModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">✦ New Quotation</span>
+                <button class="modal-close" onclick="closeCreateModal()" aria-label="Close">×</button>
             </div>
 
-            <div class="p-5 flex justify-end gap-3" style="border-top:1px solid var(--border);">
-                <button onclick="closeCreateModal()" class="px-5 py-2.5 rounded-xl font-bold text-xs" style="background:var(--surface2); color:var(--text);">Cancel</button>
-                <button onclick="saveQuote()" id="saveBtn" class="px-6 py-2.5 rounded-xl font-black text-xs uppercase bg-emerald-500 text-black">Save Quote</button>
+            <div class="modal-body">
+                <!-- Customer info -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div style="grid-column: span 2;" id="nameField">
+                        <label class="flabel" for="cName">Customer Name *</label>
+                        <input type="text" id="cName" class="finput" placeholder="Enter customer name" autocomplete="name">
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <label class="flabel" for="cPhone">Phone Number</label>
+                        <input type="tel" id="cPhone" class="finput" placeholder="Optional" autocomplete="tel">
+                    </div>
+                </div>
+
+                <!-- Items -->
+                <div>
+                    <label class="flabel">Order Items *</label>
+                    <div id="itemRows" style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px;"></div>
+                    <button class="btn-add-item" onclick="addItemRow()">+ Add Item</button>
+                </div>
+
+                <!-- Grand total -->
+                <div class="grand-total-row">
+                    <span class="grand-total-label">Grand Total</span>
+                    <span class="grand-total-value">KES <span id="grandTotal">0.00</span></span>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-full btn-cancel" onclick="closeCreateModal()">Cancel</button>
+                <button class="btn-full btn-save" id="saveBtn" onclick="saveQuote()">Save Quote</button>
             </div>
         </div>
     </div>
@@ -108,6 +318,12 @@
         const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
         let allInventory = [];
         let rowCount = 0;
+
+        // Show desktop create btn on md+
+        const mql = window.matchMedia('(min-width: 768px)');
+        function syncCreateBtn(e) { document.getElementById('headerCreateBtn').style.display = e.matches ? 'flex' : 'none'; }
+        mql.addEventListener('change', syncCreateBtn);
+        syncCreateBtn(mql);
 
         document.addEventListener('eliteAuthReady', () => {
             loadInventory();
@@ -121,7 +337,6 @@
                 const res = await window.apiFetch(API + '/inventory');
                 if (!res || !res.ok) return;
                 const data = await res.json();
-                // Guard: server may return an object on error — always ensure array
                 allInventory = Array.isArray(data) ? data : [];
             } catch (e) { allInventory = []; }
         }
@@ -131,54 +346,113 @@
                 const res = await window.apiFetch(API + '/sales-orders');
                 if (!res || !res.ok) return;
                 const data = await res.json();
-                const tb = document.getElementById('soTableBody');
-
-                if (!Array.isArray(data) || !data.length) {
-                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`;
-                    return;
-                }
-
-                tb.innerHTML = data.map(so => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="p-4 font-mono font-bold" style="color:var(--blue);">${so.so_number}</td>
-                        <td class="p-4 text-xs" style="color:var(--muted);">${new Date(so.order_date).toLocaleDateString()}</td>
-                        <td class="p-4 font-bold uppercase">${so.customer_name}<br><span class="text-[10px] font-normal" style="color:var(--muted);">${so.customer_phone || ''}</span></td>
-                        <td class="p-4 text-right font-mono font-black">KES ${fmt(so.total_amount)}</td>
-                        <td class="p-4 text-center"><span class="badge badge-${so.status}">${so.status}</span></td>
-                        <td class="p-4 text-center">
-                            <button onclick='printProforma(${JSON.stringify(so).replace(/'/g, "&#39;")})' class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-[10px] font-black uppercase">🖨️ Print Quote</button>
-                            ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id}, 'Confirmed')" class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">Confirm</button>` : ''}
-                            ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">🛒 Fulfill</button>` : ''}
-                        </td>
-                    </tr>
-                `).join('');
+                renderMobileCards(data);
+                renderDesktopTable(data);
             } catch (e) { console.error('[loadSalesOrders]', e); }
         }
 
-        // CREATE MODAL LOGIC
+        // ── Mobile card renderer ──
+        function renderMobileCards(data) {
+            const list = document.getElementById('mobileCardList');
+            if (!Array.isArray(data) || !data.length) {
+                list.innerHTML = '<div class="state-msg">No quotes found.<br>Tap + to create one.</div>';
+                return;
+            }
+            list.innerHTML = data.map((so, i) => `
+                <div class="so-card" style="animation-delay:${i * 40}ms">
+                    <div class="so-card-top">
+                        <div>
+                            <div class="so-number">${so.so_number}</div>
+                            <div class="so-date">${new Date(so.order_date).toLocaleDateString('en-KE', {day:'numeric',month:'short',year:'numeric'})}</div>
+                        </div>
+                        <span class="badge badge-${so.status}">${so.status}</span>
+                    </div>
+                    <div>
+                        <div class="so-customer">${so.customer_name}</div>
+                        ${so.customer_phone ? `<div class="so-phone">📞 ${so.customer_phone}</div>` : ''}
+                    </div>
+                    <div class="so-card-mid">
+                        <span class="so-total">KES ${fmt(so.total_amount)}</span>
+                    </div>
+                    <div class="so-actions">
+                        <button class="btn-action btn-print" onclick='printProforma(${JSON.stringify(so).replace(/'/g,"&#39;")})'>🖨️ Print</button>
+                        ${so.status === 'Quote' ? `<button class="btn-action btn-confirm" onclick="updateStatus(${so.id},'Confirmed')">✓ Confirm</button>` : ''}
+                        ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button class="btn-action btn-fulfill" onclick="fulfillOrder(${so.id})">🛒 Fulfill</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ── Desktop table renderer ──
+        function renderDesktopTable(data) {
+            const tb = document.getElementById('soTableBody');
+            if (!Array.isArray(data) || !data.length) {
+                tb.innerHTML = `<tr><td colspan="6" style="padding:32px;text-align:center;color:var(--muted);">No sales orders found.</td></tr>`;
+                return;
+            }
+            tb.innerHTML = data.map(so => `
+                <tr>
+                    <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--blue);">${so.so_number}</td>
+                    <td style="color:var(--muted);font-size:12px;">${new Date(so.order_date).toLocaleDateString()}</td>
+                    <td style="font-weight:700;text-transform:uppercase;">${so.customer_name}<br><span style="font-size:10px;font-weight:400;color:var(--muted);">${so.customer_phone || ''}</span></td>
+                    <td style="text-align:right;font-family:'Space Mono',monospace;font-weight:700;">KES ${fmt(so.total_amount)}</td>
+                    <td style="text-align:center;"><span class="badge badge-${so.status}">${so.status}</span></td>
+                    <td style="text-align:center;">
+                        <button onclick='printProforma(${JSON.stringify(so).replace(/'/g,"&#39;")})' class="btn-action btn-print">🖨️ Print Quote</button>
+                        ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id},'Confirmed')" class="btn-action btn-confirm" style="margin-left:4px;">Confirm</button>` : ''}
+                        ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="btn-action btn-fulfill" style="margin-left:4px;">🛒 Fulfill</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ── Modal ──
         function openCreateModal() {
             document.getElementById('cName').value = '';
             document.getElementById('cPhone').value = '';
             document.getElementById('itemRows').innerHTML = '';
             rowCount = 0;
             addItemRow();
-            document.getElementById('createModal').classList.remove('hidden');
-            document.getElementById('createModal').classList.add('flex');
+            const m = document.getElementById('createModal');
+            m.classList.add('open');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('cName').focus(), 300);
         }
-        function closeCreateModal() { document.getElementById('createModal').classList.add('hidden'); document.getElementById('createModal').classList.remove('flex'); }
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        // Close on backdrop tap
+        document.getElementById('createModal').addEventListener('click', e => {
+            if (e.target === document.getElementById('createModal')) closeCreateModal();
+        });
 
+        // ── Item rows ──
         function addItemRow() {
             rowCount++;
-            // allInventory is guaranteed to be an array — safe to .map()
             const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
             const row = document.createElement('div');
             row.id = `row-${rowCount}`;
-            row.className = "flex gap-2 items-center";
+            row.className = 'item-row-card';
             row.innerHTML = `
-                <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
-                <input type="number" id="qty-${rowCount}" placeholder="Qty" min="1" value="1" oninput="calcTotal()" class="finput w-20 text-center" style="font-size:12px;">
-                <input type="number" id="price-${rowCount}" placeholder="Price" oninput="calcTotal()" class="finput w-28 text-right" style="font-size:12px;">
-                <button onclick="document.getElementById('row-${rowCount}').remove(); calcTotal();" class="bg-red-500/20 text-red-500 w-8 h-8 rounded flex items-center justify-center font-bold">&times;</button>
+                <button class="btn-remove-row" onclick="document.getElementById('row-${rowCount}').remove();calcTotal();" aria-label="Remove item">×</button>
+                <div>
+                    <label class="flabel">Item</label>
+                    <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput"
+                        style="padding-right:36px;">
+                        <option value="">Select item...</option>${opts}
+                    </select>
+                </div>
+                <div class="item-row-nums">
+                    <div style="flex:1">
+                        <label class="flabel">Qty</label>
+                        <input type="number" id="qty-${rowCount}" min="1" value="1" oninput="calcTotal()" class="finput" inputmode="numeric" style="text-align:center;">
+                    </div>
+                    <div style="flex:2">
+                        <label class="flabel">Unit Price (KES)</label>
+                        <input type="number" id="price-${rowCount}" placeholder="0.00" oninput="calcTotal()" class="finput" inputmode="decimal" style="text-align:right;">
+                    </div>
+                </div>
             `;
             document.getElementById('itemRows').appendChild(row);
         }
@@ -186,7 +460,7 @@
         function setPrice(id) {
             const sel = document.getElementById(`sel-${id}`);
             const opt = sel.options[sel.selectedIndex];
-            if(opt.value) document.getElementById(`price-${id}`).value = opt.dataset.price;
+            if (opt.value) document.getElementById(`price-${id}`).value = opt.dataset.price;
             calcTotal();
         }
 
@@ -194,31 +468,32 @@
             let sum = 0;
             document.querySelectorAll('[id^="row-"]').forEach(r => {
                 const id = r.id.split('-')[1];
-                const q = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
-                const p = parseFloat(document.getElementById(`price-${id}`).value) || 0;
-                sum += (q * p);
+                const q = parseFloat(document.getElementById(`qty-${id}`)?.value) || 0;
+                const p = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+                sum += q * p;
             });
             document.getElementById('grandTotal').innerText = fmt(sum);
         }
 
         async function saveQuote() {
             const name = document.getElementById('cName').value.trim();
-            if (!name) return alert("Customer Name is required.");
+            if (!name) { document.getElementById('cName').focus(); return alert("Customer Name is required."); }
 
             const items = [];
             document.querySelectorAll('[id^="row-"]').forEach(r => {
                 const id = r.id.split('-')[1];
                 const sel = document.getElementById(`sel-${id}`);
-                const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
-                const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
-                if (sel.value && qty > 0) {
+                const qty = parseFloat(document.getElementById(`qty-${id}`)?.value) || 0;
+                const price = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+                if (sel?.value && qty > 0) {
                     items.push({ inventory_id: parseInt(sel.value), item_name: sel.options[sel.selectedIndex].text.split(' (')[0], qty_ordered: qty, unit_price: price });
                 }
             });
 
             if (!items.length) return alert("Add at least one valid item.");
 
-            document.getElementById('saveBtn').innerText = "Saving...";
+            const btn = document.getElementById('saveBtn');
+            btn.innerText = "Saving..."; btn.disabled = true;
             try {
                 const res = await window.apiFetch(API + '/sales-orders', {
                     method: 'POST',
@@ -226,7 +501,7 @@
                 });
                 if (res && res.ok) { closeCreateModal(); loadSalesOrders(); }
             } catch (e) { alert("Error saving quote."); }
-            finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
+            finally { btn.innerText = "Save Quote"; btn.disabled = false; }
         }
 
         async function updateStatus(id, status) {
@@ -234,17 +509,14 @@
             loadSalesOrders();
         }
 
-        // FULFILLMENT -> Transfers the SO items to the POS Cart.
         function fulfillOrder(id) {
             alert("To fulfill, items will be loaded into your POS Cart.");
             window.location.href = `/inventory.html?fulfill_so=${id}`;
         }
 
-        // PRINT PROFORMA INVOICE
         function printProforma(so) {
             const pa = document.getElementById('printArea');
             pa.style.display = 'block';
-            
             const rows = so.sales_order_items.map(i => `
                 <tr style="border-bottom:1px solid #ddd;">
                     <td style="padding:10px 4px;">${i.item_name}</td>
@@ -253,51 +525,45 @@
                     <td style="padding:10px 4px;text-align:right;font-weight:bold;">${fmt(i.line_total)}</td>
                 </tr>
             `).join('');
-
             pa.innerHTML = `
-                <div style="max-width:800px; margin:0 auto; font-family:Arial, sans-serif;">
-                    <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:16px; margin-bottom:24px;">
-                        <h1 style="font-size:24px; font-weight:900; margin:0; letter-spacing:2px;">ELITE HARDWARE LTD</h1>
-                        <h2 style="font-size:16px; color:#555; margin:4px 0; letter-spacing:4px;">PROFORMA INVOICE</h2>
-                        <p style="font-size:12px; color:#777;">PIN: A014661185V</p>
+                <div style="max-width:800px;margin:0 auto;font-family:Arial,sans-serif;">
+                    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px;">
+                        <h1 style="font-size:24px;font-weight:900;margin:0;letter-spacing:2px;">ELITE HARDWARE LTD</h1>
+                        <h2 style="font-size:16px;color:#555;margin:4px 0;letter-spacing:4px;">PROFORMA INVOICE</h2>
+                        <p style="font-size:12px;color:#777;">PIN: A014661185V</p>
                     </div>
-                    
-                    <div style="display:flex; justify-content:space-between; margin-bottom:32px; font-size:14px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:32px;font-size:14px;">
                         <div>
-                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Customer</p>
-                            <p style="margin:0; font-weight:bold; font-size:16px; text-transform:uppercase;">${so.customer_name}</p>
-                            <p style="margin:4px 0 0; color:#555;">${so.customer_phone || ''}</p>
+                            <p style="margin:0 0 4px;color:#666;font-size:11px;text-transform:uppercase;">Customer</p>
+                            <p style="margin:0;font-weight:bold;font-size:16px;text-transform:uppercase;">${so.customer_name}</p>
+                            <p style="margin:4px 0 0;color:#555;">${so.customer_phone || ''}</p>
                         </div>
                         <div style="text-align:right;">
-                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Quote Reference</p>
-                            <p style="margin:0; font-weight:bold; font-size:16px;">${so.so_number}</p>
-                            <p style="margin:4px 0 0; color:#555;">Date: ${new Date(so.order_date).toLocaleDateString()}</p>
+                            <p style="margin:0 0 4px;color:#666;font-size:11px;text-transform:uppercase;">Quote Reference</p>
+                            <p style="margin:0;font-weight:bold;font-size:16px;">${so.so_number}</p>
+                            <p style="margin:4px 0 0;color:#555;">Date: ${new Date(so.order_date).toLocaleDateString()}</p>
                         </div>
                     </div>
-
-                    <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:32px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:32px;">
                         <thead>
-                            <tr style="background:#000; color:#fff;">
-                                <th style="padding:10px 4px; text-align:left;">Description</th>
-                                <th style="padding:10px 4px; text-align:center;">Qty</th>
-                                <th style="padding:10px 4px; text-align:right;">Unit Price (KES)</th>
-                                <th style="padding:10px 4px; text-align:right;">Total (KES)</th>
+                            <tr style="background:#000;color:#fff;">
+                                <th style="padding:10px 4px;text-align:left;">Description</th>
+                                <th style="padding:10px 4px;text-align:center;">Qty</th>
+                                <th style="padding:10px 4px;text-align:right;">Unit Price (KES)</th>
+                                <th style="padding:10px 4px;text-align:right;">Total (KES)</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
                     </table>
-
-                    <div style="text-align:right; margin-bottom:40px;">
-                        <p style="font-size:12px; color:#666; margin:0 0 4px; text-transform:uppercase; letter-spacing:1px;">Grand Total</p>
-                        <p style="font-size:24px; font-weight:900; margin:0;">KES ${fmt(so.total_amount)}</p>
+                    <div style="text-align:right;margin-bottom:40px;">
+                        <p style="font-size:12px;color:#666;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">Grand Total</p>
+                        <p style="font-size:24px;font-weight:900;margin:0;">KES ${fmt(so.total_amount)}</p>
                     </div>
-
-                    <div style="border-top:1px solid #000; padding-top:16px; font-size:11px; color:#555; text-align:center;">
+                    <div style="border-top:1px solid #000;padding-top:16px;font-size:11px;color:#555;text-align:center;">
                         <p>This is a quotation, not a tax invoice. Stock is subject to availability at the time of payment.</p>
                         <p>Valid for 7 Days. Thank you for choosing Elite Hardware!</p>
                     </div>
-                </div>
-            `;
+                </div>`;
             window.print();
             setTimeout(() => { pa.style.display = 'none'; }, 1000);
         }
