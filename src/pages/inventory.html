@@ -973,9 +973,9 @@ function waitForAuthThenLoad() {
 
         return;
     }
-    // Otherwise poll every 50 ms — auth.js typically resolves in < 300 ms
+   // Otherwise poll every 50 ms — auth.js typically resolves in < 300 ms
     let attempts = 0;
-    const MAX_ATTEMPTS = 60; // 60 × 50 ms = 3 s max wait
+    const MAX_ATTEMPTS = 200; // 200 × 50 ms = 10 s max wait to allow for slow networks
     const poll = setInterval(() => {
         attempts++;
         if (typeof window.apiFetch === 'function') {
