@@ -114,27 +114,28 @@
             loadSalesOrders();
         });
 
-        function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.EliteAuth.token }; }
         function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
 
         async function loadInventory() {
             try {
-                const res = await fetch(API + '/inventory', { headers: hdr() });
+                // Use apiFetch, no need to manually pass headers
+                const res = await window.apiFetch(API + '/inventory');
+                if (!res) return; // Catch 401 redirect
                 if (!res.ok) throw new Error('Failed to fetch inventory');
                 
                 const data = await res.json();
-                // Ensure it's an array, guarding against pagination objects or errors
                 allInventory = Array.isArray(data) ? data : (data.items || []);
             } catch (e) {
                 console.error("Inventory load error:", e);
-                allInventory = []; // Fallback to an empty array so .map() won't crash
+                allInventory = []; 
             }
         }
 
         async function loadSalesOrders() {
             const tb = document.getElementById('soTableBody');
             try {
-                const res = await fetch(API + '/sales-orders', { headers: hdr() });
+                const res = await window.apiFetch(API + '/sales-orders');
+                if (!res) return; // Catch 401 redirect
                 if (!res.ok) throw new Error('Failed to fetch sales orders');
                 
                 const data = await res.json();
@@ -160,7 +161,7 @@
                 `).join('');
             } catch (e) {
                 console.error("Sales orders load error:", e);
-                tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Authentication error or server unreachable. Please log in again.</td></tr>`;
+                tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Error loading sales orders. Please refresh.</td></tr>`;
             }
         }
         // CREATE MODAL LOGIC
@@ -208,7 +209,7 @@
             document.getElementById('grandTotal').innerText = fmt(sum);
         }
 
-        async function saveQuote() {
+       async function saveQuote() {
             const name = document.getElementById('cName').value.trim();
             if (!name) return alert("Customer Name is required.");
 
@@ -227,18 +228,23 @@
 
             document.getElementById('saveBtn').innerText = "Saving...";
             try {
-                const res = await fetch(API + '/sales-orders', {
-                    method: 'POST', headers: hdr(),
+                // Use apiFetch, no headers required
+                const res = await window.apiFetch(API + '/sales-orders', {
+                    method: 'POST', 
                     body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
                 });
-                if (res.ok) { closeCreateModal(); loadSalesOrders(); }
+                if (res && res.ok) { closeCreateModal(); loadSalesOrders(); }
             } catch (e) { alert("Error saving quote."); }
             finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
         }
 
         async function updateStatus(id, status) {
-            await fetch(API + `/sales-orders/${id}/status`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ status }) });
-            loadSalesOrders();
+            // Use apiFetch, no headers required
+            const res = await window.apiFetch(API + `/sales-orders/${id}/status`, { 
+                method: 'PUT', 
+                body: JSON.stringify({ status }) 
+            });
+            if (res && res.ok) loadSalesOrders();
         }
 
         // FULFILLMENT -> Transfers the SO items to the POS Cart.
