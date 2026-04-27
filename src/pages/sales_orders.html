@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Orders & Quotes | Elite Hardware</title>
     <link rel="stylesheet" href="/src/tailwind.css">
     <script src="/src/pages/auth.js" data-roles="admin,manager,cashier"></script>
@@ -27,58 +27,6 @@
         .badge-Fulfilled { background: rgba(16,185,129,0.15); color: var(--green); }
         .badge-Cancelled { background: rgba(239,68,68,0.15); color: var(--red); }
 
-        /* --- MOBILE RESPONSIVE STYLES --- */
-        @media (max-width: 768px) {
-            main { padding: 16px !important; padding-top: 70px !important; }
-            
-            /* Convert Table to Mobile Cards */
-            .table-container { background: transparent !important; border: none !important; }
-            table, thead, tbody, th, td, tr { display: block; width: 100%; }
-            thead { display: none; }
-            tbody tr { 
-                background: var(--surface); 
-                margin-bottom: 12px; 
-                border-radius: 16px; 
-                padding: 12px 16px; 
-                border: 1px solid var(--border);
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }
-            tbody td { 
-                display: flex; 
-                justify-content: space-between; 
-                align-items: center; 
-                padding: 6px 0 !important; 
-                border: none !important;
-                text-align: right;
-            }
-            tbody td::before { 
-                content: attr(data-label); 
-                font-size: 10px; 
-                font-weight: 900; 
-                text-transform: uppercase; 
-                color: var(--muted); 
-            }
-            /* Style the Actions row in the card */
-            tbody td:last-child { 
-                flex-direction: column; 
-                gap: 8px; 
-                align-items: stretch; 
-                margin-top: 10px; 
-                border-top: 1px solid var(--border) !important; 
-                padding-top: 12px !important; 
-            }
-            tbody td:last-child button { margin: 0 !important; width: 100%; padding: 12px !important; }
-
-            /* Bottom Sheet Modal on Mobile */
-            #createModal { padding: 0; align-items: flex-end; }
-            #createModal > div { 
-                border-radius: 24px 24px 0 0 !important; 
-                max-height: 92vh !important; 
-                margin: 0 !important;
-                border-bottom: none !important;
-            }
-        }
-
         @media print {
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
@@ -90,17 +38,17 @@
     <div id="sidebarMount"></div>
 
     <main class="flex-1 p-6 overflow-y-auto" style="padding-top: 70px;">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-6">
+        <div class="flex justify-between items-end mb-6">
             <div>
                 <h1 class="text-2xl font-black tracking-tight" style="font-family:'Space Mono',monospace;">📝 Sales Orders / Quotes</h1>
                 <p class="text-xs mt-1" style="color:var(--muted);">Issue Proforma Invoices and reserve stock for future delivery.</p>
             </div>
-            <button onclick="openCreateModal()" class="w-full md:w-auto px-5 py-3 md:py-2.5 rounded-xl font-black text-xs tracking-wider uppercase bg-emerald-500 text-black hover:bg-emerald-400 transition-colors shadow-lg">
+            <button onclick="openCreateModal()" class="px-5 py-2.5 rounded-xl font-black text-xs tracking-wider uppercase bg-emerald-500 text-black hover:bg-emerald-400 transition-colors shadow-lg">
                 + Create Quote
             </button>
         </div>
 
-        <div class="table-container" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
             <table class="w-full text-left text-sm">
                 <thead style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:1px;">
                     <tr>
@@ -120,43 +68,43 @@
     </main>
 
     <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column;">
             <div class="p-5 flex justify-between items-center" style="border-bottom:1px solid var(--border);">
                 <h2 class="font-black text-emerald-500 uppercase tracking-widest text-sm">New Quotation</h2>
-                <button onclick="closeCreateModal()" class="text-2xl leading-none hover:text-white transition-colors" style="color:var(--muted);">&times;</button>
+                <button onclick="closeCreateModal()" class="text-2xl leading-none" style="color:var(--muted);">&times;</button>
             </div>
             
-            <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4 custom-scrollbar">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Customer Name *</label>
                     <input type="text" id="cName" class="finput" placeholder="Enter customer name"></div>
                     <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Phone Number</label>
                     <input type="text" id="cPhone" class="finput" placeholder="Optional"></div>
                 </div>
 
-                <div class="border border-white/10 rounded-xl p-4 mt-2" style="background:var(--surface2);">
+                <div class="border border-white/10 rounded-xl p-4" style="background:var(--surface2);">
                     <div class="flex justify-between items-center mb-3">
                         <label class="text-[10px] font-bold uppercase" style="color:var(--muted);">Order Items *</label>
-                        <button onclick="addItemRow()" class="text-emerald-500 font-black text-[10px] uppercase bg-emerald-500/10 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20">+ Add Item</button>
+                        <button onclick="addItemRow()" class="text-emerald-500 font-black text-[10px] uppercase bg-emerald-500/10 px-3 py-1 rounded-lg">+ Add Item</button>
                     </div>
-                    <div id="itemRows" class="flex flex-col gap-3 md:gap-2"></div>
-                    <div class="mt-4 pt-4 text-right" style="border-top:1px dashed var(--border);">
+                    <div id="itemRows" class="flex flex-col gap-2"></div>
+                    <div class="mt-4 pt-3 text-right" style="border-top:1px solid var(--border);">
                         <span class="text-xs font-bold" style="color:var(--muted);">GRAND TOTAL:</span>
-                        <span class="text-2xl md:text-xl font-black text-emerald-500 ml-2 font-mono block md:inline mt-1 md:mt-0">KES <span id="grandTotal">0.00</span></span>
+                        <span class="text-xl font-black text-emerald-500 ml-2 font-mono">KES <span id="grandTotal">0.00</span></span>
                     </div>
                 </div>
             </div>
 
             <div class="p-5 flex justify-end gap-3" style="border-top:1px solid var(--border);">
-                <button onclick="closeCreateModal()" class="flex-1 md:flex-none px-5 py-3 md:py-2.5 rounded-xl font-bold text-xs" style="background:var(--surface2); color:var(--text);">Cancel</button>
-                <button onclick="saveQuote()" id="saveBtn" class="flex-1 md:flex-none px-6 py-3 md:py-2.5 rounded-xl font-black text-xs uppercase bg-emerald-500 text-black hover:bg-emerald-400">Save Quote</button>
+                <button onclick="closeCreateModal()" class="px-5 py-2.5 rounded-xl font-bold text-xs" style="background:var(--surface2); color:var(--text);">Cancel</button>
+                <button onclick="saveQuote()" id="saveBtn" class="px-6 py-2.5 rounded-xl font-black text-xs uppercase bg-emerald-500 text-black">Save Quote</button>
             </div>
         </div>
     </div>
 
     <div id="printArea" style="display:none;"></div>
 
-   <script>
+    <script>
         const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
         let allInventory = [];
         let rowCount = 0;
@@ -166,55 +114,39 @@
             loadSalesOrders();
         });
 
+        function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.EliteAuth.token }; }
         function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
 
         async function loadInventory() {
             try {
-                // FIX 1: Use window.apiFetch instead of manual fetch headers
-                const res = await window.apiFetch(API + '/inventory');
-                if (!res || !res.ok) {
-                    allInventory = []; 
-                    return; 
-                }
-                const data = await res.json();
-                // FIX 2: Safely ensure it's an array, accounting for paginated object responses
-                allInventory = Array.isArray(data) ? data : (data.items || []);
-            } catch (e) {
-                allInventory = [];
-                console.error("Failed to load inventory:", e);
-            }
+                const res = await fetch(API + '/inventory', { headers: hdr() });
+                allInventory = await res.json();
+            } catch (e) {}
         }
 
         async function loadSalesOrders() {
             try {
-                const res = await window.apiFetch(API + '/sales-orders');
-                if (!res || !res.ok) return;
-                
+                const res = await fetch(API + '/sales-orders', { headers: hdr() });
                 const data = await res.json();
                 const tb = document.getElementById('soTableBody');
                 
-                if (!data || !data.length) { 
-                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; 
-                    return; 
-                }
+                if (!data.length) { tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; return; }
 
                 tb.innerHTML = data.map(so => `
                     <tr class="hover:bg-white/5 transition-colors">
-                        <td data-label="SO Number" class="p-4 font-mono font-bold" style="color:var(--blue);">${so.so_number}</td>
-                        <td data-label="Date" class="p-4 text-xs md:text-left text-right" style="color:var(--muted);">${new Date(so.order_date).toLocaleDateString()}</td>
-                        <td data-label="Customer" class="p-4 font-bold uppercase md:text-left text-right">${so.customer_name}<br><span class="text-[10px] font-normal" style="color:var(--muted);">${so.customer_phone || ''}</span></td>
-                        <td data-label="Total" class="p-4 text-right font-mono font-black">KES ${fmt(so.total_amount)}</td>
-                        <td data-label="Status" class="p-4 text-center"><span class="badge badge-${so.status}">${so.status}</span></td>
-                        <td data-label="Actions" class="p-4 text-center md:flex md:justify-center md:items-center gap-2">
-                            <button onclick='printProforma(${JSON.stringify(so).replace(/'/g, "&#39;")})' class="bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded text-[10px] font-black uppercase md:w-auto w-full">🖨️ Print Quote</button>
-                            ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id}, 'Confirmed')" class="bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded text-[10px] font-black uppercase md:w-auto w-full md:ml-0 mt-2 md:mt-0">Confirm</button>` : ''}
-                            ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="bg-amber-500/20 text-amber-400 px-3 py-1.5 rounded text-[10px] font-black uppercase md:w-auto w-full md:ml-0 mt-2 md:mt-0">🛒 Fulfill</button>` : ''}
+                        <td class="p-4 font-mono font-bold" style="color:var(--blue);">${so.so_number}</td>
+                        <td class="p-4 text-xs" style="color:var(--muted);">${new Date(so.order_date).toLocaleDateString()}</td>
+                        <td class="p-4 font-bold uppercase">${so.customer_name}<br><span class="text-[10px] font-normal" style="color:var(--muted);">${so.customer_phone || ''}</span></td>
+                        <td class="p-4 text-right font-mono font-black">KES ${fmt(so.total_amount)}</td>
+                        <td class="p-4 text-center"><span class="badge badge-${so.status}">${so.status}</span></td>
+                        <td class="p-4 text-center">
+                            <button onclick='printProforma(${JSON.stringify(so).replace(/'/g, "&#39;")})' class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-[10px] font-black uppercase">🖨️ Print Quote</button>
+                            ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id}, 'Confirmed')" class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">Confirm</button>` : ''}
+                            ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">🛒 Fulfill</button>` : ''}
                         </td>
                     </tr>
                 `).join('');
-            } catch (e) {
-                console.error("Failed to load sales orders:", e);
-            }
+            } catch (e) {}
         }
 
         // CREATE MODAL LOGIC
@@ -231,18 +163,15 @@
 
         function addItemRow() {
             rowCount++;
-            // allInventory is now guaranteed to be an array
             const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
             const row = document.createElement('div');
             row.id = `row-${rowCount}`;
-            row.className = "flex flex-col md:flex-row gap-2 items-stretch md:items-center bg-black/10 md:bg-transparent p-3 md:p-0 rounded-xl md:rounded-none";
+            row.className = "flex gap-2 items-center";
             row.innerHTML = `
-                <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput md:flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
-                <div class="flex gap-2 w-full md:w-auto">
-                    <input type="number" id="qty-${rowCount}" placeholder="Qty" min="1" value="1" oninput="calcTotal()" class="finput flex-1 md:w-20 text-center" style="font-size:12px;">
-                    <input type="number" id="price-${rowCount}" placeholder="Price" oninput="calcTotal()" class="finput flex-1 md:w-28 text-right" style="font-size:12px;">
-                    <button onclick="document.getElementById('row-${rowCount}').remove(); calcTotal();" class="bg-red-500/20 text-red-500 w-10 md:w-8 flex-shrink-0 rounded flex items-center justify-center font-bold text-lg hover:bg-red-500/30 transition-colors">&times;</button>
-                </div>
+                <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
+                <input type="number" id="qty-${rowCount}" placeholder="Qty" min="1" value="1" oninput="calcTotal()" class="finput w-20 text-center" style="font-size:12px;">
+                <input type="number" id="price-${rowCount}" placeholder="Price" oninput="calcTotal()" class="finput w-28 text-right" style="font-size:12px;">
+                <button onclick="document.getElementById('row-${rowCount}').remove(); calcTotal();" class="bg-red-500/20 text-red-500 w-8 h-8 rounded flex items-center justify-center font-bold">&times;</button>
             `;
             document.getElementById('itemRows').appendChild(row);
         }
@@ -284,40 +213,24 @@
 
             document.getElementById('saveBtn').innerText = "Saving...";
             try {
-                const res = await window.apiFetch(API + '/sales-orders', {
-                    method: 'POST',
+                const res = await fetch(API + '/sales-orders', {
+                    method: 'POST', headers: hdr(),
                     body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
                 });
-                if (res && res.ok) { 
-                    closeCreateModal(); 
-                    loadSalesOrders(); 
-                } else {
-                    const data = await res.json();
-                    alert(data.message || "Error saving quote.");
-                }
-            } catch (e) { 
-                alert("Error connecting to server."); 
-            } finally { 
-                document.getElementById('saveBtn').innerText = "Save Quote"; 
-            }
+                if (res.ok) { closeCreateModal(); loadSalesOrders(); }
+            } catch (e) { alert("Error saving quote."); }
+            finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
         }
 
         async function updateStatus(id, status) {
-            try {
-                await window.apiFetch(API + `/sales-orders/${id}/status`, { 
-                    method: 'PUT', 
-                    body: JSON.stringify({ status }) 
-                });
-                loadSalesOrders();
-            } catch (e) {
-                console.error("Failed to update status", e);
-            }
+            await fetch(API + `/sales-orders/${id}/status`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ status }) });
+            loadSalesOrders();
         }
 
         // FULFILLMENT -> Transfers the SO items to the POS Cart.
         function fulfillOrder(id) {
             alert("To fulfill, items will be loaded into your POS Cart.");
-            window.location.href = `/inventory?fulfill_so=${id}`;
+            window.location.href = `/inventory.html?fulfill_so=${id}`;
         }
 
         // PRINT PROFORMA INVOICE

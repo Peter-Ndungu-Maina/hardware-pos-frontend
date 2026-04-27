@@ -564,6 +564,33 @@
         return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
     }
 const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+
+// ── BUSINESS PIN — fetched from DigiTax, never hardcoded ──────
+let BUSINESS_PIN = '';
+let _businessInfoReady   = false;
+let _businessInfoPromise = null;
+
+function fetchBusinessInfo() {
+    if (_businessInfoPromise) return _businessInfoPromise;
+    _businessInfoPromise = (async () => {
+        try {
+            const res  = await window.apiFetch(`${API}/business-info`);
+            if (!res || !res.ok) throw new Error('non-ok response');
+            const data = await res.json();
+            if (data.success && data.kraPin) {
+                BUSINESS_PIN = data.kraPin;
+            } else {
+                console.warn('[business-info] kraPin missing in DigiTax response');
+            }
+        } catch (err) {
+            console.warn('[business-info] Could not fetch from DigiTax:', err.message);
+        } finally {
+            _businessInfoReady = true;
+        }
+    })();
+    return _businessInfoPromise;
+}
+
 let currentPage = 1;
 let totalPages  = 1;
 let debounceTimer;
@@ -910,7 +937,7 @@ function showVoucher(data) {
             <div style="font-size:9px;margin-top:6px;text-align:left;padding:0 4px;">
                 <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
                     <span>KRA PIN:</span>
-                    <span style="font-weight:900;">A014661185V</span>
+                    <span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
                 </div>
                 ${data.kraReturnRef ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
                     <span>KRA REF:</span>
@@ -925,7 +952,7 @@ function showVoucher(data) {
             <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">KRA eTIMS ${noteLabel}</div>
             <div style="font-size:9px;text-align:left;padding:0 4px;">
                 <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
-                    <span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span>
+                    <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;padding:3px 0;">
                     <span>eTIMS Status:</span>
@@ -939,7 +966,7 @@ function showVoucher(data) {
             <span class="copy-badge ${copyClass}">${copyLabel}</span>
             <div style="text-align:center;font-size:14px;font-weight:900;">ELITE HARDWARE LTD</div>
             <div style="text-align:center;font-size:9px;letter-spacing:2px;margin:2px 0;">EXCHANGE VOUCHER — ${noteLabel}</div>
-            <div style="text-align:center;font-size:8px;color:#888;">PIN: A014661185V &nbsp;|&nbsp; NO CASH VALUE</div>
+            <div style="text-align:center;font-size:8px;color:#888;">PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
             <div style="border-top:1px dashed #999;margin:6px 0;"></div>
 
             <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
@@ -1591,7 +1618,9 @@ async function submitExchange() {
     }
 }
 
-function showVoucher(data) {
+async function showVoucher(data) {
+    // Ensure KRA PIN is loaded before building the voucher HTML
+    if (!_businessInfoReady) await fetchBusinessInfo();
     // ── Store structured data for live thermal printing ──
     window._lastCreditNoteData = {
         customerName:        data.customerName        || '—',
@@ -1625,13 +1654,13 @@ function showVoucher(data) {
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}" style="width:120px;height:120px;image-rendering:pixelated;margin:0 auto;display:block;" alt="KRA QR"/>
             </div>
             <div style="font-size:8px;font-style:italic;color:#888;margin-bottom:4px;text-align:center;">✓ Live eTIMS QR</div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span></div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span></div>
             ${data.kraReturnRef ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>KRA REF:</span><span style="font-weight:900;">${data.kraReturnRef}</span></div>` : ''}
             <div style="text-align:center;font-size:8px;font-weight:700;margin-top:6px;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</div>
         </div>` : `
         <div style="border:1px solid #000; margin-top:10px; padding:8px 6px;">
             <div style="text-align:center; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">KRA eTIMS ${noteLabel}</div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span></div>
+            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span></div>
             <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>eTIMS Status:</span><span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span></div>
         </div>`;
 
@@ -1644,7 +1673,7 @@ function showVoucher(data) {
             
             <div style="text-align:center; font-size:14px; font-weight:900; letter-spacing:1px; text-transform:uppercase;">ELITE HARDWARE LTD</div>
             <div style="text-align:center; font-size:9px; letter-spacing:2px; margin:2px 0; text-transform:uppercase;">${noteLabel}</div>
-            <div style="text-align:center; font-size:8px; color:#666;">PIN: A014661185V &nbsp;|&nbsp; NO CASH VALUE</div>
+            <div style="text-align:center; font-size:8px; color:#666;">PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
             
             <div style="border-top:1px dashed #999; margin:6px 0;"></div>
 
