@@ -880,6 +880,7 @@ function showDashboard(role, name) {
     buildSidebar(role);
     document.getElementById('userRoleLabel').innerText = role;
     document.getElementById('userNameLabel').innerText = name;
+    fetchBusinessInfo();
     loadDashboard();
     // Admin: silently poll for pending PIN reset requests to light up the sidebar badge
     if (role.toLowerCase() === 'admin') {
@@ -1673,9 +1674,9 @@ async function c2bPrintReceipt(customer, phone, mpesaCode, items, receiptNumber,
     const maskedPhone = phone && phone.length >= 10 ? phone.substring(0,4) + 'xxx' + phone.slice(-3) : phone;
 
     // Generate QR locally — no external API call
-    const _qrData = kraQrUrl ||
-        ('PIN:A014661185V|REF:' + (receiptNumber || Date.now()) +
-         '|AMT:' + total + '|DATE:' + new Date().toLocaleDateString());
+   const _qrData = kraQrUrl ||
+    (`PIN:${BUSINESS_PIN || 'PENDING'}|REF:` + (receiptNumber || Date.now()) +
+     '|AMT:' + total + '|DATE:' + new Date().toLocaleDateString());
     const _qrDataUrl = await clientGenerateQrDataUrl(_qrData);
 
     const kraBlock = `
@@ -1686,7 +1687,7 @@ async function c2bPrintReceipt(customer, phone, mpesaCode, items, receiptNumber,
         <div style="font-size:9px;margin-top:6px;text-align:left;padding:0 4px;">
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
                 <span>KRA PIN:</span>
-                <span style="font-weight:900;">A014661185V</span>
+                <span style="font-weight:900;">${BUSINESS_PIN || 'PENDING'}</span>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
                 <span>CU Invoice No:</span>
@@ -1725,7 +1726,7 @@ async function c2bPrintReceipt(customer, phone, mpesaCode, items, receiptNumber,
     </style></head><body>
     <div class="center bold upper" style="font-size:14px;letter-spacing:1px;">ELITE HARDWARE LTD</div>
     <div class="center upper" style="font-size:9px;color:#555;letter-spacing:2px;margin:2px 0;">OFFICIAL SALES RECEIPT</div>
-    <div class="center" style="font-size:8px;color:#888;">PIN: A014661185V</div>
+    <div class="center" style="font-size:8px;color:#888;">PIN: ${BUSINESS_PIN || 'PENDING'}</div>
     <div class="divider"></div>
     ${receiptNumber ? `<div class="row"><span class="bold">RECEIPT NO:</span><span class="bold upper">${receiptNumber}</span></div>` : ''}
     ${kraReceiptNo  ? `<div class="row"><span class="bold">KRA RECEIPT:</span><span class="bold upper">${kraReceiptNo}</span></div>` : ''}
@@ -2403,12 +2404,32 @@ async function submitDebtPayment(e) {
     }
 }
 // ── BUSINESS CONSTANTS (update when KRA certificate received) ──
-const BUSINESS_PIN = 'A014661185V'; // ← replace: e.g. P051234567A
-const BUSINESS_VAT = 'A014661185V'; // ← same PIN doubles as VAT No in Kenya
-const VAT_RATE     = 0.16;                        // 16% VAT, back-calculated as 16/116
+let BUSINESS_PIN = '';   
+const VAT_RATE   = 0.16; 
 
+let _businessInfoReady = false;
+let _businessInfoPromise = null;
+
+function fetchBusinessInfo() {
+    if (_businessInfoPromise) return _businessInfoPromise;
+    _businessInfoPromise = (async () => {
+        try {
+            const res  = await window.apiFetch(`${API_BASE}/business-info`);
+            if (!res || !res.ok) throw new Error('non-ok response');
+            const data = await res.json();
+            if (data.success && data.kraPin) {
+                BUSINESS_PIN = data.kraPin;
+            }
+        } catch (err) {
+            console.warn('[business-info] Could not fetch:', err.message);
+        } finally {
+            _businessInfoReady = true;
+        }
+    })();
+    return _businessInfoPromise;
+}                
 // ══════════════════════════════════════════════════════════════
-//  PRINT SETTINGS — set LIVE_PRINT=true to use v-printer.js
+//  PRINT SETTINGS — set LIVE_PRINT=true to use printer.js
 // ══════════════════════════════════════════════════════════════
 const LIVE_PRINT       = true;
 const PRINT_SERVER_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
@@ -2430,7 +2451,7 @@ async function silentPrint(data) {
         showPrintToastIdx('✅ Receipt saved — 2 copies');
     } catch (err) {
         console.error('[PRINT]', err.message);
-        showPrintToastIdx('⚠️ v-printer offline — opening receipt', true);
+        showPrintToastIdx('⚠️ printer offline — opening receipt', true);
         // NEVER call window.print() here — it blocks the dashboard and freezes PIN entry
         // Instead open a self-contained receipt popup
         _openC2BReceiptPopup(data);
@@ -2467,7 +2488,7 @@ async function _openC2BReceiptPopup(data) {
     const mPhone  = data.phone && data.phone.length >= 10
         ? data.phone.slice(0,4)+'xxx'+data.phone.slice(-3) : (data.phone||'');
     const qrData  = data.kraQrUrl ||
-        ('PIN:A014661185V|REF:'+(data.receiptNumber||data.invoiceNumber||Date.now())+
+        ('PIN:'+(BUSINESS_PIN||'PENDING')+'|REF:'+(data.receiptNumber||data.invoiceNumber||Date.now())+
          '|AMT:'+total+'|DATE:'+new Date().toLocaleDateString());
     const qrDataUrl = await clientGenerateQrDataUrl(qrData);
 
@@ -2476,7 +2497,7 @@ async function _openC2BReceiptPopup(data) {
         <div style="text-align:center;border:1px dashed #000;padding:2px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:.2em;">${label}</div>
         <div style="text-align:center;font-size:14px;font-weight:900;">ELITE HARDWARE LTD</div>
         <div style="text-align:center;font-size:9px;letter-spacing:2px;margin:2px 0;">OFFICIAL SALES RECEIPT</div>
-        <div style="text-align:center;font-size:8px;color:#888;">PIN: A014661185V</div>
+        <div style="text-align:center;font-size:8px;color:#888;">PIN: ${BUSINESS_PIN||'PENDING'}</div>
         <div style="border-top:1px dashed #999;margin:6px 0;"></div>
         ${data.invoiceNumber ? `<div style="display:flex;justify-content:space-between;"><span style="font-weight:900;">INVOICE NO:</span><span style="font-weight:900;">${data.invoiceNumber}</span></div>` : ''}
         ${!data.invoiceNumber && data.receiptNumber ? `<div style="display:flex;justify-content:space-between;"><span style="font-weight:900;">RECEIPT NO:</span><span style="font-weight:900;">${data.receiptNumber}</span></div>` : ''}
@@ -2515,7 +2536,7 @@ async function _openC2BReceiptPopup(data) {
             <img src="${qrDataUrl || ('https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(qrData))}"
                  style="width:110px;height:110px;margin:6px auto;display:block;" alt="KRA QR"/>
             <div style="font-size:8px;text-align:left;padding:0 4px;">
-                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:2px 0;"><span>KRA PIN:</span><span style="font-weight:900;">A014661185V</span></div>
+                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:2px 0;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span></div>
                 <div style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:2px 0;"><span>Receipt No:</span><span style="font-weight:900;">${data.invoiceNumber||data.receiptNumber||'N/A'}</span></div>
                 <div style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:2px 0;"><span>KRA Receipt:</span><span style="font-weight:900;color:${data.kraReceiptNo?'green':'#E8640A'};">${data.kraReceiptNo||'PENDING'}</span></div>
                 <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>eTIMS Status:</span><span style="font-weight:900;color:${data.kraReceiptNo?'green':'#E8640A'};">${data.kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span></div>
@@ -2566,7 +2587,7 @@ function showDebtReceipt(customer, amount, method, code, receiptNumber = null, r
         receiptNumber: payRef,
         servedBy:      servedBy,
         date:          date,
-        // FIX: Correct item with actual amount — NOT price:0
+        remainingBalance: remainingBalance, // <--- ADD THIS LINE
         items: [{ itemName: 'Debt Clearance - ' + customer, price: totalAmt, quantity: 1 }]
     };
 
@@ -2690,6 +2711,7 @@ function printDebtSilent() {
                 receiptNumber: d.receiptNumber,
                 servedBy:      d.servedBy,
                 date:          d.date,
+                remainingBalance: d.remainingBalance, // <--- ADD THIS LINE
                 items:         d.items,
                 copies:        2
             })
