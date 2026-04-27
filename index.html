@@ -2414,7 +2414,8 @@ function fetchBusinessInfo() {
     if (_businessInfoPromise) return _businessInfoPromise;
     _businessInfoPromise = (async () => {
         try {
-            const res  = await window.apiFetch(`${API_BASE}/business-info`);
+            // FIX: Use the local authFetch instead of window.apiFetch
+            const res  = await authFetch(`${API_BASE}/business-info`);
             if (!res || !res.ok) throw new Error('non-ok response');
             const data = await res.json();
             if (data.success && data.kraPin) {
@@ -2427,7 +2428,7 @@ function fetchBusinessInfo() {
         }
     })();
     return _businessInfoPromise;
-}                
+}        
 // ══════════════════════════════════════════════════════════════
 //  PRINT SETTINGS — set LIVE_PRINT=true to use printer.js
 // ══════════════════════════════════════════════════════════════
