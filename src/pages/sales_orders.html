@@ -120,17 +120,29 @@
         async function loadInventory() {
             try {
                 const res = await fetch(API + '/inventory', { headers: hdr() });
-                allInventory = await res.json();
-            } catch (e) {}
+                if (!res.ok) throw new Error('Failed to fetch inventory');
+                
+                const data = await res.json();
+                // Ensure it's an array, guarding against pagination objects or errors
+                allInventory = Array.isArray(data) ? data : (data.items || []);
+            } catch (e) {
+                console.error("Inventory load error:", e);
+                allInventory = []; // Fallback to an empty array so .map() won't crash
+            }
         }
 
         async function loadSalesOrders() {
+            const tb = document.getElementById('soTableBody');
             try {
                 const res = await fetch(API + '/sales-orders', { headers: hdr() });
-                const data = await res.json();
-                const tb = document.getElementById('soTableBody');
+                if (!res.ok) throw new Error('Failed to fetch sales orders');
                 
-                if (!data.length) { tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; return; }
+                const data = await res.json();
+                
+                if (!Array.isArray(data) || !data.length) { 
+                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; 
+                    return; 
+                }
 
                 tb.innerHTML = data.map(so => `
                     <tr class="hover:bg-white/5 transition-colors">
@@ -146,9 +158,11 @@
                         </td>
                     </tr>
                 `).join('');
-            } catch (e) {}
+            } catch (e) {
+                console.error("Sales orders load error:", e);
+                tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Authentication error or server unreachable. Please log in again.</td></tr>`;
+            }
         }
-
         // CREATE MODAL LOGIC
         function openCreateModal() {
             document.getElementById('cName').value = '';
