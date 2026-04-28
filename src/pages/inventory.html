@@ -767,8 +767,8 @@
 
     <script>
 // Fallback in case sidebar.js hasn't set API_URL yet
-const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
-const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+const API_URL  = 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = 'https://hardware-pos-backend.onrender.com/api';
 
 // ══════════════════════════════════════════════════════════════
 //  PRINT ENVIRONMENT SETTINGS
@@ -1707,7 +1707,7 @@ function generateGRNSlip(itemName, qty, dn) {
             endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
         }
 
-        const res  = await apiFetch(`/api${endpoint}`, {
+        const res  = await apiFetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             body: JSON.stringify({ 
                 phone, 
