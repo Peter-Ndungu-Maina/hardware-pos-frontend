@@ -661,11 +661,12 @@
        </p>
 
         <div class="flex flex-col gap-2">
-            <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-                <option value="Cash">Cash Sale</option>
-                <option value="M-Pesa">M-Pesa</option>
-                <option value="Credit">Credit (Debt)</option>
-            </select>
+          <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+            <option value="Cash">Cash Sale</option>
+            <option value="Safaricom">Safaricom M-Pesa</option>
+            <option value="Equity">Equity Mobile</option>
+            <option value="Credit">Credit (Debt)</option>
+        </select>
             
             <div id="mpesaFields" class="hidden  flex-col gap-2 w-full">
                 <input type="text" id="cartMpesaId" placeholder="Phone Number e.g. 0712345678" class="w-full p-4 rounded-2xl bg-blue-900/50 border-none outline-none font-mono ring-1 ring-blue-500 text-white">
@@ -1529,48 +1530,53 @@ function generateGRNSlip(itemName, qty, dn) {
 
         function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
         function clearCart() { cart = []; renderCart(); }
-    function toggleCartMpesa() {
-        const method      = document.getElementById('cartMethod').value;
-        const mpesaFields = document.getElementById('mpesaFields');
-        const stkBtn      = document.getElementById('stkPushBtn');
-        const codeField   = document.getElementById('cartMpesaCode');
-        const stkStatus   = document.getElementById('stkStatus');
-        const inC2BMode   = isC2BCheckoutMode();
+        function toggleCartMpesa() {
+            const method      = document.getElementById('cartMethod').value;
+            const mpesaFields = document.getElementById('mpesaFields');
+            const stkBtn      = document.getElementById('stkPushBtn');
+            const codeField   = document.getElementById('cartMpesaCode');
+            const stkStatus   = document.getElementById('stkStatus');
+            const inC2BMode   = isC2BCheckoutMode();
 
-        // Reset STK state on method change
-        if (!inC2BMode) clearStkState();
+            if (!inC2BMode) clearStkState();
 
-        if (method === 'M-Pesa') {
-            mpesaFields.classList.remove('hidden');
-            if (inC2BMode) {
+            // Show phone fields if EITHER Safaricom or Equity is selected
+            if (method === 'Safaricom' || method === 'Equity') {
+                mpesaFields.classList.remove('hidden');
+                if (inC2BMode) {
+                    stkBtn.classList.add('hidden');
+                    const phoneField = document.getElementById('cartMpesaId');
+                    if (phoneField) phoneField.readOnly = true;
+                    codeField.classList.remove('hidden');
+                    codeField.readOnly = true;
+                    stkStatus.classList.remove('hidden');
+                    stkStatus.style.background = 'rgba(0,229,160,0.15)';
+                    stkStatus.style.color = '#00e5a0';
+                    stkStatus.textContent = '✅ C2B payment already received. No prompt needed.';
+                } else {
+                    stkBtn.classList.remove('hidden');
+                    // Dynamically change button text based on provider
+                    stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
+                    stkBtn.className = method === 'Equity' 
+                        ? 'w-full p-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm uppercase tracking-wider transition' 
+                        : 'w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition';
+                    
+                    const phoneField = document.getElementById('cartMpesaId');
+                    if (phoneField) phoneField.readOnly = false;
+                    codeField.readOnly = false;
+                    codeField.classList.add('hidden'); 
+                }
+            } else if (method === 'Credit') {
+                mpesaFields.classList.remove('hidden');
                 stkBtn.classList.add('hidden');
-                const phoneField = document.getElementById('cartMpesaId');
-                if (phoneField) phoneField.readOnly = true;
-                codeField.classList.remove('hidden');
-                codeField.readOnly = true;
-                stkStatus.classList.remove('hidden');
-                stkStatus.style.background = 'rgba(0,229,160,0.15)';
-                stkStatus.style.color = '#00e5a0';
-                stkStatus.textContent = '✅ C2B payment already received. No prompt needed.';
+                codeField.classList.add('hidden');
+                stkStatus.classList.add('hidden');
+                _setKraPinRequired(false);
             } else {
-                stkBtn.classList.remove('hidden');
-                const phoneField = document.getElementById('cartMpesaId');
-                if (phoneField) phoneField.readOnly = false;
-                codeField.readOnly = false;
-                codeField.classList.add('hidden'); // hidden until STK confirms or manual toggle
+                mpesaFields.classList.add('hidden');
+                _setKraPinRequired(false);
             }
-        } else if (method === 'Credit') {
-            mpesaFields.classList.remove('hidden');
-            stkBtn.classList.add('hidden');
-            codeField.classList.add('hidden');
-            stkStatus.classList.add('hidden');
-            // Mark KRA PIN as optional for credit sales
-            _setKraPinRequired(false);
-        } else {
-            mpesaFields.classList.add('hidden');
-            _setKraPinRequired(false);
         }
-    }
 
     let stkPollInterval   = null;
     let currentCheckoutId = null;
@@ -1591,7 +1597,12 @@ function generateGRNSlip(itemName, qty, dn) {
         s.classList.add('hidden'); s.textContent = '';
         document.getElementById('cartMpesaCode').value = '';
         const btn = document.getElementById('stkPushBtn');
-        if (btn) { btn.disabled = false; btn.textContent = '📲 Send M-Pesa Prompt'; btn.onclick = sendStkPush; }
+        if (btn) {
+            const m = document.getElementById('cartMethod')?.value || 'Safaricom';
+            btn.disabled = false;
+            btn.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
+            btn.onclick = sendStkPush;
+        }
     }
 
     function toggleManualCode() {
@@ -1612,9 +1623,11 @@ function generateGRNSlip(itemName, qty, dn) {
         clearInterval(stkPollInterval); stkPollInterval = null;
         clearInterval(stkCountdownTimer); stkCountdownTimer = null;
 
+        const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
+        const methodLabel   = currentMethod === 'Equity' ? 'Equity' : 'M-Pesa';
+
         if (pd.status === 'confirmed') {
             document.getElementById('cartMpesaCode').value = pd.mpesaCode || '';
-            document.getElementById('cartMethod').value = 'M-Pesa';
             status.style.background = 'rgba(0,229,160,0.15)';
             status.style.color = '#00e5a0';
             status.textContent = `✅ Payment confirmed! Code: ${pd.mpesaCode}`;
@@ -1625,10 +1638,10 @@ function generateGRNSlip(itemName, qty, dn) {
         } else if (pd.status === 'cancelled') {
             status.style.background = 'rgba(245,158,11,0.15)';
             status.style.color = '#fcd34d';
-            status.textContent = '🚫 Customer cancelled the M-Pesa prompt. Resend or collect cash.';
+            status.textContent = `🚫 Customer cancelled the ${methodLabel} prompt. Resend or collect cash.`;
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
             stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendStkPush;
+                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
             }, 5000);
 
         } else if (pd.status === 'timeout') {
@@ -1637,16 +1650,16 @@ function generateGRNSlip(itemName, qty, dn) {
             status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
             stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendStkPush;
+                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
             }, 5000);
 
         } else if (pd.status === 'insufficient_funds') {
             status.style.background = 'rgba(239,68,68,0.15)';
             status.style.color = '#fca5a5';
-            status.textContent = '💸 Customer has insufficient M-Pesa balance. Ask them to top up or pay cash.';
+            status.textContent = `💸 Customer has insufficient ${methodLabel} balance. Ask them to top up or pay cash.`;
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
             stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendStkPush;
+                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
             }, 5000);
 
         } else if (pd.status === 'failed') {
@@ -1656,120 +1669,134 @@ function generateGRNSlip(itemName, qty, dn) {
             status.textContent = '❌ ' + reason + '. Try again or collect cash.';
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
             stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendStkPush;
+                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
             }, 5000);
         }
     }
 
-    async function sendStkPush() {
-        const phone  = document.getElementById('cartMpesaId').value.trim();
-        const total  = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-        const customer = document.getElementById('cartCustomer').value.trim();
+   async function sendStkPush() {
+    const phone    = document.getElementById('cartMpesaId').value.trim();
+    const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const customer = document.getElementById('cartCustomer').value.trim();
+    const method   = document.getElementById('cartMethod').value; // 'Safaricom' or 'Equity'
 
-        if (!phone) return alert('⚠️ Enter customer phone number first');
-        if (!total)  return alert('⚠️ Cart is empty');
+    if (!phone) return alert('⚠️ Enter customer phone number first');
+    if (!total)  return alert('⚠️ Cart is empty');
+    
+    const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
 
-        const btn    = document.getElementById('stkPushBtn');
-        const status = document.getElementById('stkStatus');
-        btn.disabled = true;
-        btn.textContent = '⏳ Sending prompt...';
-        status.classList.remove('hidden');
-        status.style.background = 'rgba(59,130,246,0.15)';
-        status.style.color = '#93c5fd';
-        status.textContent = 'Sending STK Push to ' + phone + '...';
+    const btn    = document.getElementById('stkPushBtn');
+    const status = document.getElementById('stkStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Sending prompt...';
+    status.classList.remove('hidden');
+    status.style.background = 'rgba(59,130,246,0.15)';
+    status.style.color = '#93c5fd';
+    status.textContent = `Sending ${method} Push to ${phone}...`;
 
-        clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0;
+    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0;
 
-        try {
-            const res  = await apiFetch(`${API_URL}/mpesa/stk-push`, {
-                method: 'POST',
-                body: JSON.stringify({ phone, amount: total, accountRef: customer || 'EliteHardware', context: {} })
-            });
-            const data = await res.json();
-            if (!data.success) {
-                status.style.background = 'rgba(239,68,68,0.15)';
-                status.style.color = '#fca5a5';
-                status.textContent = '❌ ' + data.message;
-                btn.disabled = false; btn.textContent = '📲 Send M-Pesa Prompt';
-                return;
-            }
+    try {
+        let endpoint = '/mpesa/stk-push'; // Default to Safaricom Daraja
+        
+        // If Equity is selected, apply Jenga routing logic
+        if (method === 'Equity') {
+            let cleanPhone = phone.replace(/\s/g, '').replace(/^\+?254/, '0');
+            const isEquitel = cleanPhone.startsWith('01');
+            endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
+        }
 
-            currentCheckoutId = data.checkoutRequestId;
-            btn.textContent = '⏳ Waiting...';
-
-            // Live countdown — 60 seconds to accommodate network delays
-            let secondsLeft = 60;
-            const updateCountdown = () => {
-                if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
-                secondsLeft--;
-            };
-            updateCountdown();
-            stkCountdownTimer = setInterval(() => {
-                if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
-                updateCountdown();
-            }, 1000);
-
-            // Poll DB every 3s. After ~10s of pending (3 polls), query Safaricom directly
-            // in case the callback never arrived (expired ngrok, network issue, etc.)
-            stkPollInterval = setInterval(async () => {
-                try {
-                    const pr = await apiFetch(`${API_URL}/mpesa/status/${currentCheckoutId}`);
-                    const pd = await pr.json();
-
-                    // 404 / not_found means row wasn't saved — stop polling, show error
-                    if (!pr.ok || pd.status === 'not_found') {
-                        clearInterval(stkPollInterval); stkPollInterval = null;
-                        clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                        status.style.background = 'rgba(239,68,68,0.15)';
-                        status.style.color = '#fca5a5';
-                        status.textContent = '❌ Could not track payment — enter M-Pesa code manually.';
-                        document.getElementById('cartMethod').value = 'M-Pesa';
-                        const c = document.getElementById('cartMpesaCode');
-                        c.classList.remove('hidden'); c.focus();
-                        btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendStkPush;
-                        return;
-                    }
-
-                    if (pd.status !== 'pending') {
-                        handleStkResult(pd, status, btn);
-                        return;
-                    }
-
-                    // Still pending — only query Safaricom directly after 18 polls (~54s)
-                    // Avoids premature "still processing" false failures
-                    stkPollCount++;
-                    if (stkPollCount >= 18) {
-                        try {
-                            const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
-                            const qd = await qr.json();
-                            if (qd.success && qd.status !== 'pending') {
-                                handleStkResult(qd, status, btn);
-                            }
-                        } catch(e) { /* query failed, keep polling DB */ }
-                    }
-                } catch(e) { /* keep polling on network hiccup */ }
-            }, 3000);
-
-            // Hard timeout after 60 seconds
-            setTimeout(() => {
-                if (stkPollInterval) {
-                    clearInterval(stkPollInterval); stkPollInterval = null;
-                    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                    status.style.background = 'rgba(245,158,11,0.15)';
-                    status.style.color = '#fcd34d';
-                    status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-                    btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt';
-                    btn.onclick = sendStkPush;
-                }
-            }, 60000);
-
-        } catch(e) {
+        const res  = await apiFetch(`/api${endpoint}`, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                phone, 
+                amount: total, 
+                accountRef: safeAccountRef, 
+                customerName: safeCustomerName, // <── ADD THIS LINE
+                context: {} 
+            })
+        });
+        const data = await res.json();
+        
+        if (!data.success) {
             status.style.background = 'rgba(239,68,68,0.15)';
             status.style.color = '#fca5a5';
-            status.textContent = '❌ Error: ' + e.message;
-            btn.disabled = false; btn.textContent = '📲 Send M-Pesa Prompt';
+            status.textContent = '❌ ' + data.message;
+            btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
+            return;
         }
+
+        currentCheckoutId = data.checkoutRequestId;
+        btn.textContent = '⏳ Waiting...';
+
+        let secondsLeft = 60;
+        const updateCountdown = () => {
+            if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
+            secondsLeft--;
+        };
+        updateCountdown();
+        stkCountdownTimer = setInterval(() => {
+            if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
+            updateCountdown();
+        }, 1000);
+
+        // Polling (Works for both Daraja and Jenga because we routed them to the same table!)
+        stkPollInterval = setInterval(async () => {
+            try {
+                // If Equity, poll Jenga status. If Safaricom, poll Daraja status.
+                const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
+                const pr = await apiFetch(`/api${statusEndpoint}`);
+                const pd = await pr.json();
+
+                if (!pr.ok || pd.status === 'not_found') {
+                    clearInterval(stkPollInterval); stkPollInterval = null;
+                    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+                    status.style.background = 'rgba(239,68,68,0.15)';
+                    status.style.color = '#fca5a5';
+                    status.textContent = '❌ Could not track payment — enter code manually.';
+                    const c = document.getElementById('cartMpesaCode');
+                    c.classList.remove('hidden'); c.focus();
+                    btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
+                    return;
+                }
+
+                if (pd.status !== 'pending') {
+                    handleStkResult(pd, status, btn); 
+                    return;
+                }
+
+                // Safaricom Manual Query Fallback (Only run if method is Safaricom)
+                stkPollCount++;
+                if (method === 'Safaricom' && stkPollCount >= 18) {
+                    try {
+                        const qr = await apiFetch(`/api/mpesa/query/${currentCheckoutId}`);
+                        const qd = await qr.json();
+                        if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
+                    } catch(e) {}
+                }
+            } catch(e) {}
+        }, 3000);
+
+        setTimeout(() => {
+            if (stkPollInterval) {
+                clearInterval(stkPollInterval); stkPollInterval = null;
+                clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+                status.style.background = 'rgba(245,158,11,0.15)';
+                status.style.color = '#fcd34d';
+                status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
+                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
+                btn.onclick = sendStkPush;
+            }
+        }, 60000);
+
+    } catch(e) {
+        status.style.background = 'rgba(239,68,68,0.15)';
+        status.style.color = '#fca5a5';
+        status.textContent = '❌ Error: ' + e.message;
+        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
     }
+}
 
         // ── Recent sales with pagination ─────────────────────────────────
         let _recentAll  = [];

@@ -37,8 +37,8 @@
 <body class="flex min-h-screen">
     <div id="sidebarMount"></div>
 
-    <main class="flex-1 p-6 overflow-y-auto" style="padding-top: 70px;">
-        <div class="flex justify-between items-end mb-6">
+    <main class="flex-1 p-3 sm:p-6 overflow-y-auto" style="padding-top: 70px;">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-6">
             <div>
                 <h1 class="text-2xl font-black tracking-tight" style="font-family:'Space Mono',monospace;">📝 Sales Orders / Quotes</h1>
                 <p class="text-xs mt-1" style="color:var(--muted);">Issue Proforma Invoices and reserve stock for future delivery.</p>
@@ -49,7 +49,8 @@
         </div>
 
         <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
-            <table class="w-full text-left text-sm">
+            <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm" style="min-width:580px;">
                 <thead style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:1px;">
                     <tr>
                         <th class="p-4">SO Number</th>
@@ -64,18 +65,19 @@
                     <tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">Loading quotes...</td></tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </main>
 
     <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column;">
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:95vh; display:flex; flex-direction:column;">
             <div class="p-5 flex justify-between items-center" style="border-bottom:1px solid var(--border);">
                 <h2 class="font-black text-emerald-500 uppercase tracking-widest text-sm">New Quotation</h2>
                 <button onclick="closeCreateModal()" class="text-2xl leading-none" style="color:var(--muted);">&times;</button>
             </div>
             
             <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Customer Name *</label>
                     <input type="text" id="cName" class="finput" placeholder="Enter customer name"></div>
                     <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Phone Number</label>
@@ -170,7 +172,9 @@
             document.getElementById('cPhone').value = '';
             document.getElementById('itemRows').innerHTML = '';
             rowCount = 0;
-            addItemRow();
+            // Reload inventory if it failed on page load
+            const ready = () => { addItemRow(); };
+            if (!allInventory.length) { loadInventory().then(ready); } else { ready(); }
             document.getElementById('createModal').classList.remove('hidden');
             document.getElementById('createModal').classList.add('flex');
         }
@@ -178,15 +182,33 @@
 
         function addItemRow() {
             rowCount++;
-            const opts = allInventory.map(i => `<option value="${i.id}" data-price="${i.price}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('');
+            const id = rowCount;
+            // If inventory hasn't loaded yet, show a warning option
+            const opts = allInventory.length
+                ? allInventory.map(i => `<option value="${i.id}" data-price="${i.price}" data-name="${i.item_name.replace(/"/g,'&quot;')}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('')
+                : '<option value="" disabled>⚠️ Loading inventory...</option>';
             const row = document.createElement('div');
-            row.id = `row-${rowCount}`;
-            row.className = "flex gap-2 items-center";
+            row.id = `row-${id}`;
+            row.className = "flex flex-col gap-1 p-2 rounded-lg" ;
+            row.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border);";
             row.innerHTML = `
-                <select id="sel-${rowCount}" onchange="setPrice(${rowCount})" class="finput flex-1" style="font-size:12px;"><option value="">Select Item...</option>${opts}</select>
-                <input type="number" id="qty-${rowCount}" placeholder="Qty" min="1" value="1" oninput="calcTotal()" class="finput w-20 text-center" style="font-size:12px;">
-                <input type="number" id="price-${rowCount}" placeholder="Price" oninput="calcTotal()" class="finput w-28 text-right" style="font-size:12px;">
-                <button onclick="document.getElementById('row-${rowCount}').remove(); calcTotal();" class="bg-red-500/20 text-red-500 w-8 h-8 rounded flex items-center justify-center font-bold">&times;</button>
+                <div class="flex gap-2 items-center">
+                    <select id="sel-${id}" onchange="setPrice(${id})" class="finput flex-1" style="font-size:13px; min-width:0;">
+                        <option value="">Select Item...</option>${opts}
+                    </select>
+                    <button onclick="document.getElementById('row-${id}').remove(); calcTotal();" class="bg-red-500/20 text-red-400 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-lg leading-none">&times;</button>
+                </div>
+                <div id="item-name-${id}" class="text-xs font-bold px-1" style="color:var(--green); min-height:16px;"></div>
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <label class="text-[10px] uppercase font-bold px-1" style="color:var(--muted);">Qty</label>
+                        <input type="number" id="qty-${id}" placeholder="1" min="1" value="1" oninput="calcTotal()" class="finput text-center" style="font-size:13px;">
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] uppercase font-bold px-1" style="color:var(--muted);">Unit Price (KES)</label>
+                        <input type="number" id="price-${id}" placeholder="0.00" oninput="calcTotal()" class="finput text-right" style="font-size:13px;">
+                    </div>
+                </div>
             `;
             document.getElementById('itemRows').appendChild(row);
         }
@@ -194,7 +216,13 @@
         function setPrice(id) {
             const sel = document.getElementById(`sel-${id}`);
             const opt = sel.options[sel.selectedIndex];
-            if(opt.value) document.getElementById(`price-${id}`).value = opt.dataset.price;
+            const nameEl = document.getElementById(`item-name-${id}`);
+            if (opt && opt.value) {
+                document.getElementById(`price-${id}`).value = opt.dataset.price || '';
+                if (nameEl) nameEl.textContent = opt.dataset.name || opt.text.split(' (')[0];
+            } else {
+                if (nameEl) nameEl.textContent = '';
+            }
             calcTotal();
         }
 
@@ -220,7 +248,7 @@
                 const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
                 const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
                 if (sel.value && qty > 0) {
-                    items.push({ inventory_id: parseInt(sel.value), item_name: sel.options[sel.selectedIndex].text.split(' (')[0], qty_ordered: qty, unit_price: price });
+                    const selectedOpt = sel.options[sel.selectedIndex]; const itemName = selectedOpt.dataset.name || selectedOpt.text.split(' (')[0] || 'Unknown Item'; items.push({ inventory_id: parseInt(sel.value), item_name: itemName, qty_ordered: qty, unit_price: price });
                 }
             });
 

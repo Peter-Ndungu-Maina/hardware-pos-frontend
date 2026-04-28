@@ -206,6 +206,7 @@
     // STEP 9 — Auth passed: expose globals and reveal the page
     // ─────────────────────────────────────────────────────────────────────────
     window.EliteAuth = {
+        token:        _token,
         role:         _serverRole,
         name:         _name,
         isAdmin:      _serverRole === 'admin',

@@ -179,7 +179,9 @@
             <div>
                 <label style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">Method</label>
                 <select id="payMethod" onchange="togglePayDetails()" style="width:100%;padding:13px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:700;outline:none;">
-                    <option value="Cash">Cash</option><option value="M-Pesa">M-Pesa</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Safaricom">Safaricom M-Pesa</option>
+                    <option value="Equity">Equity Mobile</option>
                 </select>
             </div>
             <div id="payMpesaDetails" class="hidden">
@@ -830,7 +832,7 @@ async function submitLogin() {
             localStorage.setItem('authToken', data.token);
             localStorage.setItem('userRole', data.role);
             localStorage.setItem('userName', data.name);
-            document.cookie = `authToken=${data.token}; path=/; SameSite=Strict; max-age=28800`;
+            document.cookie = `authToken=${data.token}; path=/; SameSite=Strict; max-age=28800${location.protocol === "https:" ? "; Secure" : ""}`;
             
             await trySyncOfflineQueue();
             showDashboard(data.role, data.name);
@@ -2300,11 +2302,11 @@ function renderDebtorLedger() {
     tbody.innerHTML = page.map(d => {
         const bal = parseFloat(d.total_amount)-parseFloat(d.amount_paid||0);
         return `<tr style="border-bottom:1px solid var(--border);" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-            <td style="padding:11px 12px;font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text);">${d.customer_name}</td>
+            <td style="padding:11px 12px;font-size:12px;font-weight:800;text-transform:uppercase;color:var(--text);">${escHtml(d.customer_name)}</td>
             <td style="padding:11px 12px;font-size:10px;color:var(--muted);font-family:var(--mono);">${escHtml(d.item_name)||'—'}</td>
             <td style="padding:11px 12px;font-size:13px;font-weight:900;font-family:var(--mono);color:var(--red);text-align:right;">KES ${bal.toLocaleString()}</td>
             <td style="padding:11px 12px;text-align:center;" class="no-print">
-                <button onclick="openPaymentModal('${d.id}','${(d.customer_name||'').replace(/'/g,'&#39;')}',${bal})" style="padding:5px 12px;border-radius:7px;background:var(--green);color:#000;font-weight:900;font-size:9px;text-transform:uppercase;cursor:pointer;border:none;font-family:var(--mono);">Collect</button>
+                <button onclick="openPaymentModal('${d.id}', this.dataset.name, ${bal})" data-name="${escHtml((d.customer_name||'').replace(/"/g,'&quot;'))}" style="padding:5px 12px;border-radius:7px;background:var(--green);color:#000;font-weight:900;font-size:9px;text-transform:uppercase;cursor:pointer;border:none;font-family:var(--mono);">Collect</button>
             </td>
         </tr>`;
     }).join('');
@@ -2342,7 +2344,15 @@ function openPaymentModal(saleId, name, balance) {
     document.getElementById('paymentModal').style.display = 'flex';
 }
 function togglePayDetails() {
-    document.getElementById('payMpesaDetails').classList.toggle('hidden', document.getElementById('payMethod').value !== 'M-Pesa');
+    const method = document.getElementById('payMethod').value;
+    const isMobile = method === 'Safaricom' || method === 'Equity';
+    document.getElementById('payMpesaDetails').classList.toggle('hidden', !isMobile);
+    
+    const btn = document.getElementById('paySTKBtn');
+    if (btn && isMobile) {
+        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
+        btn.style.background = method === 'Equity' ? '#d97706' : '#16a34a'; // Amber for Equity, Green for Safaricom
+    }
 }
 let _debtSubmitting = false; // module-level guard — blocks any re-entry including double-clicks
 async function submitDebtPayment(e) {
@@ -2433,7 +2443,7 @@ function fetchBusinessInfo() {
 //  PRINT SETTINGS — set LIVE_PRINT=true to use printer.js
 // ══════════════════════════════════════════════════════════════
 const LIVE_PRINT       = true;
-const PRINT_SERVER_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
+const PRINT_SERVER_URL = window.PRINT_SERVER_URL || 'https://unpicketed-unappliable-rena.ngrok-free.dev/print'; // Set window.PRINT_SERVER_URL in a config script to avoid hardcoding
 async function silentPrint(data) {
     try {
         showPrintToastIdx('🖨️ Sending to printer...', false, true);
@@ -2693,7 +2703,7 @@ function printDebtSilent() {
     if (!d) { window.print(); return; }
 
     // FIX: Send to /print/debt-payment — separate from sales receipts
-    const DEBT_PRINT_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/debt-payment';
+    const DEBT_PRINT_URL = (window.PRINT_SERVER_URL || 'https://unpicketed-unappliable-rena.ngrok-free.dev/print') + '/debt-payment';
     (async () => {
         try {
             showPrintToastIdx('🖨️ Sending to printer...', false, true);
@@ -3061,6 +3071,8 @@ function clearDebtStkState() {
 async function sendDebtStkPush() {
     const phone  = document.getElementById('payMpesaPhone').value.trim();
     const amount = document.getElementById('payAmount').value.trim();
+    const method = document.getElementById('payMethod').value; // 'Safaricom' or 'Equity'
+
     if (!phone)  return alert('⚠️ Enter customer phone number');
     if (!amount) return alert('⚠️ Enter payment amount');
 
@@ -3069,11 +3081,10 @@ async function sendDebtStkPush() {
     btn.disabled = true; btn.textContent = '⏳ Sending...';
     status.style.display = 'block';
     status.style.background = 'rgba(59,130,246,0.15)'; status.style.color = '#93c5fd';
-    status.textContent = 'Sending STK Push to ' + phone + '...';
+    status.textContent = `Sending ${method} Push to ${phone}...`;
 
     clearInterval(debtStkInterval); debtStkInterval = null;
     let debtPollCount = 0;
-
     let debtStkCountdown = null;
 
     function handleDebtStkResult(pd) {
@@ -3089,51 +3100,71 @@ async function sendDebtStkPush() {
 
         } else if (pd.status === 'cancelled') {
             status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
-            status.textContent = '🚫 Customer cancelled the M-Pesa prompt. Resend or collect cash.';
+            status.textContent = `🚫 Customer cancelled the ${method} prompt. Resend or collect cash.`;
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent='📲 Resend M-Pesa Prompt'; btn.onclick=sendDebtStkPush; }, 5000);
+            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
 
         } else if (pd.status === 'timeout') {
             status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
             status.textContent = '⏰ Prompt expired — customer did not respond in time. Resend or collect cash.';
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent='📲 Resend M-Pesa Prompt'; btn.onclick=sendDebtStkPush; }, 5000);
+            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
 
         } else if (pd.status === 'insufficient_funds') {
             status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
-            status.textContent = '💸 Customer has insufficient M-Pesa balance. Ask them to top up or pay cash.';
+            status.textContent = '💸 Customer has insufficient balance. Ask them to top up or pay cash.';
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent='📲 Resend M-Pesa Prompt'; btn.onclick=sendDebtStkPush; }, 5000);
+            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
 
         } else if (pd.status === 'failed') {
             const reason = pd.resultDesc || 'Payment failed';
             status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
             status.textContent = '❌ ' + reason + '. Try again or collect cash.';
             btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent='📲 Resend M-Pesa Prompt'; btn.onclick=sendDebtStkPush; }, 5000);
+            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
         }
     }
 
     try {
         // accountRef is the account number the customer sees on their Paybill prompt.
-        // Use customer name (trimmed to 12 chars — Safaricom limit) so it's meaningful.
         const customerLabel = (document.getElementById('modalCustomerInfo')?.innerText || '')
             .replace('CLEAR DEBT FOR ', '').trim().substring(0, 12) || 'DebtPayment';
 
-        const res  = await authFetch(`${API_BASE}/mpesa/stk-push`, {
-            method:'POST', body: JSON.stringify({ phone, amount: parseFloat(amount), accountRef: customerLabel, context: { saleId: activeSaleId } })
+        // ── JENGA FIX: Strip all special characters from payload ──
+        const safeCustomerName = customerLabel.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Debt Customer';
+        const safeAccountRef   = customerLabel.replace(/[^a-zA-Z0-9]/g, '').substring(0, 12) || 'Debt';
+
+        let endpoint = '/mpesa/stk-push'; 
+        
+        if (method === 'Equity') {
+            let cleanPhone = phone.replace(/\s/g, '').replace(/^\+?254/, '0');
+            const isEquitel = cleanPhone.startsWith('01');
+            endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
+        }
+
+        const res  = await authFetch(`${API_BASE}${endpoint}`, {
+            method:'POST', 
+            body: JSON.stringify({ 
+                phone, 
+                amount: parseFloat(amount), 
+                accountRef: safeAccountRef, 
+                customerName: safeCustomerName, // Explicitly pass the cleaned name
+                context: { saleId: activeSaleId } 
+            })
         });
         const data = await res.json();
+        
         if (!data.success) {
             status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
             status.textContent = '❌ ' + data.message;
-            btn.disabled=false;btn.textContent='📲 Send M-Pesa Prompt';
+            btn.disabled=false;btn.textContent=`📲 Send ${method} Prompt`;
             return;
         }
+        
         debtCheckoutId = data.checkoutRequestId;
         btn.textContent = '⏳ Waiting...';
 
-        // Live countdown — Safaricom prompts expire in ~40 seconds
+        // Live countdown — Safaricom/Jenga prompts expire in ~60 seconds
         let secondsLeft = 60;
         const updateCountdown = () => {
             if (debtStkInterval) status.textContent = `📱 Waiting for PIN... Acct: ${customerLabel} (${secondsLeft}s)`;
@@ -3145,16 +3176,22 @@ async function sendDebtStkPush() {
             updateCountdown();
         }, 1000);
 
+        // ── POLLING LOGIC ──
         debtStkInterval = setInterval(async () => {
             try {
-                const pr = await authFetch(`${API_BASE}/mpesa/status/${debtCheckoutId}`);
+                // Ensure we poll the correct backend status URL based on the provider
+                const statusEndpoint = method === 'Equity' ? `/jenga/status/${debtCheckoutId}` : `/mpesa/status/${debtCheckoutId}`;
+                const pr = await authFetch(`${API_BASE}${statusEndpoint}`);
                 const pd = await pr.json();
 
-                if (pd.status !== 'pending') { handleDebtStkResult(pd); return; }
+                if (pd.status !== 'pending') { 
+                    handleDebtStkResult(pd); 
+                    return; 
+                }
 
-                // Still pending — only query Safaricom after 18 polls (~54s)
                 debtPollCount++;
-                if (debtPollCount >= 18) {
+                // Safaricom Manual Query Fallback - ONLY run if Daraja was used
+                if (method === 'Safaricom' && debtPollCount >= 18) {
                     try {
                         const qr = await authFetch(`${API_BASE}/mpesa/query/${debtCheckoutId}`);
                         const qd = await qr.json();
@@ -3164,24 +3201,23 @@ async function sendDebtStkPush() {
             } catch(e){}
         }, 3000);
 
-        // Hard timeout after 40 seconds — matches Safaricom prompt expiry
+        // Hard timeout after 60 seconds
         setTimeout(() => {
             if (debtStkInterval) {
                 clearInterval(debtStkInterval); debtStkInterval = null;
                 clearInterval(debtStkCountdown); debtStkCountdown = null;
                 status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
                 status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-                btn.disabled=false;btn.textContent='📲 Resend M-Pesa Prompt';btn.onclick=sendDebtStkPush;
+                btn.disabled=false;btn.textContent=`📲 Resend ${method} Prompt`;btn.onclick=sendDebtStkPush;
             }
         }, 60000);
 
     } catch(e) {
         status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
         status.textContent = '❌ Error: ' + e.message;
-        btn.disabled=false;btn.textContent='📲 Send M-Pesa Prompt';
+        btn.disabled=false;btn.textContent=`📲 Send ${method} Prompt`;
     }
 }
-
     // ── AUTOMATION SCRIPTS PANEL ──────────────────────────────────────────────
     window.openScriptsPanel = function() {
         if ((dashRole || '').toLowerCase() !== 'admin') return;
