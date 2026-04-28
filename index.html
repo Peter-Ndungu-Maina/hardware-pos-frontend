@@ -3086,7 +3086,7 @@ async function sendDebtStkPush() {
     clearInterval(debtStkInterval); debtStkInterval = null;
     let debtPollCount = 0;
     let debtStkCountdown = null;
-
+    let debtStkResolved = false;
     function handleDebtStkResult(pd) {
         clearInterval(debtStkInterval); debtStkInterval = null;
         clearInterval(debtStkCountdown); debtStkCountdown = null;
