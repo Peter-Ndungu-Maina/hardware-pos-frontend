@@ -1618,7 +1618,7 @@ function generateGRNSlip(itemName, qty, dn) {
             document.getElementById('manualCodeBtn').onclick = toggleManualCode;
         };
     }
-
+    let stkResolved = false;
     function handleStkResult(pd, status, btn) {
         clearInterval(stkPollInterval); stkPollInterval = null;
         clearInterval(stkCountdownTimer); stkCountdownTimer = null;
@@ -1701,9 +1701,13 @@ function generateGRNSlip(itemName, qty, dn) {
         let endpoint = '/mpesa/stk-push'; // Default to Safaricom Daraja
         
         // If Equity is selected, apply Jenga routing logic
-        if (method === 'Equity') {
+       if (method === 'Equity') {
             let cleanPhone = phone.replace(/\s/g, '').replace(/^\+?254/, '0');
-            const isEquitel = cleanPhone.startsWith('01');
+            
+            // Equitel lines strictly use 0763, 0764, 0765, 0766 in Kenya
+            const isEquitel = /^(0763|0764|0765|0766)/.test(cleanPhone);
+            
+            // If Equitel, hit the Equity SIM. If Safaricom, hit Jenga's M-Pesa Wrapper!
             endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
         }
 
@@ -1778,8 +1782,9 @@ function generateGRNSlip(itemName, qty, dn) {
             } catch(e) {}
         }, 3000);
 
-        setTimeout(() => {
-            if (stkPollInterval) {
+       setTimeout(() => {
+            // 3. THE FIX: Check stkResolved, not stkPollInterval
+            if (!stkResolved) { 
                 clearInterval(stkPollInterval); stkPollInterval = null;
                 clearInterval(stkCountdownTimer); stkCountdownTimer = null;
                 status.style.background = 'rgba(245,158,11,0.15)';
