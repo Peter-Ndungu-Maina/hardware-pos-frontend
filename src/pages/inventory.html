@@ -1746,7 +1746,7 @@ function generateGRNSlip(itemName, qty, dn) {
             try {
                 // If Equity, poll Jenga status. If Safaricom, poll Daraja status.
                 const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
-                const pr = await apiFetch(`/api${statusEndpoint}`);
+                const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
                 const pd = await pr.json();
 
                 if (!pr.ok || pd.status === 'not_found') {
@@ -1770,7 +1770,7 @@ function generateGRNSlip(itemName, qty, dn) {
                 stkPollCount++;
                 if (method === 'Safaricom' && stkPollCount >= 18) {
                     try {
-                        const qr = await apiFetch(`/api/mpesa/query/${currentCheckoutId}`);
+                        const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
                         const qd = await qr.json();
                         if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
                     } catch(e) {}
