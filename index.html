@@ -3086,10 +3086,12 @@ async function sendDebtStkPush() {
     clearInterval(debtStkInterval); debtStkInterval = null;
     let debtPollCount = 0;
     let debtStkCountdown = null;
-    let debtStkResolved = false;
+    let debtStkResolved = false;   // set true when a real result arrives — blocks 60s timeout overwrite
+
     function handleDebtStkResult(pd) {
         clearInterval(debtStkInterval); debtStkInterval = null;
         clearInterval(debtStkCountdown); debtStkCountdown = null;
+        debtStkResolved = true;    // prevent the 60s timeout from overwriting this real result
 
         if (pd.status === 'confirmed') {
             document.getElementById('payMpesaCode').value = pd.mpesaCode || '';
@@ -3130,17 +3132,13 @@ async function sendDebtStkPush() {
         const customerLabel = (document.getElementById('modalCustomerInfo')?.innerText || '')
             .replace('CLEAR DEBT FOR ', '').trim().substring(0, 12) || 'DebtPayment';
 
-        // ── JENGA FIX: Strip all special characters from payload ──
         const safeCustomerName = customerLabel.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Debt Customer';
         const safeAccountRef   = customerLabel.replace(/[^a-zA-Z0-9]/g, '').substring(0, 12) || 'Debt';
 
-        let endpoint = '/mpesa/stk-push'; 
-        
-        if (method === 'Equity') {
-            let cleanPhone = phone.replace(/\s/g, '').replace(/^\+?254/, '0');
-            const isEquitel = cleanPhone.startsWith('01');
-            endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
-        }
+        // Equity → always equity-stk-push (server detects Safaricom vs Equitel internally)
+        // Safaricom → Daraja as before
+        let endpoint = '/mpesa/stk-push';
+        if (method === 'Equity') endpoint = '/jenga/equity-stk-push';
 
         const res  = await authFetch(`${API_BASE}${endpoint}`, {
             method:'POST', 
@@ -3148,7 +3146,7 @@ async function sendDebtStkPush() {
                 phone, 
                 amount: parseFloat(amount), 
                 accountRef: safeAccountRef, 
-                customerName: safeCustomerName, // Explicitly pass the cleaned name
+                customerName: safeCustomerName,
                 context: { saleId: activeSaleId } 
             })
         });
@@ -3164,7 +3162,7 @@ async function sendDebtStkPush() {
         debtCheckoutId = data.checkoutRequestId;
         btn.textContent = '⏳ Waiting...';
 
-        // Live countdown — Safaricom/Jenga prompts expire in ~60 seconds
+        // Live countdown
         let secondsLeft = 60;
         const updateCountdown = () => {
             if (debtStkInterval) status.textContent = `📱 Waiting for PIN... Acct: ${customerLabel} (${secondsLeft}s)`;
@@ -3179,7 +3177,6 @@ async function sendDebtStkPush() {
         // ── POLLING LOGIC ──
         debtStkInterval = setInterval(async () => {
             try {
-                // Ensure we poll the correct backend status URL based on the provider
                 const statusEndpoint = method === 'Equity' ? `/jenga/status/${debtCheckoutId}` : `/mpesa/status/${debtCheckoutId}`;
                 const pr = await authFetch(`${API_BASE}${statusEndpoint}`);
                 const pd = await pr.json();
@@ -3190,20 +3187,20 @@ async function sendDebtStkPush() {
                 }
 
                 debtPollCount++;
-                // Safaricom Manual Query Fallback - ONLY run if Daraja was used
+                // Daraja manual query fallback — only for Safaricom
                 if (method === 'Safaricom' && debtPollCount >= 18) {
                     try {
                         const qr = await authFetch(`${API_BASE}/mpesa/query/${debtCheckoutId}`);
                         const qd = await qr.json();
                         if (qd.success && qd.status !== 'pending') handleDebtStkResult(qd);
-                    } catch(e) { /* keep polling DB */ }
+                    } catch(e) { /* keep polling */ }
                 }
             } catch(e){}
         }, 3000);
 
-        // Hard timeout after 60 seconds
+        // Hard timeout — only fires if no real result arrived (debtStkResolved is still false)
         setTimeout(() => {
-            if (debtStkInterval) {
+            if (!debtStkResolved && debtStkInterval) {
                 clearInterval(debtStkInterval); debtStkInterval = null;
                 clearInterval(debtStkCountdown); debtStkCountdown = null;
                 status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
