@@ -277,9 +277,10 @@
 
         // FULFILLMENT -> Transfers the SO items to the POS Cart.
         function fulfillOrder(id) {
-            alert("To fulfill, items will be loaded into your POS Cart.");
-            window.location.href = `/inventory.html?fulfill_so=${id}`;
-        }
+        alert("To fulfill, items will be loaded into your POS Cart.");
+        // Remove .html to match the clean URL routing in server.js
+        window.location.href = `/inventory?fulfill_so=${id}`;
+    }
 
         // PRINT PROFORMA INVOICE
         function printProforma(so) {
