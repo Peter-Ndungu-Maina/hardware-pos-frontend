@@ -1593,6 +1593,7 @@ function generateGRNSlip(itemName, qty, dn) {
         stkCountdownTimer = null;
         stkPollCount      = 0;
         currentCheckoutId = null;
+        stkResolved = false;
         const s = document.getElementById('stkStatus');
         s.classList.add('hidden'); s.textContent = '';
         document.getElementById('cartMpesaCode').value = '';
@@ -1622,6 +1623,7 @@ function generateGRNSlip(itemName, qty, dn) {
     function handleStkResult(pd, status, btn) {
         clearInterval(stkPollInterval); stkPollInterval = null;
         clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+        stkResolved = true;
 
         const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
         const methodLabel   = currentMethod === 'Equity' ? 'Equity' : 'M-Pesa';
@@ -1696,6 +1698,7 @@ function generateGRNSlip(itemName, qty, dn) {
     status.textContent = `Sending ${method} Push to ${phone}...`;
 
     clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0;
+    stkResolved = false;
 
     try {
         let endpoint = '/mpesa/stk-push'; // Default: Safaricom Daraja
