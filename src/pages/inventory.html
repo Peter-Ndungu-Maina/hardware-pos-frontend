@@ -1698,26 +1698,23 @@ function generateGRNSlip(itemName, qty, dn) {
     clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0;
 
     try {
-        let endpoint = '/mpesa/stk-push'; // Default to Safaricom Daraja
+        let endpoint = '/mpesa/stk-push'; // Default: Safaricom Daraja
         
-        // If Equity is selected, apply Jenga routing logic
+        // Equity selected → always equity-stk-push for both 07xx and 01xx.
+        // The server detects Safaricom vs Equitel from the phone prefix and
+        // sets the correct Jenga `telco` field. No frontend routing needed.
        if (method === 'Equity') {
-            let cleanPhone = phone.replace(/\s/g, '').replace(/^\+?254/, '0');
-            
-            // Equitel lines strictly use 0763, 0764, 0765, 0766 in Kenya
-            const isEquitel = /^(0763|0764|0765|0766)/.test(cleanPhone);
-            
-            // If Equitel, hit the Equity SIM. If Safaricom, hit Jenga's M-Pesa Wrapper!
-            endpoint = isEquitel ? '/jenga/equity-stk-push' : '/jenga/stk-push';
+            endpoint = '/jenga/equity-stk-push';
         }
 
         const res  = await apiFetch(`${API_URL}${endpoint}`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 phone, 
                 amount: total, 
                 accountRef: safeAccountRef, 
-                customerName: safeCustomerName, // <── ADD THIS LINE
+                customerName: safeCustomerName,
                 context: {} 
             })
         });
