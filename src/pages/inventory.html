@@ -1623,6 +1623,7 @@ function generateGRNSlip(itemName, qty, dn) {
     function handleStkResult(pd, status, btn) {
         clearInterval(stkPollInterval); stkPollInterval = null;
         clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+        stkResolved = true; // block the 60s timeout from overwriting this real result
         stkResolved = true;
 
         const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
@@ -1697,7 +1698,7 @@ function generateGRNSlip(itemName, qty, dn) {
     status.style.color = '#93c5fd';
     status.textContent = `Sending ${method} Push to ${phone}...`;
 
-    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0;
+    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
     stkResolved = false;
 
     try {
@@ -2031,6 +2032,8 @@ async function finalizeCartSale() {
     if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
     if (effectiveMethod === "M-Pesa" && !phone) return alert("⚠️ Phone Number required for M-Pesa");
     if (effectiveMethod === "M-Pesa" && !code) return alert("⚠️ M-Pesa payment not confirmed. Send the prompt and wait, or enter code manually.");
+    if (effectiveMethod === "Equity" && !phone) return alert("⚠️ Phone Number required for Equity payment");
+    if (effectiveMethod === "Equity" && !code) return alert("⚠️ Equity payment not confirmed. Send the prompt and wait for the customer to complete payment.");
     if (effectiveMethod === "Credit" && !phone) return alert("⚠️ Phone Number required for Credit sales");
     
     if (customerPin && !/^[A-Z][0-9]{9}[A-Z]$/.test(customerPin)) {
