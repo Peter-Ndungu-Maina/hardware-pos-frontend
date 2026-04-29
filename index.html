@@ -2339,7 +2339,14 @@ function openPaymentModal(saleId, name, balance) {
     document.getElementById('payMpesaPhone').value = '';
     document.getElementById('payStkStatus').style.display = 'none';
     document.getElementById('payMpesaCode').style.display = 'none';
-    const pb = document.getElementById('paySTKBtn'); if(pb){pb.disabled=false;pb.textContent='📲 Send M-Pesa Prompt';pb.onclick=sendDebtStkPush;}
+    const pb = document.getElementById('paySTKBtn'); 
+    if(pb){
+        const m = document.getElementById('payMethod')?.value || 'Safaricom';
+        pb.disabled=false;
+        pb.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
+        pb.style.background = m === 'Equity' ? '#d97706' : '#16a34a';
+        pb.onclick=sendDebtStkPush;
+    }
     if(debtStkInterval){clearInterval(debtStkInterval);debtStkInterval=null;}
     document.getElementById('paymentModal').style.display = 'flex';
 }
@@ -2369,7 +2376,8 @@ async function submitDebtPayment(e) {
     const name   = document.getElementById('modalCustomerInfo').innerText.replace('CLEAR DEBT FOR ','');
 
     if (!amount || amount <= 0) return alert('Enter valid amount');
-    if (method === 'M-Pesa' && !code) return alert('⚠️ M-Pesa payment not confirmed yet.\nSend the prompt and wait for customer to pay, or enter the code manually.');
+    if ((method === 'M-Pesa' || method === 'Safaricom') && !code) return alert('⚠️ M-Pesa payment not confirmed yet.\nSend the prompt and wait for customer to pay, or enter the code manually.');
+    if (method === 'Equity' && !code) return alert('⚠️ Equity payment not confirmed yet.\nSend the prompt and wait for customer to pay, or enter the code manually.');
 
     // Capture the saleId NOW at submission time — activeSaleId could change if the
     // user somehow opens another debtor's modal before this request completes.
