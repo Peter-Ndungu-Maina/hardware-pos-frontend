@@ -1936,15 +1936,21 @@ function generateGRNSlip(itemName, qty, dn) {
                 // Derive payment method — payment_method lives in the joined payments[] row.
                 // Every sale row now has its own payments entry (server fix), so this is reliable.
                 // Last-resort fallback checks mpesa_code / mpesa_id for old rows in DB.
-                const method = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
+                const _rawMethod = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
                     ? 'Credit'
                     : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
                         ? s.payments[0].payment_method
                         : (s.mpesa_code || s.mpesaCode || s.mpesa_id ? 'M-Pesa' : 'Cash');
+                // Normalise DB values → display labels (same logic as showMultiReceipt)
+                const method = /equity|equitel/i.test(_rawMethod) ? 'Equity Mobile'
+                    : (_rawMethod === 'Safaricom' || /^safaricom/i.test(_rawMethod)) ? 'M-Pesa'
+                    : _rawMethod;
                 const methodStyle = method === 'M-Pesa'
                     ? 'background:rgba(0,229,160,0.12);color:#00e5a0;'
                     : method === 'Credit'
                     ? 'background:rgba(255,77,109,0.12);color:#ff4d6d;'
+                    : method === 'Equity Mobile'
+                    ? 'background:rgba(245,158,11,0.12);color:#f59e0b;'
                     : 'background:rgba(86,156,214,0.12);color:#569cd6;';
 
                 return `<tr class="border-t border-slate-50 hover:bg-slate-50 transition">
@@ -2029,6 +2035,11 @@ async function finalizeCartSale() {
     const phone    = c2bMode ? (phoneInput || (_activeC2BCheckoutTask?.phone || '')) : phoneInput;
     const code     = c2bMode ? (codeInput || (_activeC2BCheckoutTask?.mpesaCode || '')) : codeInput;
 
+    // Canonical method sent to server — must match server enum
+    // 'Safaricom' → 'M-Pesa'  (server accepts both but normalises internally)
+    // 'Equity'    → 'Equity'  (server maps to 'Equity Paybill' for DB)
+    const serverMethod = effectiveMethod === 'Safaricom' ? 'M-Pesa' : effectiveMethod;
+
     if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
     if (effectiveMethod === "M-Pesa" && !phone) return alert("⚠️ Phone Number required for M-Pesa");
     if (effectiveMethod === "M-Pesa" && !code) return alert("⚠️ M-Pesa payment not confirmed. Send the prompt and wait, or enter code manually.");
@@ -2059,13 +2070,13 @@ async function finalizeCartSale() {
             await OfflineQueue.add({
                 isBulkCart:      true,
                 items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
-                paymentMethod:   effectiveMethod,
+                paymentMethod:   serverMethod,
                 mpesaId:         phone,
                 mpesaCode:       code,
                 customerName:    customer,
                 customerPin:     customerPin || null,
-                amountPaid:      effectiveMethod === 'Credit' ? 0 : totalAmount,
-                offlineReceipt:  offlineReceiptNo   // stored for audit; not sent to server
+                amountPaid:      serverMethod === 'Credit' ? 0 : totalAmount,
+                offlineReceipt:  offlineReceiptNo
             });
 
            // ── Deduct stock from in-memory cache immediately so the UI
@@ -2119,12 +2130,12 @@ async function finalizeCartSale() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 items: cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
-                paymentMethod: effectiveMethod,
+                paymentMethod: serverMethod,
                 mpesaId:       phone,
                 mpesaCode:     code,
                 customerName:  customer,
                 customerPin:   customerPin || null,
-                amountPaid:    effectiveMethod === 'Credit' ? 0 : totalAmount,
+                amountPaid:    serverMethod === 'Credit' ? 0 : totalAmount,
                 isC2B:         c2bMode 
             })
         });
@@ -2251,7 +2262,21 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
     if (!_businessInfoReady) await fetchBusinessInfo();
     const date = new Date().toLocaleString();
     const hardwareName = "ELITE HARDWARE LTD";
-    
+
+    // ── Normalise internal method codes → human-friendly receipt label ──────
+    // DB may store 'Equity Paybill', 'Equitel STK', 'Equitel', 'Equitel Paybill',
+    // 'Safaricom STK via Equity', or the frontend passes 'Equity'. All Equity-family
+    // values show as 'Equity Mobile Money'. 'Safaricom' (STK) normalises to 'M-Pesa'.
+    const _methodRaw = (method || '').trim();
+    if (/equity|equitel/i.test(_methodRaw)) {
+        method = 'Equity Mobile Money';
+    } else if (_methodRaw === 'Safaricom' || /^safaricom/i.test(_methodRaw)) {
+        method = 'M-Pesa';
+    } else if (_methodRaw === 'M-Pesa STK (pending reconciliation)') {
+        method = 'M-Pesa';
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     let maskedPhone = phone;
     if (phone && phone.length >= 10) {
         maskedPhone = phone.substring(0, 4) + "xxx" + phone.substring(phone.length - 3);
@@ -2267,6 +2292,8 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
         methodColor = "text-red-600";
     } else if (method === 'M-Pesa') {
         methodColor = "text-emerald-600";
+    } else if (method === 'Equity Mobile Money') {
+        methodColor = "text-amber-500";
     }
 
     // ADDED ID="receiptDocType" so we can target it in printDeliveryNote()
