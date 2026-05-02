@@ -661,6 +661,14 @@
        </p>
 
         <div class="flex flex-col gap-2">
+          <!-- Price Tier Selector -->
+          <select id="cartPriceTier" onchange="applyPriceTierToCart()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+            <option value="retail">🏷️ Retail Price (Walk-in)</option>
+            <option value="fundi">🔨 Fundi Price (Contractor)</option>
+            <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
+          </select>
+          <p id="tierHint" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden"></p>
+
           <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
             <option value="Cash">Cash Sale</option>
             <option value="Safaricom">Safaricom M-Pesa</option>
@@ -1241,9 +1249,10 @@ function renderInventory() {
     document.getElementById('prevBtn').disabled = (currentPage === 1);
     document.getElementById('nextBtn').disabled = (currentPage === totalPages || totalItems === 0);
 
-    // FIX H-01: Map items to a global window object for safe event handling
-    window._itemMap = window._itemMap || {};
-    paginatedItems.forEach(item => { window._itemMap[item.id] = item; });
+    // FIX H-01: Map ALL stock so sub_unit/tier data is always accessible
+    window._itemMap = {};
+    (typeof allStock !== 'undefined' ? allStock : paginatedItems)
+        .forEach(item => { window._itemMap[String(item.id)] = item; });
 
     let hasCritical = false;
 
@@ -1300,6 +1309,9 @@ function renderInventory() {
             </td>
             <td class="p-6 text-center">
                 <span style="font-family:'Space Mono',monospace;font-weight:900;font-size:13px;color:#569cd6;">KES ${Number(item.price).toLocaleString()}</span>
+                ${item.fundi_price ? `<div style="font-size:9px;font-weight:900;color:#f59e0b;margin-top:3px;">🔨 KES ${Number(item.fundi_price).toLocaleString()}</div>` : ''}
+                ${item.wholesale_price ? `<div style="font-size:9px;font-weight:900;color:#10b981;margin-top:2px;">📦 KES ${Number(item.wholesale_price).toLocaleString()}${item.wholesale_min_qty ? ` (>${item.wholesale_min_qty})` : ''}</div>` : ''}
+                ${item.sub_unit && item.sub_unit_qty ? `<div style="font-size:9px;font-weight:700;color:#a78bfa;margin-top:2px;">⚖️ ${item.bulk_unit || item.unit} = ${item.sub_unit_qty} ${item.sub_unit}</div>` : ''}
             </td>
             <td class="p-6 text-center">
                 <div style="display:flex;flex-direction:column;align-items:center;">
@@ -1333,7 +1345,10 @@ function renderInventory() {
                 <div class="mobile-card-left">
                     <div class="mobile-card-name">${window.escHtml(item.item_name)}</div>
                     <div class="mobile-card-meta">${window.escHtml(item.category || 'General')}</div>
-                    <div class="mobile-card-price">KES ${Number(item.price).toLocaleString()}</div>
+                    <div class="mobile-card-price">KES ${Number(item.price).toLocaleString()}
+                        ${item.fundi_price ? `<span style="font-size:9px;color:#f59e0b;font-weight:900;margin-left:6px;">🔨${Number(item.fundi_price).toLocaleString()}</span>` : ''}
+                        ${item.wholesale_price ? `<span style="font-size:9px;color:#10b981;font-weight:900;margin-left:6px;">📦${Number(item.wholesale_price).toLocaleString()}</span>` : ''}
+                    </div>
                 </div>
                 <div class="mobile-card-right">
                     <span class="mobile-stock-badge" style="${stockStyle}color:#fff;">${item.stock_quantity} ${window.escHtml(item.unit || 'pcs')}</span>
@@ -1489,23 +1504,76 @@ function generateGRNSlip(itemName, qty, dn) {
             } catch (err) { alert("Delete failed"); }
         }
 
+        function resolveTierPrice(item, sellUnit) {
+            const tier = document.getElementById('cartPriceTier')?.value || 'retail';
+            // Sub-unit sale (e.g. Kg) — always use sub_unit_price if available
+            if (sellUnit === 'sub' && item.sub_unit_price) return { price: item.sub_unit_price, tier: 'sub' };
+            if (tier === 'fundi' && item.fundi_price) return { price: item.fundi_price, tier };
+            if (tier === 'wholesale' && item.wholesale_price) return { price: item.wholesale_price, tier };
+            return { price: item.price, tier: 'retail' };
+        }
+
+        function applyPriceTierToCart() {
+            // Re-price all items already in cart when tier changes
+            cart = cart.map(ci => {
+                const item = window._itemMap[ci.itemId];
+                if (!item) return ci;
+                const { price } = resolveTierPrice(item, ci.sellUnit || 'bulk');
+                const sellUnit = ci.sellUnit;
+                // If selling by sub_unit, price is per sub_unit — keep as is
+                return { ...ci, price };
+            });
+            const tier = document.getElementById('cartPriceTier')?.value || 'retail';
+            const hint = document.getElementById('tierHint');
+            if (tier !== 'retail') {
+                hint.classList.remove('hidden');
+                hint.textContent = tier === 'fundi' ? '🔨 Fundi pricing applied to all items' : '📦 Wholesale pricing applied to all items';
+            } else {
+                hint.classList.add('hidden');
+            }
+            renderCart();
+        }
+
         function addToCart(id) {
             const item = window._itemMap[id];
             if (!item) return alert("Item not found. Please refresh.");
             const name  = item.item_name;
-            const price = item.price;
             const stock = item.stock_quantity;
             const qtyInput = document.getElementById(`qty-${id}`);
             const qty = parseInt(qtyInput.value);
             if (!qty || qty <= 0) return alert("Enter valid quantity");
-            if (qty > stock) return alert("Insufficient Stock!");
-            
-            const existing = cart.find(i => i.itemId === id);
+
+            // Determine sell unit — if item has sub_unit, ask cashier
+            let sellUnit = 'bulk';
+            if (item.sub_unit && item.sub_unit_qty) {
+                const useSubUnit = confirm(
+                    `"${name}" can be sold by:\n\n` +
+                    `[OK]     ${item.sub_unit} (e.g. enter qty in ${item.sub_unit})\n` +
+                    `[Cancel] ${item.bulk_unit || item.unit} (whole unit)\n\n` +
+                    `Click OK to sell by ${item.sub_unit}, Cancel for ${item.bulk_unit || item.unit}.`
+                );
+                sellUnit = useSubUnit ? 'sub' : 'bulk';
+            }
+
+            // Stock check — convert to bulk units for comparison
+            const stockDeductCheck = sellUnit === 'sub' && item.sub_unit_qty
+                ? qty / parseFloat(item.sub_unit_qty)
+                : qty;
+            if (stockDeductCheck > stock) return alert(`Insufficient stock! Only ${stock} ${item.bulk_unit || item.unit} in stock.`);
+
+            // Resolve price based on tier and sell unit
+            const { price: basePrice } = resolveTierPrice(item, sellUnit);
+
+            const existing = cart.find(i => i.itemId === id && i.sellUnit === sellUnit);
             if (existing) {
-                if (existing.quantity + qty > stock) return alert("Exceeds stock!");
+                const newStockCheck = sellUnit === 'sub' && item.sub_unit_qty
+                    ? (existing.quantity + qty) / parseFloat(item.sub_unit_qty)
+                    : existing.quantity + qty;
+                if (newStockCheck > stock) return alert("Exceeds stock!");
                 existing.quantity += qty;
             } else {
-                cart.push({ itemId: id, itemName: name, price: price, quantity: qty });
+                const displayUnit = sellUnit === 'sub' ? item.sub_unit : (item.bulk_unit || item.unit);
+                cart.push({ itemId: id, itemName: name, price: basePrice, quantity: qty, sellUnit, displayUnit });
             }
             qtyInput.value = ''; 
             renderCart();
@@ -2069,14 +2137,15 @@ async function finalizeCartSale() {
 
             await OfflineQueue.add({
                 isBulkCart:      true,
-                items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
+                items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
                 paymentMethod:   serverMethod,
                 mpesaId:         phone,
                 mpesaCode:       code,
                 customerName:    customer,
                 customerPin:     customerPin || null,
                 amountPaid:      serverMethod === 'Credit' ? 0 : totalAmount,
-                offlineReceipt:  offlineReceiptNo
+                offlineReceipt:  offlineReceiptNo,
+                priceTier:       document.getElementById('cartPriceTier')?.value || 'retail'
             });
 
            // ── Deduct stock from in-memory cache immediately so the UI
@@ -2085,7 +2154,11 @@ async function finalizeCartSale() {
             receiptItems.forEach(soldItem => {
                 const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
                 if (itemInMemory) {
-                    itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - soldItem.quantity);
+                    const item = window._itemMap[soldItem.itemId];
+                    const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
+                        ? soldItem.quantity / parseFloat(item.sub_unit_qty)
+                        : soldItem.quantity;
+                    itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
                 }
             });
             // Persist the updated stock to IndexedDB so the deduction
@@ -2129,14 +2202,15 @@ async function finalizeCartSale() {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                items: cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
+                items:         cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
                 paymentMethod: serverMethod,
                 mpesaId:       phone,
                 mpesaCode:     code,
                 customerName:  customer,
                 customerPin:   customerPin || null,
                 amountPaid:    serverMethod === 'Credit' ? 0 : totalAmount,
-                isC2B:         c2bMode 
+                isC2B:         c2bMode,
+                priceTier:     document.getElementById('cartPriceTier')?.value || 'retail'
             })
         });
         const cartData = await cartRes.json();
@@ -2162,7 +2236,11 @@ async function finalizeCartSale() {
         receiptItems.forEach(soldItem => {
             const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
             if (itemInMemory) {
-                itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - soldItem.quantity);
+                const item = window._itemMap[soldItem.itemId];
+                const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
+                    ? soldItem.quantity / parseFloat(item.sub_unit_qty)
+                    : soldItem.quantity;
+                itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
             }
         });
         renderInventory();
