@@ -143,8 +143,54 @@
                                 <input type="number" id="costPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
                             </div>
                             <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selling Price (KES)</label>
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Retail Price (KES)</label>
                                 <input type="number" id="sellingPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
+                            </div>
+                        </div>
+
+                        <!-- Multi-tier pricing -->
+                        <div class="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 p-4 space-y-3">
+                            <p class="text-[10px] font-black uppercase text-blue-600 tracking-widest">Optional: Price Tiers</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Fundi Price (KES)</label>
+                                    <input type="number" id="fundiPrice" placeholder="e.g. 700" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Wholesale Price (KES)</label>
+                                    <input type="number" id="wholesalePrice" placeholder="e.g. 650" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Min Qty for Wholesale Auto-trigger</label>
+                                <input type="number" id="wholesaleMinQty" placeholder="e.g. 50 (bags, kgs, pcs...)" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Bulk/Sub unit conversion -->
+                        <div class="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                            <p class="text-[10px] font-black uppercase text-emerald-700 tracking-widest">Optional: Bulk ↔ Unit Conversion</p>
+                            <p class="text-[10px] text-slate-500">Use if you BUY by the carton/bag but SELL by the kg/piece. Leave blank if not applicable.</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bulk Unit</label>
+                                    <input type="text" id="bulkUnit" placeholder="Carton" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sub Unit</label>
+                                    <input type="text" id="subUnit" placeholder="Kg" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sub Units per Bulk</label>
+                                    <input type="number" id="subUnitQty" placeholder="e.g. 20 (Kgs per Carton)" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-black uppercase text-emerald-700 tracking-widest">Sub Unit Price (KES)</label>
+                                    <input type="number" id="subUnitPrice" placeholder="e.g. 150 per Kg" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
+                                    <p class="text-[9px] text-slate-400 font-bold">Price per single Kg/Pc when selling loose</p>
+                                </div>
                             </div>
                         </div>
 
@@ -718,16 +764,23 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
     // 2. Prepare product object
     const barcodeVal = document.getElementById('barcode').value.trim();
     const product = {
-        itemName: document.getElementById('itemName').value,
-        category: document.getElementById('categoryInput').value, 
-        unit: document.getElementById('unit').value,
-        costPrice: parseFloat(document.getElementById('costPrice').value),
-        sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
-        stockQty: parseInt(document.getElementById('stockQty').value),
-        deliveryNote: dn,
-        barcode: barcodeVal || null,
-        role: window.EliteAuth?.role || 'admin',
-        userName: window.EliteAuth?.name || 'Admin'
+        itemName:        document.getElementById('itemName').value,
+        category:        document.getElementById('categoryInput').value, 
+        unit:            document.getElementById('unit').value,
+        costPrice:       parseFloat(document.getElementById('costPrice').value),
+        sellingPrice:    parseFloat(document.getElementById('sellingPrice').value),
+        stockQty:        parseInt(document.getElementById('stockQty').value),
+        deliveryNote:    dn,
+        barcode:         barcodeVal || null,
+        fundiPrice:      parseFloat(document.getElementById('fundiPrice').value) || null,
+        wholesalePrice:  parseFloat(document.getElementById('wholesalePrice').value) || null,
+        wholesaleMinQty: parseInt(document.getElementById('wholesaleMinQty').value) || null,
+        bulkUnit:        document.getElementById('bulkUnit').value.trim() || null,
+        subUnit:         document.getElementById('subUnit').value.trim() || null,
+        subUnitQty:      parseFloat(document.getElementById('subUnitQty').value) || null,
+        subUnitPrice:    parseFloat(document.getElementById('subUnitPrice').value) || null,
+        role:            window.EliteAuth?.role || 'admin',
+        userName:        window.EliteAuth?.name || 'Admin'
     };
 
     try {
