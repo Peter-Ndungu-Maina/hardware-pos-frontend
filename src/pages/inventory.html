@@ -159,7 +159,7 @@
         .bg-blue-900\/50                   { background: rgba(59,130,246,0.15) !important; }
 
         /* ── Primary action button ── */
-        .bg-slate-900:not(#sidebar):not([style]) { background: var(--green) !important; color: #000 !important; }
+        .bg-slate-900:not(#sidebar):not([style]):not(#cartSection) { background: var(--green) !important; color: #000 !important; }
         .hover\:bg-slate-800:hover         { background: #00c98e !important; }
         .hover\:bg-emerald-500:hover       { background: #00c98e !important; color: #000 !important; }
 
@@ -625,7 +625,7 @@
                     <div id="lowStockAlertItems" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
                 </div>
                 
-                <div id="cartSection" class="bg-slate-900 rounded-3xl p-4 md:p-6 mb-6 text-white hidden shadow-2xl border-b-8 border-emerald-500 no-print transition-all">
+                <div id="cartSection" class="rounded-3xl p-4 md:p-6 mb-6 hidden shadow-2xl no-print transition-all" style="background:#0f172a;color:#f1f5f9;border-bottom:8px solid #10b981;">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg md:text-2xl font-black">Current Basket</h2>
                         <button onclick="clearCart()" class="text-red-400 text-xs font-bold uppercase border border-red-400/30 px-3 py-1 rounded-full hover:bg-red-400/10">Empty Cart</button>
