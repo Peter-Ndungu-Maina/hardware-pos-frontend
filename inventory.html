@@ -34,20 +34,16 @@
 
     /* --- PROFESSIONAL PRINT FIXES --- */
     @media print {
-        /* ── Default: 80mm thermal for receipts; DN overrides via tempPrintArea style ── */
         @page { size: 80mm auto; margin: 2mm 1mm; }
 
-        /* If combined print area exists, hide body and show ONLY that area */
         body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
         body:has(#tempPrintArea) #tempPrintArea,
         body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
 
-        /* Standard: show only receipt modal */
         body:not(:has(#tempPrintArea)) * { visibility: hidden !important; }
         body:not(:has(#tempPrintArea)) #receiptModal,
         body:not(:has(#tempPrintArea)) #receiptModal * { visibility: visible !important; }
 
-        /* Receipt / temp area sizing for 80mm thermal */
         #receiptModal, #tempPrintArea {
             position: absolute !important;
             left: 0 !important; right: 0 !important; top: 0 !important;
@@ -64,16 +60,13 @@
             opacity: 1 !important;
         }
 
-        /* DN tempPrintArea overrides — full A4 browser page */
         #tempPrintArea.dn-print {
             width: 100% !important;
             max-width: 100% !important;
         }
 
-        /* Hide non-print elements */
         #receiptButtons, .no-print, #sidebarMenu, #modalOverlay { display: none !important; }
 
-        /* Watermark on print */
         .receipt-watermark::before {
             content: 'ELITE HARDWARE';
             position: absolute; top: 50%; left: 50%;
@@ -86,7 +79,6 @@
         .receipt-watermark { position: relative !important; }
         .receipt-watermark > * { position: relative !important; z-index: 1 !important; }
 
-        /* Copy badge */
         .copy-badge {
             display: block !important;
             text-align: center;
@@ -100,11 +92,7 @@
 
     .low-stock-row { background-color: #fef2f2; border-left: 4px solid #ef4444; }
 
-        /* ════════════════════════════════════════════════
-           ELITE HARDWARE — DARK THEME (do not duplicate)
-           ════════════════════════════════════════════════ */
         :root {
-            /* Enterprise Dark Mode */
             --bg: #090a0fd0; --surface: #14171f; --surface2: #1e222d;
             --border: rgba(255,255,255,0.08);
             --green: #10b981; --green-dim: rgba(16,185,129,0.12);
@@ -117,28 +105,25 @@
         }
         
         body.light {
-            /* DEEP MATTE LIGHT MODE - Zero Pure White, Zero Glare */
-            --bg: #eceff1e8;        /* Slate-300: Deep grey background to absorb screen light */
-            --surface: #eceff1e8;      /* Slate-200: Mid-grey for the Login Card and Dash Cards */
-            --surface2: #eceff1e8;      /* Slate-100: Soft light-grey to make Input Fields pop slightly */
-            --border: rgba(15,23,42,0.15); /* Stronger border so the greys don't blend together */
+            --bg: #eceff1e8;        
+            --surface: #eceff1e8;      
+            --surface2: #eceff1e8;      
+            --border: rgba(15,23,42,0.15); 
             --green: #059669; --green-dim: rgba(5,150,105,0.10);
             --red: #dc2626;   --red-dim: rgba(220,38,38,0.10);
             --blue: #2563eb;  --blue-dim: rgba(37,99,235,0.10);
             --amber: #d97706; --amber-dim: rgba(217,119,6,0.10);
             --purple: #7c3aed; --purple-dim: rgba(124,58,237,0.10);
-            --text: #0f172a;       /* Slate-900: Near-black text for sharp reading */
-            --muted: #475569;      /* Slate-600: Dark grey for secondary text */
+            --text: #0f172a;       
+            --muted: #475569;      
         }
         * { box-sizing: border-box; }
         body { font-family: var(--sans) !important; background: var(--bg) !important; color: var(--text) !important; }
 
-        /* ── Scrollbar ── */
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
 
-        /* ── Solid backgrounds — cards & containers ── */
         .bg-white                          { background: var(--surface)  !important; }
         .bg-gray-50, .bg-gray-100          { background: var(--surface2) !important; }
         .bg-slate-50, .bg-slate-100        { background: var(--surface2) !important; }
@@ -146,7 +131,6 @@
         .bg-slate-700, .bg-slate-800       { background: #1e2d40         !important; }
         .bg-slate-50\/50, .bg-slate-50\/30 { background: rgba(255,255,255,0.03) !important; }
 
-        /* ── Status / accent backgrounds — keep vivid, just desaturate slightly ── */
         .bg-emerald-50, .bg-emerald-100    { background: rgba(0,229,160,0.10)  !important; }
         .bg-emerald-500, .bg-emerald-600   { background: var(--green)          !important; color:#000 !important; }
         .bg-red-50, .bg-red-100            { background: rgba(255,77,109,0.10) !important; }
@@ -158,12 +142,10 @@
         .bg-amber-100                      { background: rgba(245,158,11,0.10) !important; }
         .bg-blue-900\/50                   { background: rgba(59,130,246,0.15) !important; }
 
-        /* ── Primary action button ── */
         .bg-slate-900:not(#sidebar):not([style]) { background: var(--green) !important; color: #000 !important; }
         .hover\:bg-slate-800:hover         { background: #00c98e !important; }
         .hover\:bg-emerald-500:hover       { background: #00c98e !important; color: #000 !important; }
 
-        /* ── Text colours ── */
         .text-slate-900, .text-slate-800   { color: var(--text)  !important; }
         .text-slate-700                    { color: #cbd5e1      !important; }
         .text-slate-600, .text-slate-500, .text-slate-400 { color: var(--muted) !important; }
@@ -173,7 +155,6 @@
         .text-blue-600, .text-blue-500     { color: var(--blue)  !important; }
         .text-orange-600                   { color: var(--amber) !important; }
 
-        /* ── Borders ── */
         .border, .border-b, .border-t, .border-l, .border-r,
         .border-slate-100, .border-slate-200, .border-slate-300,
         .divide-y > *                      { border-color: var(--border) !important; }
@@ -182,15 +163,6 @@
         .border-blue-500                   { border-color: var(--blue)   !important; }
         .border-slate-800                  { border-color: #334155       !important; }
 
-        /* ── Table ── */
-        .hover\:bg-slate-50:hover          { background: var(--surface2) !important; }
-        thead.bg-slate-50, thead.bg-gray-50 { background: rgba(255,255,255,0.03) !important; }
-        body.light thead { background:rgba(15,23,42,0.05) !important; border-bottom:1px solid var(--border) !important; }
-        body.light thead tr { color:var(--text) !important; }
-        body.light thead th { color:var(--text) !important; }
-        tr.bg-slate-900, tr.bg-slate-800   { background: rgba(0,229,160,0.08) !important; color: var(--green) !important; }
-
-        /* ── Inputs & selects ── */
         input:not([type=range]), select, textarea {
             background: var(--surface2) !important;
             color: var(--text)          !important;
@@ -198,10 +170,8 @@
         }
         input::placeholder, textarea::placeholder { color: var(--muted) !important; }
 
-        /* ── KPI card top-border accents ── */
         .border-t-4 { border-top-width: 4px !important; }
 
-        /* ── CART SECTION — explicit overrides so global dark theme doesn't bleed in ── */
         #cartSection                          { background: #0f172a !important; color: #f1f5f9 !important; }
         #cartSection h2                       { color: #f1f5f9 !important; }
         #cartSection .cart-item-row           { background: #1e293b !important; }
@@ -228,178 +198,35 @@
         #cartSection #stkPushBtn              { background: #16a34a !important; color: #fff !important; }
         #cartSection #manualCodeBtn           { color: #60a5fa !important; background: transparent !important; }
 
-        /* ── Shadows on rounded cards ── */
         .rounded-3xl, .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
-
-        /* ── Ensure main/page area has correct bg ── */
         main, .page-main { background: var(--bg) !important; }
 
-        /* ── Low-stock row fix ── */
-        .low-stock-row { background: rgba(255,77,109,0.08) !important; border-left: 4px solid var(--red) !important; }
-
-        /* ══════════════════════════════════════════
-           MOBILE & PC RESPONSIVE IMPROVEMENTS
-           ══════════════════════════════════════════ */
-
-        /* ── Base layout fixes ── */
-        main { overflow-x: hidden; }
-        .overflow-x-auto { max-width: 100%; }
-
-        /* ── Inventory table: ensure horizontal scroll works on PC ── */
-        .overflow-x-auto { -webkit-overflow-scrolling: touch; }
-
-        /* ── Cart section: full width, never side by side ── */
-        #cartSection { width: 100% !important; margin-bottom: 16px !important; }
-
-        /* ── Low stock: full width ── */
-        #lowStockAlert { width: 100% !important; margin-bottom: 12px !important; }
-
-        /* ── Receipt modal: always centered, scrollable ── */
-        #receiptModal {
-            position: fixed !important;
-            top: 50% !important; left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: min(95vw, 420px) !important;
-            max-height: min(90vh, 700px) !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-            z-index: 120 !important;
-        }
-        #receiptModal.hidden { display: none !important; }
-        #receiptModal > .flex-1 { overflow-y: auto; flex: 1; min-height: 0; }
-        #receiptModal #receiptButtons { flex-shrink: 0; }
-
-        /* ── RECEIPT MODAL — Dark mode skin ──────────────────────────────────
-           The modal itself uses dark theme colours.
-           When printing we force white-on-black so the physical receipt
-           always comes out correct regardless of screen theme.
-        ── */
-       /* ── RECEIPT MODAL — Comprehensive Dark Theme Fix ── */
-#receiptModal {
-    background: var(--surface) !important;
-    border: 1px solid var(--border) !important;
-    color: var(--text) !important;
-}
-
-/* Force all text variants to inherit light colors in Dark Mode */
-#receiptModal h1, 
-#receiptModal h2, 
-#receiptModal h3, 
-#receiptModal p, 
-#receiptModal span, 
-#receiptModal td, 
-#receiptModal th,
-#receiptModal .text-black,
-#receiptModal .text-slate-900,
-#receiptModal .text-slate-800,
-#receiptModal .text-slate-700 {
-    color: var(--text) !important;
-}
-
-/* Secondary/Muted text */
-#receiptModal .text-slate-500,
-#receiptModal .text-slate-400,
-#receiptModal .text-gray-500 {
-    color: var(--muted) !important;
-}
-
-/* Accent Colors */
-#receiptModal .text-emerald-600 { color: var(--green) !important; }
-#receiptModal .text-red-600     { color: var(--red) !important; }
-#receiptModal .text-blue-600    { color: var(--blue) !important; }
-
-/* Borders & Dividers */
-#receiptModal .border-black,
-#receiptModal .border-gray-400,
-#receiptModal .border-gray-300,
-#receiptModal .border-dashed,
-#receiptModal .divide-gray-100 > * {
-    border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-/* Total Amount Display Block */
-#receiptModal #totalDisplayBlock {
-    border-top: 2px solid rgba(255, 255, 255, 0.3) !important;
-}
-
-#receiptModal #totalDisplayBlock .bg-black {
-    background: var(--surface2) !important;
-    border: 1px solid var(--border) !important;
-}
-
-/* Watermark tweak for dark bg */
-#receiptModal .receipt-watermark::before {
-    color: rgba(255, 255, 255, 0.04) !important;
-}
-
-/* Buttons area at the bottom */
-#receiptModal #receiptButtons {
-    background: var(--surface2) !important;
-    border-top: 1px solid var(--border) !important;
-}
-
-/* ── PRINT OVERRIDE: Must remain Black on White ── */
-@media print {
-    #receiptModal,
-    #receiptModal *,
-    #tempPrintArea,
-    #tempPrintArea * {
-        background: #fff !important;
-        color: #000 !important;
-        border-color: #000 !important;
-        visibility: visible !important;
-    }
-    
-    #receiptModal .bg-black,
-    #receiptModal #totalDisplayBlock .bg-black {
-        background: #000 !important;
-        color: #fff !important;
-    }
-}
-
-        /* ─────────────────────────────
-           TABLET (769px – 1024px)
-        ───────────────────────────── */
         @media (max-width: 1024px) and (min-width: 769px) {
             .p-6.md\:p-8 { padding: 16px !important; }
             #searchInput { width: 260px !important; }
         }
 
-        /* ─────────────────────────────
-           MOBILE (≤ 768px)
-        ───────────────────────────── */
         @media (max-width: 768px) {
             main { padding: 8px !important; }
-
-            /* Header */
             .p-6.md\:p-8.flex { flex-direction: column !important; gap: 10px !important; padding: 14px !important; }
             #searchInput { width: 100% !important; padding: 11px 14px !important; font-size: 16px !important; }
 
-            /* Hide desktop table, show mobile cards */
-          table:has(#inventoryBody) { display: none !important; }
-
-            /* Pagination */
             .p-6.bg-slate-50 { padding: 10px 14px !important; }
             .p-6.bg-slate-50 .flex { flex-wrap: wrap; gap: 8px; }
             .p-6.bg-slate-50 button { flex: 1; }
 
-            /* Cart section */
             #cartSection { padding: 14px !important; margin-bottom: 12px !important; border-radius: 16px !important; }
             #cartSection h2 { font-size: 16px !important; }
             #cartSection .grid.grid-cols-1.md\:grid-cols-2 { grid-template-columns: 1fr !important; gap: 14px !important; }
             #cartTotalLabel { font-size: 28px !important; }
             #cartMpesaCode, #cartMpesaId, #cartCustomer { font-size: 16px !important; }
 
-            /* Recent sales: hide Customer + Item on mobile */
             #recentSalesBody td:nth-child(2),
             #recentSalesBody td:nth-child(3) { display: none !important; }
             #recentSalesBody td { padding: 8px 10px !important; font-size: 11px !important; }
 
-            /* Low stock alert */
             #lowStockAlert { border-radius: 12px !important; padding: 10px 14px !important; }
 
-            /* Receipt modal — bottom sheet on mobile */
             #receiptModal {
                 top: auto !important; bottom: 0 !important;
                 left: 0 !important; right: 0 !important;
@@ -410,109 +237,14 @@
                 max-height: 92vh !important;
             }
 
-            /* Offline banner */
             #offlineBanner .text-sm { font-size: 11px !important; }
             #offlineBanner .text-xs { font-size: 9px !important; }
-        }
-
-        /* ── Mobile inventory card styles ── */
-        .mobile-stock-card {
-            display: none;
-        }
-        @media (max-width: 768px) {
-            .mobile-stock-cards-container {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                padding: 10px;
-            }
-            .mobile-stock-card {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                background: var(--surface2);
-                border: 1px solid var(--border);
-                border-radius: 14px;
-                padding: 12px 14px;
-                gap: 10px;
-                transition: background 0.15s;
-            }
-            .mobile-stock-card.low-stock-card {
-                border-left: 3px solid var(--red);
-                background: rgba(255,77,109,0.06);
-            }
-            .mobile-card-left { flex: 1; min-width: 0; }
-            .mobile-card-name {
-                font-size: 12px;
-                font-weight: 900;
-                color: var(--text);
-                text-transform: uppercase;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-            .mobile-card-meta {
-                font-size: 9px;
-                color: var(--muted);
-                font-weight: 700;
-                text-transform: uppercase;
-                margin-top: 2px;
-            }
-            .mobile-card-price {
-                font-family: var(--mono);
-                font-size: 11px;
-                font-weight: 900;
-                color: #569cd6;
-                margin-top: 3px;
-            }
-            .mobile-card-right {
-                display: flex;
-                align-items: center;
-                gap: 7px;
-                flex-shrink: 0;
-            }
-            .mobile-stock-badge {
-                font-size: 9px;
-                font-weight: 900;
-                padding: 3px 9px;
-                border-radius: 20px;
-                white-space: nowrap;
-            }
-            .mobile-qty-input {
-                width: 46px !important;
-                padding: 6px 4px !important;
-                border-radius: 8px !important;
-                border: 1px solid var(--border) !important;
-                background: var(--surface) !important;
-                color: var(--text) !important;
-                text-align: center !important;
-                font-weight: 700 !important;
-                font-size: 12px !important;
-                outline: none !important;
-            }
-            .mobile-add-btn {
-                background: linear-gradient(135deg,#00e5a0,#0891b2) !important;
-                color: #000 !important;
-                padding: 7px 12px !important;
-                border-radius: 8px !important;
-                font-size: 9px !important;
-                font-weight: 900 !important;
-                text-transform: uppercase !important;
-                border: none !important;
-                cursor: pointer !important;
-                white-space: nowrap;
-            }
-            /* Recent sales compact */
+            
             #recentSalesBody td { padding: 10px 8px !important; font-size: 11px !important; }
             .p-6.border-b { padding: 12px 14px !important; }
             .rounded-3xl { border-radius: 16px !important; }
         }
 
-    /* ═══════════════════════════════════════════════
-       ELITE HARDWARE — THERMAL PRINT + WATERMARK
-       ═══════════════════════════════════════════════ */
-
-    /* Diagonal watermark on every receipt printed page */
     .receipt-watermark {
         position: relative;
     }
@@ -534,13 +266,8 @@
     .receipt-watermark > * { position: relative; z-index: 1; }
 
     @media print {
-        /* ── THERMAL PAPER: 80mm wide ── */
         @page { size: 80mm auto; margin: 2mm; }
-
-        /* ── COPY SEPARATOR ── */
         .print-copy-break { page-break-after: always; break-after: page; }
-
-        /* ── COPY BADGE ── */
         .copy-badge {
             text-align: center;
             font-family: 'Courier New', monospace;
@@ -555,15 +282,12 @@
         }
         .copy-badge-customer { color: #000; border-color: #000; }
         .copy-badge-shop     { color: #555; border-color: #aaa; }
-
-        /* ── WATERMARK on print ── */
         .receipt-watermark::before {
             color: rgba(0,0,0,0.07) !important;
             font-size: 24px !important;
         }
     }
 
-    /* Screen styles for dual copy label */
     .copy-badge {
         display: inline-block;
         font-family: 'Courier New', monospace;
@@ -577,7 +301,6 @@
         margin-bottom: 4px;
         color: #64748b;
     }
-
     </style>
 </head>
 <body class="antialiased">
@@ -603,7 +326,6 @@
             <p id="syncToastMsg" class="text-xs opacity-80"></p>
         </div>
     </div>
-
 
     <div class="flex min-h-screen">
         <div id="sidebarMount"></div>
@@ -631,112 +353,106 @@
                         <button onclick="clearCart()" class="text-red-400 text-xs font-bold uppercase border border-red-400/30 px-3 py-1 rounded-full hover:bg-red-400/10">Empty Cart</button>
                     </div>
                     <div id="cartItems" class="space-y-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
-       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-end border-t border-slate-800 pt-4">
-    <div class="space-y-4">
-        <div class="relative flex items-center">
-            <input type="text" id="cartCustomer" placeholder="Customer Name" 
-                   class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none text-white font-bold ring-1 ring-slate-700 focus:ring-emerald-500 transition-all pr-20">
-            
-            <button onclick="resetCustomerName()" type="button"
-                    class="absolute right-3 bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-lg border border-slate-600">
-                NEW
-            </button>
-        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-end border-t border-slate-800 pt-4">
+                        <div class="space-y-4">
+                            <div class="relative flex items-center">
+                                <input type="text" id="cartCustomer" placeholder="Customer Name" 
+                                    class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none text-white font-bold ring-1 ring-slate-700 focus:ring-emerald-500 transition-all pr-20">
+                                <button onclick="resetCustomerName()" type="button"
+                                        class="absolute right-3 bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-lg border border-slate-600">
+                                    NEW
+                                </button>
+                            </div>
 
-        <!-- KRA PIN field — required for Credit, optional for Cash/M-Pesa -->
-        <div id="kraPinWrap" class="relative flex items-center gap-2">
-            <input type="text" id="cartKraPin"
-                   placeholder="Customer KRA PIN (e.g. A012345678B)"
-                   maxlength="11"
-                   oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-                   class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-mono font-bold ring-1 ring-slate-700 focus:ring-amber-400 transition-all text-white uppercase"
-                   style="letter-spacing:2px;">
-            <span id="kraPinBadge"
-                  style="position:absolute;right:12px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">
-                OPTIONAL
-            </span>
-        </div>
-       <p id="kraPinHint" style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:-6px;">
-            KRA PIN is optional but recommended for B2B / credit invoices on eTIMS
-       </p>
+                            <div id="kraPinWrap" class="relative flex items-center gap-2">
+                                <input type="text" id="cartKraPin"
+                                    placeholder="Customer KRA PIN (e.g. A012345678B)"
+                                    maxlength="11"
+                                    oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                                    class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-mono font-bold ring-1 ring-slate-700 focus:ring-amber-400 transition-all text-white uppercase"
+                                    style="letter-spacing:2px;">
+                                <span id="kraPinBadge"
+                                    style="position:absolute;right:12px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">
+                                    OPTIONAL
+                                </span>
+                            </div>
+                            <p id="kraPinHint" style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:-6px;">
+                                KRA PIN is optional but recommended for B2B / credit invoices on eTIMS
+                            </p>
 
-        <div class="flex flex-col gap-2">
-          <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-            <option value="Cash">Cash Sale</option>
-            <option value="Safaricom">Safaricom M-Pesa</option>
-            <option value="Equity">Equity Mobile</option>
-            <option value="Credit">Credit (Debt)</option>
-        </select>
-            
-            <div id="mpesaFields" class="hidden  flex-col gap-2 w-full">
-                <input type="text" id="cartMpesaId" placeholder="Phone Number e.g. 0712345678" class="w-full p-4 rounded-2xl bg-blue-900/50 border-none outline-none font-mono ring-1 ring-blue-500 text-white">
-                <!-- STK Push button — shown for M-Pesa -->
-                <button id="stkPushBtn" onclick="sendStkPush()" class="hidden w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition">
-                    📲 Send M-Pesa Prompt
-                </button>
-                <!-- STK status display -->
-                <div id="stkStatus" class="hidden p-3 rounded-2xl text-xs font-bold text-center"></div>
-                <!-- Fallback manual code entry -->
-                <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto-filled or enter manually)" class="hidden flex-1 p-4 rounded-2xl bg-blue-900/50 border-none outline-none uppercase font-mono ring-1 ring-blue-500 text-white">
-                
-            </div>
-        </div>
-    </div>
+                            <div class="flex flex-col gap-2">
+                            <!-- Price Tier Selector -->
+                            <select id="cartPriceTier" onchange="applyPriceTierToCart()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+                                <option value="retail">🏷️ Retail Price (Walk-in)</option>
+                                <option value="fundi">🔨 Fundi Price (Contractor)</option>
+                                <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
+                            </select>
+                            <p id="tierHint" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden"></p>
 
-    <div style="text-align:right;">
-        <div style="background:linear-gradient(135deg,#1e3a5f,#1e293b);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px 20px;margin-bottom:14px;">
-            <p style="color:#94a3b8;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Payable Amount</p>
-            <h2 id="cartTotalLabel" style="font-size:clamp(24px,6vw,42px);font-weight:900;color:#ffffff;font-family:'Space Mono',monospace;line-height:1;margin:0;">KES 0</h2>
-        </div>
-        <button onclick="finalizeCartSale()" id="checkoutBtn"
-                style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px;border-radius:16px;font-weight:900;font-size:clamp(13px,3.5vw,16px);border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(37,99,235,0.5);transition:opacity 0.15s;"
-                onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-            COMPLETE TRANSACTION
-        </button>
-    </div>
-</div>
+                            <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+                                <option value="Cash">Cash Sale</option>
+                                <option value="Safaricom">Safaricom M-Pesa</option>
+                                <option value="Equity">Equity Mobile</option>
+                                <option value="Credit">Credit (Debt)</option>
+                            </select>
+                                
+                                <div id="mpesaFields" class="hidden  flex-col gap-2 w-full">
+                                    <input type="text" id="cartMpesaId" placeholder="Phone Number e.g. 0712345678" class="w-full p-4 rounded-2xl bg-blue-900/50 border-none outline-none font-mono ring-1 ring-blue-500 text-white">
+                                    <button id="stkPushBtn" onclick="sendStkPush()" class="hidden w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition">
+                                        📲 Send M-Pesa Prompt
+                                    </button>
+                                    <div id="stkStatus" class="hidden p-3 rounded-2xl text-xs font-bold text-center"></div>
+                                    <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto-filled or enter manually)" class="hidden flex-1 p-4 rounded-2xl bg-blue-900/50 border-none outline-none uppercase font-mono ring-1 ring-blue-500 text-white">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="text-align:right;">
+                            <div style="background:linear-gradient(135deg,#1e3a5f,#1e293b);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px 20px;margin-bottom:14px;">
+                                <p style="color:#94a3b8;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Payable Amount</p>
+                                <h2 id="cartTotalLabel" style="font-size:clamp(24px,6vw,42px);font-weight:900;color:#ffffff;font-family:'Space Mono',monospace;line-height:1;margin:0;">KES 0</h2>
+                            </div>
+                            <button onclick="finalizeCartSale()" id="checkoutBtn"
+                                    style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px;border-radius:16px;font-weight:900;font-size:clamp(13px,3.5vw,16px);border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(37,99,235,0.5);transition:opacity 0.15s;"
+                                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                COMPLETE TRANSACTION
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8 no-print">
-                    <div class="p-6 md:p-8 flex flex-col md:flex-row justify-between gap-4">
+                    <div class="p-6 md:p-8 flex flex-col md:flex-row justify-between gap-4 border-b border-slate-100">
                         <div class="flex items-center gap-3">
                             <h1 class="text-2xl font-black text-slate-800">Hardware Stock</h1>
                             <span id="adminBadge" class="hidden bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded uppercase">Admin Mode</span>
-                           </div>
+                        </div>
                         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search items or categories..." class="w-full md:w-96 p-4 bg-slate-50 border-none rounded-2xl outline-none ring-1 ring-slate-100 focus:ring-slate-300">
                     </div>
 
-                    <div class="overflow-x-auto" style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                        <table class="w-full text-left" style="min-width:480px;">
-                            <thead style="background:rgba(255,255,255,0.04);border-bottom:1px solid var(--border);">
-                                <tr style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--text);">
-                                    <th class="p-6">Product Information</th>
-                                    <th class="p-6 text-center hidden md:table-cell">Barcode / SKU</th>
-                                    <th class="p-6 text-center">Unit Price</th>
-                                    <th class="p-6 text-center">In Stock</th>
-                                    <th class="p-6 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inventoryBody" class="divide-y divide-slate-50"></tbody>
-                        </table>
-                        <!-- Mobile card view (shown only on small screens via CSS) -->
-                        <div id="mobileCardsContainer" class="mobile-stock-cards-container" style="display:none;"></div>
-                        <div class="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                            <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">
-                                Showing 1 - 10 of 0
-                            </span>
-                            <div class="flex gap-2">
-                                <button onclick="changePage(-1)" id="prevBtn" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                                    Previous
-                                </button>
-                                <button onclick="changePage(1)" id="nextBtn" class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                                    Next
-                                </button>
-                            </div>
-</div>
+                    <!-- NEW GRID COMMAND CENTER -->
+                    <div class="p-6 md:p-8 bg-[#0a0f1e]">
+                        <div id="inventoryGrid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                            <!-- Cards will be injected here by JS -->
+                        </div>
+                    </div>
+
+                    <div class="p-6 bg-slate-900 border-t border-slate-800 flex items-center justify-between no-print">
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">
+                            Showing 1 - 10 of 0
+                        </span>
+                        <div class="flex gap-2">
+                            <button onclick="changePage(-1)" id="prevBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                                Previous
+                            </button>
+                            <button onclick="changePage(1)" id="nextBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                                Next
+                            </button>
+                        </div>
                     </div>
                 </div>
-                  <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden no-print mb-8">
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden no-print mb-8">
                     <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                         <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Your Recent Transactions</h3>
                         <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Today Only</span>
@@ -757,7 +473,6 @@
                             <tbody id="recentSalesBody" class="divide-y divide-slate-50 text-sm"></tbody>
                         </table>
                     </div>
-                    <!-- Recent sales pagination -->
                     <div id="recentSalesPagination" class="p-4 border-t border-slate-100 no-print"></div>
                 </div>
 
@@ -770,45 +485,25 @@
 const API_URL  = 'https://hardware-pos-backend.onrender.com/api';
 const API_BASE = 'https://hardware-pos-backend.onrender.com/api';
 
-// ══════════════════════════════════════════════════════════════
-//  PRINT ENVIRONMENT SETTINGS
-//  Set LIVE_PRINT = true  when thermal printer is connected
-//  Set LIVE_PRINT = false to use browser print dialog (testing)
-// ══════════════════════════════════════════════════════════════
 const LIVE_PRINT        = true;
 const PRINT_SERVER_URL  = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
 const GRN_SERVER_URL    = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
 
-/**
- * silentPrint(data)
- * In LIVE mode  → sends receipt data to ElitePrintServer (no dialog)
- * In TEST mode  → falls back to browser print dialog
- */
 async function silentPrint(data) {
-    if (!LIVE_PRINT) {
-        // TEST MODE: browser print dialog fallback
-        window.print();
-        return;
-    }
+    if (!LIVE_PRINT) { window.print(); return; }
     try {
         showPrintToast('🖨️ Sending to printer...', false, true);
         const res = await fetch(PRINT_SERVER_URL, {
             method:  'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true' 
-            },
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
             body:    JSON.stringify({ ...data, copies: 2 })
         });
         if (!res.ok) throw new Error('Print server error ' + res.status);
         const result = await res.json();
         if (!result.success) throw new Error(result.error || 'Print failed');
-        // Open the receipt URL in a new tab for visual confirmation
         if (result.url) window.open(result.url, '_blank');
         showPrintToast('✅ Receipt saved — 2 copies');
     } catch (err) {
-        console.error('[PRINT]', err.message);
-        // Server down? Fall back to browser print so sale is never lost
         showPrintToast('⚠️ v-printer offline — using browser print', true);
         setTimeout(() => window.print(), 800);
     }
@@ -819,13 +514,10 @@ async function silentPrintGRN(itemName, qty, dnRef) {
     try {
         const res = await fetch(GRN_SERVER_URL, {
             method:  'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'ngrok-skip-browser-warning': 'true'
-            },
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
             body:    JSON.stringify({ itemName, qty, dnRef, servedBy: userName })
         });
-                const result = await res.json();
+        const result = await res.json();
         if (!result.success) throw new Error(result.error);
         showPrintToast('✅ GRN printed');
     } catch (err) {
@@ -833,7 +525,6 @@ async function silentPrintGRN(itemName, qty, dnRef) {
     }
 }
 
-// Small toast notification for print feedback
 function showPrintToast(msg, isError = false, isInfo = false) {
     let toast = document.getElementById('_printToast');
     if (!toast) {
@@ -850,143 +541,102 @@ function showPrintToast(msg, isError = false, isInfo = false) {
     if (!isInfo) toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
 }
 
-// Store last receipt data so silentPrint can access it
 window._lastReceiptData = null;
 
-
-
 const userName = window.EliteAuth?.name || 'Staff';
-        const userRole = window.EliteAuth?.role || 'Staff'; 
-     let cart = [];
-    let allStock = []; // Store all items here
-    let currentPage = 1;
-    const itemsPerPage = 10;
-        let isFinalizing = false;
-    let _activeC2BCheckoutTask = null;
-    let _c2bTaskHandled = false;
+const userRole = window.EliteAuth?.role || 'Staff'; 
+let cart = [];
+let allStock = [];
+let currentPage = 1;
+const itemsPerPage = 10;
+let isFinalizing = false;
+let _activeC2BCheckoutTask = null;
+let _c2bTaskHandled = false;
 
-      
-        // --- PERMISSIONS LOGIC ---
-        const isAuthorized = ['admin', 'manager'].includes(userRole.toLowerCase());
-        if(isAuthorized) {
-            const adminBadge = document.getElementById('adminBadge');
-            if (adminBadge) { adminBadge.innerText = userRole + ' MODE'; adminBadge.classList.remove('hidden'); }
-        }
-
-// 1. The Reset Function
-function resetCustomerName() {
-    const nameInput = document.getElementById('cartCustomer');
-    nameInput.value = ""; // Clear the name
-    nameInput.classList.remove('ring-emerald-500', 'ring-blue-400');
-    nameInput.focus();    // Put cursor back in name box
+const isAuthorized = ['admin', 'manager'].includes(userRole.toLowerCase());
+if(isAuthorized) {
+    const adminBadge = document.getElementById('adminBadge');
+    if (adminBadge) { adminBadge.innerText = userRole + ' MODE'; adminBadge.classList.remove('hidden'); }
 }
 
-// 2. The Smart Lookup Listener
+function resetCustomerName() {
+    const nameInput = document.getElementById('cartCustomer');
+    nameInput.value = ""; 
+    nameInput.classList.remove('ring-emerald-500', 'ring-blue-400');
+    nameInput.focus();    
+}
+
 document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
     const phone = e.target.value.trim();
     const nameInput = document.getElementById('cartCustomer');
-    
-    // Clear old rings when phone is changed
     nameInput.classList.remove('ring-emerald-500', 'ring-blue-400');
-
     if (phone.length >= 10) {
         try {
             const res = await apiFetch(`${API_URL}/customers/${phone}`);
             if (res.ok) {
                 const customer = await res.json();
-                
                 if (nameInput.value.trim() === "") {
-                    // Scenario A: Field empty - Auto-fill (Emerald Ring)
                     nameInput.value = customer.name;
                     nameInput.classList.add('ring-2', 'ring-emerald-500');
                 } else {
-                    // Scenario B: Field has a custom name - Just highlight (Blue Ring)
-                    // This lets the cashier know the number IS in the system, 
-                    // but we aren't changing the name they typed.
                     nameInput.classList.add('ring-2', 'ring-blue-400');
                 }
             }
-        } catch (err) { 
-            // connection check silent
-        }
+        } catch (err) {}
     }
 });
-/**
- * waitForAuthThenLoad()
- * ─────────────────────────────────────────────────────────────────────────────
- * auth.js runs an async IIFE that calls /api/verify-session before it sets
- * window.apiFetch. If the user navigates between pages quickly, this script
- * can execute before that IIFE resolves — so apiFetch is undefined, the catch
- * block fires, and the page falls back to cached stock with a false "Server
- * error" warning.
- *
- * This helper polls until apiFetch is ready (max ~3 s) then fires the initial
- * data load. It does NOT affect normal loads where auth is already resolved.
- * ─────────────────────────────────────────────────────────────────────────────
- */
+
 function waitForAuthThenLoad() {
-    // If auth.js already finished (normal case), fire immediately
     if (typeof window.apiFetch === 'function') {
         fetchBusinessInfo(); 
         fetchStock().then(() => {
             processC2BInventoryTask();
-            processSalesOrderFulfillment(); // <--- ADDED HERE
+            processSalesOrderFulfillment(); 
         });
         
-    // ── READ-ONLY SUBSCRIPTION LOCK ─────────────────────────────────────────
-    if (window.EliteAuth && window.EliteAuth.readOnly) {
-        // Inject page-level banner below the first <header> or at top of <main>
-        (function() {
-            const isLifetime = (window.EliteAuth.subPlan === 'lifetime');
-            const thing = isLifetime ? 'annual service fee' : 'subscription';
-            const days  = window.EliteAuth.daysUntilExpiry;
-            const dAgo  = days !== null ? Math.abs(days) : '?';
-            const bar   = document.createElement('div');
-            bar.id      = 'pageSubBanner';
-            bar.innerHTML = `<span style="font-size:18px;">🔒</span>
-                <span><strong>POS IS READ-ONLY</strong> — ${thing} expired ${dAgo} day(s) ago.
-                New sales and edits are blocked. Data export is still available.</span>
-                <button onclick="window.location.href='/'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>`;
-            bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;' +
-                'background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));' +
-                'border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
-            // Insert after first <header> if present, else prepend to <body>
-            const header = document.querySelector('header') || document.querySelector('.page-header');
-            if (header && header.parentNode) {
-                header.parentNode.insertBefore(bar, header.nextSibling);
-            } else {
-                const main = document.querySelector('main') || document.body;
-                main.insertBefore(bar, main.firstChild);
-            }
-        })();
-        // Disable write buttons
-    const _b0 = document.getElementById('checkoutBtn');
-    if (_b0) { _b0.disabled = true; _b0.style.opacity='0.35'; _b0.style.cursor='not-allowed'; _b0.title='POS is read-only — subscription expired'; }
-
-        // Grey out the add-to-cart buttons so cashier can't build a cart
-        document.querySelectorAll('[onclick*="addToCart"]').forEach(b => {
-            b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
-        });
-        // Show read-only overlay on the checkout panel
-        const panel = document.getElementById('cartPanel') || document.getElementById('checkoutPanel');
-        if (panel) { panel.style.opacity = '0.6'; panel.style.pointerEvents = 'none'; }
-    
-    }
-    // ── END READ-ONLY LOCK ───────────────────────────────────────────────────
-
+        if (window.EliteAuth && window.EliteAuth.readOnly) {
+            (function() {
+                const isLifetime = (window.EliteAuth.subPlan === 'lifetime');
+                const thing = isLifetime ? 'annual service fee' : 'subscription';
+                const days  = window.EliteAuth.daysUntilExpiry;
+                const dAgo  = days !== null ? Math.abs(days) : '?';
+                const bar   = document.createElement('div');
+                bar.id      = 'pageSubBanner';
+                bar.innerHTML = `<span style="font-size:18px;">🔒</span>
+                    <span><strong>POS IS READ-ONLY</strong> — ${thing} expired ${dAgo} day(s) ago.
+                    New sales and edits are blocked. Data export is still available.</span>
+                    <button onclick="window.location.href='/'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>`;
+                bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;' +
+                    'background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));' +
+                    'border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
+                const header = document.querySelector('header') || document.querySelector('.page-header');
+                if (header && header.parentNode) {
+                    header.parentNode.insertBefore(bar, header.nextSibling);
+                } else {
+                    const main = document.querySelector('main') || document.body;
+                    main.insertBefore(bar, main.firstChild);
+                }
+            })();
+            const _b0 = document.getElementById('checkoutBtn');
+            if (_b0) { _b0.disabled = true; _b0.style.opacity='0.35'; _b0.style.cursor='not-allowed'; _b0.title='POS is read-only — subscription expired'; }
+            document.querySelectorAll('[onclick*="addToCart"]').forEach(b => {
+                b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
+            });
+            const panel = document.getElementById('cartPanel') || document.getElementById('checkoutPanel');
+            if (panel) { panel.style.opacity = '0.6'; panel.style.pointerEvents = 'none'; }
+        }
         return;
     }
-   // Otherwise poll every 50 ms — auth.js typically resolves in < 300 ms
     let attempts = 0;
-    const MAX_ATTEMPTS = 200; // 200 × 50 ms = 10 s max wait to allow for slow networks
+    const MAX_ATTEMPTS = 200; 
     const poll = setInterval(() => {
         attempts++;
         if (typeof window.apiFetch === 'function') {
             clearInterval(poll);
-            fetchBusinessInfo(); // start fetching KRA PIN early — receipt will await it
-          fetchStock().then(() => {
+            fetchBusinessInfo(); 
+            fetchStock().then(() => {
                 processC2BInventoryTask();
-                processSalesOrderFulfillment(); // <--- ADDED HERE
+                processSalesOrderFulfillment(); 
             });
             fetchRecentSales();
         } else if (attempts >= MAX_ATTEMPTS) {
@@ -994,7 +644,7 @@ function waitForAuthThenLoad() {
             console.warn('[Auth] apiFetch not ready after 3 s — loading from cache');
             fetchStock().then(() => {
                 processC2BInventoryTask();
-                processSalesOrderFulfillment(); // <--- ADDED HERE
+                processSalesOrderFulfillment(); 
             });
         }
     }, 50);
@@ -1007,14 +657,10 @@ function getC2BInventoryTask() {
         const task = JSON.parse(raw);
         if (!task || typeof task !== 'object') return null;
         return task;
-    } catch {
-        return null;
-    }
+    } catch { return null; }
 }
 
-function clearC2BInventoryTask() {
-    localStorage.removeItem('c2b_inventory_task');
-}
+function clearC2BInventoryTask() { localStorage.removeItem('c2b_inventory_task'); }
 
 function isC2BCheckoutMode() {
     const qp = new URLSearchParams(window.location.search);
@@ -1065,7 +711,9 @@ async function processC2BInventoryTask() {
             itemId: stockRow.id,
             itemName: stockRow.item_name,
             price: parseFloat(stockRow.price || incoming.price || 0),
-            quantity: qty
+            quantity: qty,
+            sellUnit: incoming.sellUnit || 'bulk',
+            displayUnit: incoming.displayUnit || stockRow.unit
         });
     }
     if (!mappedItems.length) return;
@@ -1083,9 +731,7 @@ async function processC2BInventoryTask() {
                     resolvedCode  = resolvedCode  || hit.mpesa_code || '';
                 }
             }
-        } catch {
-            // keep task values
-        }
+        } catch {}
     }
 
     _activeC2BCheckoutTask = {
@@ -1095,26 +741,21 @@ async function processC2BInventoryTask() {
     };
     cart = mappedItems;
     renderCart();
-  document.getElementById('cartCustomer').value = task.customer || '';
+    document.getElementById('cartCustomer').value = task.customer || '';
     
-    // FIX: Force the dropdown to M-Pesa and lock it so it cannot be changed
     const methodDropdown = document.getElementById('cartMethod');
     methodDropdown.value = 'M-Pesa';
-    methodDropdown.disabled = true; // Lock it
+    methodDropdown.disabled = true; 
     
-    // First, toggle the fields to make them visible
     if (typeof toggleCartMpesa === 'function') toggleCartMpesa();
-    // Then, explicitly set the phone number value
     const phoneField = document.getElementById('cartMpesaId');
     if (phoneField) {
         phoneField.value = resolvedPhone;
-        phoneField.classList.remove('hidden'); // Ensure it is visible
+        phoneField.classList.remove('hidden'); 
     }
-    // Always show the code field for C2B — auto-fill it and make it visible
     const codeField = document.getElementById('cartMpesaCode');
     codeField.value = resolvedCode;
     codeField.classList.remove('hidden');
-    // Hide the STK push button since payment is already confirmed via C2B
     const stkBtn = document.getElementById('stkPushBtn');
     if (stkBtn) stkBtn.classList.add('hidden');
     _c2bTaskHandled = true;
@@ -1128,8 +769,7 @@ async function processC2BInventoryTask() {
     alert('C2B goods loaded. Complete transaction in POS to register sale and print M-Pesa receipt.');
 }
 
-       async function fetchStock() {
-    // ── OFFLINE: skip Supabase entirely, load straight from cache ────────────
+async function fetchStock() {
     if (!navigator.onLine) {
         try {
             const cached   = await StockCache.load();
@@ -1140,42 +780,30 @@ async function processC2BInventoryTask() {
                 renderInventory();
                 const syncTime  = lastSync ? new Date(lastSync).toLocaleString() : 'unknown';
                 const bannerSub = document.querySelector('#offlineBanner .text-xs');
-                if (bannerSub) bannerSub.innerHTML =
-                    `Sales saved locally &amp; will sync when connected. &nbsp;|&nbsp; <b>Stock as of: ${syncTime}</b>`;
+                if (bannerSub) bannerSub.innerHTML = `Sales saved locally &amp; will sync when connected. &nbsp;|&nbsp; <b>Stock as of: ${syncTime}</b>`;
                 return;
             }
-        } catch(ce) { console.error('Cache load failed'); }
-        // Offline and no cache at all
-        document.getElementById('inventoryBody').innerHTML =
-            `<tr><td colspan="5" class="p-10 text-center text-slate-400 font-black uppercase">
+        } catch(ce) {}
+        document.getElementById('inventoryGrid').innerHTML =
+            `<div class="col-span-full p-10 text-center text-slate-400 font-black uppercase">
                 📡 Offline — No cached stock available.<br>
                 <span class="text-xs font-normal normal-case">Go online at least once to cache stock for offline use.</span>
-            </td></tr>`;
+            </div>`;
         return;
     }
 
-    // ── Guard: apiFetch not yet ready (auth still verifying) ─────────────────
-    // This should never be hit after waitForAuthThenLoad(), but kept as a
-    // safety net for any direct fetchStock() calls mid-navigation.
-    if (typeof window.apiFetch !== 'function') {
-        console.warn('[fetchStock] apiFetch not ready yet — skipping to avoid false cache warning');
-        return;
-    }
+    if (typeof window.apiFetch !== 'function') { return; }
 
-    // ── ONLINE: fetch from Supabase and save full list to cache ──────────────
     try {
         const res  = await apiFetch(`${API_URL}/inventory?role=${userRole}`);
-        if (!res) return; // apiFetch returns undefined on 401 (redirects to login)
+        if (!res) return; 
         const data = await res.json();
         allStock   = data.items || data;
-        // Save full stock list to IndexedDB — overwrites previous cache completely
         try { await StockCache.save(allStock); } catch(e) {}
         currentPage = 1;
         renderInventory();
     } catch (e) {
-        console.error("Stock fetch failed:", e.message);
-        // Only show cache fallback for genuine server errors, not auth races
-        if (typeof window.apiFetch !== 'function') return; // auth wasn't ready — silent skip
+        if (typeof window.apiFetch !== 'function') return; 
         try {
             const cached   = await StockCache.load();
             const lastSync = await StockCache.getLastSync();
@@ -1185,45 +813,34 @@ async function processC2BInventoryTask() {
                 renderInventory();
                 const syncTime = lastSync ? new Date(lastSync).toLocaleString() : 'unknown';
                 const pageInfo = document.getElementById('pageInfo');
-                if (pageInfo) pageInfo.innerHTML +=
-                    ` &nbsp;<span class="text-amber-500 text-xs">⚠️ Server error — showing cached stock as of ${syncTime}</span>`;
+                if (pageInfo) pageInfo.innerHTML += ` &nbsp;<span class="text-amber-500 text-xs">⚠️ Server error — showing cached stock as of ${syncTime}</span>`;
                 return;
             }
         } catch(ce) {}
-        document.getElementById('inventoryBody').innerHTML =
-            `<tr><td colspan="5" class="p-10 text-center text-red-400 font-black uppercase">
+        document.getElementById('inventoryGrid').innerHTML =
+            `<div class="col-span-full p-10 text-center text-red-400 font-black uppercase">
                 ⚠️ Could not load stock. Check server connection.
-            </td></tr>`;
+            </div>`;
     }
 }
-/**
- * ELITE HARDWARE POS - SECURE INVENTORY RENDERER
- * Applied Fixes: H-01 (XSS), C-02 (RBAC), and apiFetch Standardization
- */
+
+// ── THE REINVENTED COMMAND CENTER RENDERER ──────────────────────────────────
 function renderInventory() {
-    const body = document.getElementById('inventoryBody');
-    const mobileContainer = document.getElementById('mobileCardsContainer');
-    
-    // Safety check for DOM elements
-    if (!body) return;
+    const grid = document.getElementById('inventoryGrid');
+    if (!grid) return;
 
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    
-    // FIX C-02: Get role from verified localStorage set by auth.js
     const verifiedRole = (localStorage.getItem('userRole') || '').toLowerCase();
     const isAdmin = verifiedRole === 'admin';
-    const isManager = verifiedRole === 'manager';
-    const hasElevatedPrivs = isAdmin || isManager;
 
-    // Filter Logic
-    // 1. Filter the full list
+    // 1. Filter
     const filteredItems = allStock.filter(item => 
         (item.item_name || '').toLowerCase().includes(searchTerm) || 
         (item.category || '').toLowerCase().includes(searchTerm) ||
-        (item.barcode || '').toLowerCase().includes(searchTerm) // <--- ADDED BARCODE SEARCH
+        (item.barcode || '').toLowerCase().includes(searchTerm)
     );
 
-    // Pagination Logic
+    // 2. Paginate
     const totalItems = filteredItems.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
     if (currentPage > totalPages) currentPage = totalPages;
@@ -1233,118 +850,97 @@ function renderInventory() {
     const end = start + itemsPerPage;
     const paginatedItems = filteredItems.slice(start, end);
 
-    // Update Pagination UI
+    // 3. Update Pagination UI
     const pageInfo = document.getElementById('pageInfo');
-    if (pageInfo) {
-        pageInfo.innerText = `Showing ${totalItems === 0 ? 0 : start + 1} - ${Math.min(end, totalItems)} of ${totalItems}`;
-    }
+    if (pageInfo) pageInfo.innerText = `Showing ${totalItems === 0 ? 0 : start + 1} - ${Math.min(end, totalItems)} of ${totalItems}`;
     document.getElementById('prevBtn').disabled = (currentPage === 1);
     document.getElementById('nextBtn').disabled = (currentPage === totalPages || totalItems === 0);
 
-    // FIX H-01: Map items to a global window object for safe event handling
     window._itemMap = window._itemMap || {};
-    paginatedItems.forEach(item => { window._itemMap[item.id] = item; });
+    paginatedItems.forEach(item => { window._itemMap[String(item.id)] = item; });
 
-    let hasCritical = false;
-
-    // --- TABLE RENDER (DESKTOP) ---
-    body.innerHTML = paginatedItems.map(item => {
+    // 4. Render Cards
+    grid.innerHTML = paginatedItems.map(item => {
         const isLow = (item.stock_quantity || 0) <= 10;
-        if(isLow) hasCritical = true;
-
-        const batchesActive = item.active_batches || 0;
+        const isOutOfStock = (item.stock_quantity || 0) <= 0;
+        const safeName = window.escHtml ? window.escHtml(item.item_name) : item.item_name;
         
-        // FIX H-01/H-02: Escape all database strings before rendering
-        const safeName = window.escHtml(item.item_name);
-        const safeCat  = window.escHtml(item.category || 'General');
-        const safeUnit = window.escHtml(item.unit || 'pcs');
+        const isSubUnit = item.sub_unit && item.sub_unit_qty;
+        
+        let subText = '';
+        let pricingHtml = '';
 
-        // Batch Badge Logic
-        let batchBadge = '';
-        const badgeStyle = "margin-top:5px;font-size:8px;font-weight:900;text-transform:uppercase;color:#fff;padding:3px 8px;border-radius:6px;border:none;cursor:pointer;letter-spacing:0.5px;";
-
-        if (batchesActive === 1 && !isLow) {
-            batchBadge = `<button onclick="showMobileBatchInfo('${item.id}')" style="${badgeStyle}background:linear-gradient(135deg,#f59e0b,#ea580c);">Final Batch ⓘ</button>`;
-        } else if (batchesActive === 1 && isLow) {
-            batchBadge = `<button onclick="showMobileBatchInfo('${item.id}')" style="${badgeStyle}background:linear-gradient(135deg,#ef4444,#b91c1c);animation:pulse 1s infinite;">Layer Depleted ⓘ</button>`;
-        } else if (batchesActive > 1) {
-            batchBadge = `
-                <button onclick="showMobileBatchInfo('${item.id}')" style="display:flex;flex-direction:column;align-items:center;background:none;border:none;cursor:pointer;margin-top:5px;">
-                    <span style="font-size:8px;font-weight:900;text-transform:uppercase;color:#fff;background:linear-gradient(135deg,#059669,#0891b2);padding:3px 10px;border-radius:20px;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(5,150,105,0.4);">
-                        ${batchesActive} Batches Active ⓘ
-                    </span>
-                </button>`;
+        if (isSubUnit) {
+            // RENDER: BULK / FRACTIONAL CARD
+            subText = `1 ${item.bulk_unit || item.unit} = ${item.sub_unit_qty} ${item.sub_unit}s`;
+            pricingHtml = `
+                <div class="flex justify-between items-center mt-5 pt-5 border-t border-slate-700/50">
+                    <div>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Sell By ${item.sub_unit} (Retail)</p>
+                        <p class="font-black text-white text-xl">KES ${Number(item.sub_unit_price || item.price).toLocaleString()} <span class="text-xs text-slate-400 font-normal">/ ${item.sub_unit}</span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-[9px] text-blue-500 font-bold uppercase tracking-widest mb-1">Sell By ${item.bulk_unit || item.unit} (Wholesale)</p>
+                        <p class="font-black text-white text-xl">KES ${Number(item.price).toLocaleString()} <span class="text-xs text-slate-400 font-normal">/ ${item.bulk_unit ? item.bulk_unit.substring(0,3) : 'Ctn'}</span></p>
+                    </div>
+                </div>
+            `;
         } else {
-            batchBadge = `<span style="margin-top:5px;font-size:8px;font-weight:700;color:#7a8394;text-transform:uppercase;">Out of Stock</span>`;
+            // RENDER: MULTI-TIER PRICING CARD
+            subText = isAdmin ? `Base Cost: KES ${Number(item.cost_price).toLocaleString()} / ${item.unit}` : `${item.category}`;
+            pricingHtml = `
+                <div class="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-slate-700/50">
+                    <div>
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Retail Price</p>
+                        <p class="font-black text-white text-xl">KES ${Number(item.price).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        ${item.fundi_price ? `
+                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mb-1">Fundi Price</p>
+                        <p class="font-black text-white text-xl">KES ${Number(item.fundi_price).toLocaleString()}</p>
+                        ` : ''}
+                    </div>
+                    <div>
+                        ${item.wholesale_price ? `
+                        <p class="text-[9px] text-blue-500 font-bold uppercase tracking-widest mb-1">Wholesale ${item.wholesale_min_qty ? `(>${item.wholesale_min_qty})` : ''}</p>
+                        <p class="font-black text-white text-xl">KES ${Number(item.wholesale_price).toLocaleString()}</p>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
         }
 
-        // FIX C-02: Explicitly hide Delete button from non-admins
-        const adminActions = isAdmin ? `
-            <div style="margin-top:6px;">
-                <button onclick="handleDelete('${item.id}')" 
-                    style="background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;padding:4px 10px;border-radius:7px;font-size:9px;font-weight:900;text-transform:uppercase;border:none;cursor:pointer;box-shadow:0 2px 6px rgba(239,68,68,0.4);">
-                    DELETE
-                </button>
-            </div>` : '';
+        const borderClass = isOutOfStock ? 'border-red-900/50' : (isLow ? 'border-amber-700/50' : 'border-slate-800');
+        const badgeClass = isOutOfStock ? 'bg-red-900/50 text-red-400 border border-red-800' : 
+                           (isLow ? 'bg-amber-900/50 text-amber-400 border border-amber-800' : 'bg-blue-900/30 text-blue-400 border border-blue-800');
 
         return `
-        <tr class="${isLow ? 'low-stock-row' : ''}" style="border-bottom:1px solid rgba(255,255,255,0.06);">
-            <td class="p-6">
-                <div style="font-weight:900;color:var(--text);text-transform:uppercase;font-size:12px;">${safeName}</div>
-                <div style="font-size:10px;text-transform:uppercase;color:#7a8394;font-weight:700;margin-top:2px;">${safeCat}</div>
-            </td>
-            <td class="p-6 text-center hidden md:table-cell">
-                <span style="font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);padding:3px 8px;border-radius:6px;border:1px solid var(--border);letter-spacing:0.5px;">
-                    ${item.barcode ? window.escHtml(item.barcode) : '<span style="color:#444;font-size:9px;">—</span>'}
-                </span>
-            </td>
-            <td class="p-6 text-center">
-                <span style="font-family:'Space Mono',monospace;font-weight:900;font-size:13px;color:#569cd6;">KES ${Number(item.price).toLocaleString()}</span>
-            </td>
-            <td class="p-6 text-center">
-                <div style="display:flex;flex-direction:column;align-items:center;">
-                    <span style="padding:5px 14px;border-radius:20px;font-size:10px;font-weight:900;${isLow ? 'background:linear-gradient(135deg,#ef4444,#b91c1c);animation:pulse 1s infinite;' : 'background:linear-gradient(135deg,#059669,#0891b2);'} color:#fff;">
-                        ${item.stock_quantity} ${safeUnit}
-                    </span>
-                    ${batchBadge} ${adminActions}
+        <div class="bg-[#111827] border ${borderClass} rounded-2xl p-6 shadow-lg hover:border-slate-600 transition-all flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1 pr-4">
+                        <h3 class="text-white font-black text-xl leading-tight tracking-tight">${safeName}</h3>
+                        <p class="text-slate-400 text-xs mt-1 font-bold tracking-wide">${subText}</p>
+                    </div>
+                    <div class="${badgeClass} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0">
+                        In Stock: ${item.stock_quantity} ${item.bulk_unit || item.unit}
+                    </div>
                 </div>
-            </td>
-            <td class="p-6 text-right">
-                <div class="flex justify-end gap-2">
-                    <input type="number" id="qty-${item.id}" placeholder="0" min="1" 
-                        style="width:60px;padding:8px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);text-align:center;font-weight:700;font-size:12px;outline:none;">
-                    <button onclick="addToCart('${item.id}')" 
-                        style="background:linear-gradient(135deg,#00e5a0,#0891b2);color:#000;padding:8px 18px;border-radius:10px;font-size:10px;font-weight:900;text-transform:uppercase;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,229,160,0.35);">
-                        ADD
-                    </button>
-                </div>
-            </td>
-        </tr>`;
-    }).join('');
-
-    // --- MOBILE CARD RENDER ---
-    if (mobileContainer) {
-        mobileContainer.innerHTML = paginatedItems.map(item => {
-            const isLow = (item.stock_quantity || 0) <= 10;
-            const stockStyle = isLow ? 'background:linear-gradient(135deg,#ef4444,#b91c1c);' : 'background:linear-gradient(135deg,#059669,#0891b2);';
+                ${pricingHtml}
+            </div>
             
-            return `
-            <div class="mobile-stock-card ${isLow ? 'low-stock-card' : ''}">
-                <div class="mobile-card-left">
-                    <div class="mobile-card-name">${window.escHtml(item.item_name)}</div>
-                    <div class="mobile-card-meta">${window.escHtml(item.category || 'General')}</div>
-                    <div class="mobile-card-price">KES ${Number(item.price).toLocaleString()}</div>
-                </div>
-                <div class="mobile-card-right">
-                    <span class="mobile-stock-badge" style="${stockStyle}color:#fff;">${item.stock_quantity} ${window.escHtml(item.unit || 'pcs')}</span>
-                    <input type="number" id="mqty-${item.id}" placeholder="0" min="1" class="mobile-qty-input">
-                    <button class="mobile-add-btn" onclick="const q=document.getElementById('qty-${item.id}'); const mq=document.getElementById('mqty-${item.id}'); if(q&&mq) q.value=mq.value; addToCart('${item.id}');">ADD</button>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    // Toggle Low Stock Alert Banner — populate with specific item names + quantities
+            <div class="mt-6 flex gap-3">
+                <input type="number" id="qty-${item.id}" placeholder="Qty" min="0.001" step="any"
+                    class="w-24 bg-[#0a0f1e] border border-slate-700 text-white rounded-xl px-3 py-3 text-center font-black outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+                <button onclick="addToCart('${item.id}')" 
+                    class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg active:scale-[0.98]">
+                    Add to Cart
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
+    
     const lowStockAlert = document.getElementById('lowStockAlert');
     if (lowStockAlert) {
         const critItems = (typeof filteredItems !== "undefined" ? filteredItems : paginatedItems).filter(i => (i.stock_quantity || 0) <= 10);
@@ -1368,514 +964,425 @@ function renderInventory() {
     }
 }
 
-/** * Helper to change pages safely
- */
 function changePage(direction) {
     currentPage += direction;
     renderInventory();
-    // Use the main scroll area if available
     const mainEl = document.querySelector('main') || window;
     mainEl.scrollTo({ top: 0, behavior: 'smooth' });
 }
-// Update your existing filterTable function to reset to page 1
+
 function filterTable() {
     currentPage = 1; 
     renderInventory();
 }
-function showMobileBatchInfo(id) {
-    const item = window._itemMap[id];
-    if (!item) return alert("Item data not found.");
-    const itemName = item.item_name;
-    const batches  = item.batch_details || item.stock_batches || [];
-    const isAdminOrManager = ['admin', 'manager'].includes(userRole.toLowerCase());
 
-    if (!batches || batches.length === 0) {
-        alert("No specific batch data available for this item.");
-        return;
-    }
+function resolveTierPrice(item, sellUnit) {
+    const tier = document.getElementById('cartPriceTier')?.value || 'retail';
+    if (sellUnit === 'sub' && item.sub_unit_price) return { price: item.sub_unit_price, tier: 'sub' };
+    if (tier === 'fundi' && item.fundi_price) return { price: item.fundi_price, tier };
+    if (tier === 'wholesale' && item.wholesale_price) return { price: item.wholesale_price, tier };
+    return { price: item.price, tier: 'retail' };
+}
 
-    let report = `STOCK BREAKDOWN: ${itemName.toUpperCase()}\n`;
-    report += `--------------------------------\n`;
-
-    batches.forEach((b, i) => {
-        const costStr = isAdminOrManager ? ` | Cost: KES ${b.unit_cost.toLocaleString()}` : "";
-        report += `Layer ${i + 1}: ${b.remaining_qty} units${costStr}\n`;
+function applyPriceTierToCart() {
+    cart = cart.map(ci => {
+        const item = window._itemMap[ci.itemId];
+        if (!item) return ci;
+        const { price } = resolveTierPrice(item, ci.sellUnit || 'bulk');
+        const sellUnit = ci.sellUnit;
+        return { ...ci, price };
     });
+    const tier = document.getElementById('cartPriceTier')?.value || 'retail';
+    const hint = document.getElementById('tierHint');
+    if (tier !== 'retail') {
+        hint.classList.remove('hidden');
+        hint.textContent = tier === 'fundi' ? '🔨 Fundi pricing applied to all items' : '📦 Wholesale pricing applied to all items';
+    } else {
+        hint.classList.add('hidden');
+    }
+    renderCart();
+}
 
-    if (isAdminOrManager) {
-        report += `\n(Prices visible to ${userRole.toUpperCase()} only)`;
+// ── THE FRACTIONAL / SUB-UNIT ADD TO CART LOGIC ──
+function addToCart(id) {
+    const item = window._itemMap[id];
+    if (!item) return alert("Item not found. Please refresh.");
+    
+    const name  = item.item_name;
+    const stock = parseFloat(item.stock_quantity) || 0;
+    const qtyInput = document.getElementById(`qty-${id}`);
+    const qty = parseFloat(qtyInput.value);
+    
+    if (!qty || qty <= 0) return alert("Enter valid quantity");
+
+    let sellUnit = 'bulk'; 
+    const hasSubUnits = item.sub_unit !== null && item.sub_unit_qty !== null && item.sub_unit_price !== null;
+
+    if (hasSubUnits) {
+        const useSubUnit = confirm(
+            `🛒 Selling "${name}"\n\n` +
+            `[OK]     Sell by ${item.sub_unit}  (e.g., loose kgs or pieces)\n` +
+            `[Cancel] Sell by ${item.bulk_unit || item.unit} (whole carton/bag)\n\n` +
+            `Click OK to sell by ${item.sub_unit}. Click Cancel for ${item.bulk_unit || item.unit}.`
+        );
+        sellUnit = useSubUnit ? 'sub' : 'bulk';
     }
 
-    alert(report);
-}
-async function handleRestock(id, name) {
-    // 1. Validate Delivery Note (String)
-    const rawDn = prompt("Enter DN Number for " + name + ":");
-    if (!rawDn || rawDn.trim() === "") return;
-    const dnRef = rawDn.trim().toUpperCase();
+    const stockDeductCheck = (sellUnit === 'sub' && hasSubUnits)
+        ? qty / parseFloat(item.sub_unit_qty)
+        : qty;
 
-    // 2. Validate Quantity (Number)
-    const rawAmount = prompt("Quantity received?");
-    const amount = parseInt(rawAmount);
+    if (stockDeductCheck > stock) {
+        return alert(`⚠️ Insufficient stock! You are trying to sell the equivalent of ${stockDeductCheck} ${item.bulk_unit || item.unit}, but only have ${stock} in stock.`);
+    }
+
+    const { price: basePrice } = resolveTierPrice(item, sellUnit);
+
+    const existing = cart.find(i => i.itemId === id && i.sellUnit === sellUnit);
+    if (existing) {
+        const newStockCheck = (sellUnit === 'sub' && hasSubUnits)
+            ? (existing.quantity + qty) / parseFloat(item.sub_unit_qty)
+            : existing.quantity + qty;
+            
+        if (newStockCheck > stock) return alert("⚠️ This addition exceeds remaining stock!");
+        existing.quantity += qty;
+    } else {
+        const displayUnit = sellUnit === 'sub' ? item.sub_unit : (item.bulk_unit || item.unit);
+        cart.push({ itemId: id, itemName: name, price: basePrice, quantity: qty, sellUnit, displayUnit });
+    }
     
-    if (isNaN(amount) || amount <= 0) {
-        alert("Error: Please enter a valid positive number for quantity.");
+    qtyInput.value = ''; 
+    renderCart();
+}
+
+function renderCart() {
+    const section = document.getElementById('cartSection');
+    const container = document.getElementById('cartItems');
+    if (cart.length === 0) { section.classList.add('hidden'); return; }
+    section.classList.remove('hidden');
+    let total = 0;
+    container.innerHTML = cart.map((item, idx) => {
+        const sub = item.price * item.quantity; total += sub;
+        return `<div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;"><span style="font-weight:900;font-size:12px;color:#f1f5f9;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${typeof escHtml === "function" ? escHtml(item.itemName) : item.itemName}</span><span style="color:#00e5a0;font-weight:700;font-size:10px;">x ${item.quantity} ${item.displayUnit || ''}</span></div>
+            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;"><span style="font-family:'Space Mono',monospace;color:#00e5a0;font-weight:700;font-size:12px;">KES ${sub.toLocaleString()}</span>
+            <button onclick="removeFromCart(${idx})" style="color:#64748b;background:none;border:none;cursor:pointer;font-weight:900;font-size:18px;line-height:1;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">✕</button></div>
+        </div>`;
+    }).join('');
+    document.getElementById('cartTotalLabel').innerText = `KES ${total.toLocaleString()}`;
+}
+
+function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
+function clearCart() { cart = []; renderCart(); }
+
+function toggleCartMpesa() {
+    const method      = document.getElementById('cartMethod').value;
+    const mpesaFields = document.getElementById('mpesaFields');
+    const stkBtn      = document.getElementById('stkPushBtn');
+    const codeField   = document.getElementById('cartMpesaCode');
+    const stkStatus   = document.getElementById('stkStatus');
+    const inC2BMode   = isC2BCheckoutMode();
+
+    if (!inC2BMode) clearStkState();
+
+    if (method === 'Safaricom' || method === 'Equity') {
+        mpesaFields.classList.remove('hidden');
+        if (inC2BMode) {
+            stkBtn.classList.add('hidden');
+            const phoneField = document.getElementById('cartMpesaId');
+            if (phoneField) phoneField.readOnly = true;
+            codeField.classList.remove('hidden');
+            codeField.readOnly = true;
+            stkStatus.classList.remove('hidden');
+            stkStatus.style.background = 'rgba(0,229,160,0.15)';
+            stkStatus.style.color = '#00e5a0';
+            stkStatus.textContent = '✅ C2B payment already received. No prompt needed.';
+        } else {
+            stkBtn.classList.remove('hidden');
+            stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
+            stkBtn.className = method === 'Equity' 
+                ? 'w-full p-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm uppercase tracking-wider transition' 
+                : 'w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition';
+            
+            const phoneField = document.getElementById('cartMpesaId');
+            if (phoneField) phoneField.readOnly = false;
+            codeField.readOnly = false;
+            codeField.classList.add('hidden'); 
+        }
+    } else if (method === 'Credit') {
+        mpesaFields.classList.remove('hidden');
+        stkBtn.classList.add('hidden');
+        codeField.classList.add('hidden');
+        stkStatus.classList.add('hidden');
+        _setKraPinRequired(false);
+    } else {
+        mpesaFields.classList.add('hidden');
+        _setKraPinRequired(false);
+    }
+}
+
+let stkPollInterval   = null;
+let currentCheckoutId = null;
+let stkResendTimer    = null;
+let stkCountdownTimer = null;
+let stkPollCount      = 0;
+
+function clearStkState() {
+    clearInterval(stkPollInterval);
+    clearTimeout(stkResendTimer);
+    clearInterval(stkCountdownTimer);
+    stkPollInterval   = null;
+    stkResendTimer    = null;
+    stkCountdownTimer = null;
+    stkPollCount      = 0;
+    currentCheckoutId = null;
+    stkResolved = false;
+    const s = document.getElementById('stkStatus');
+    s.classList.add('hidden'); s.textContent = '';
+    document.getElementById('cartMpesaCode').value = '';
+    const btn = document.getElementById('stkPushBtn');
+    if (btn) {
+        const m = document.getElementById('cartMethod')?.value || 'Safaricom';
+        btn.disabled = false;
+        btn.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
+        btn.onclick = sendStkPush;
+    }
+}
+
+function toggleManualCode() {
+    clearStkState();
+    const c = document.getElementById('cartMpesaCode');
+    c.classList.remove('hidden');
+    c.focus();
+    document.getElementById('stkPushBtn').classList.add('hidden');
+    document.getElementById('manualCodeBtn').textContent = '📲 Use STK Push instead';
+    document.getElementById('manualCodeBtn').onclick = () => {
+        c.classList.add('hidden');
+        document.getElementById('stkPushBtn').classList.remove('hidden');
+        document.getElementById('manualCodeBtn').onclick = toggleManualCode;
+    };
+}
+let stkResolved = false;
+function handleStkResult(pd, status, btn) {
+    clearInterval(stkPollInterval); stkPollInterval = null;
+    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+    stkResolved = true; 
+
+    const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
+    const methodLabel   = currentMethod === 'Equity' ? 'Equity' : 'M-Pesa';
+
+    if (pd.status === 'confirmed') {
+        document.getElementById('cartMpesaCode').value = pd.mpesaCode || '';
+        status.style.background = 'rgba(0,229,160,0.15)';
+        status.style.color = '#00e5a0';
+        status.textContent = `✅ Payment confirmed! Code: ${pd.mpesaCode}`;
+        btn.textContent = '✅ Paid — Complete Sale';
+        btn.disabled = false;
+        btn.onclick = () => finalizeCartSale();
+
+    } else if (pd.status === 'cancelled') {
+        status.style.background = 'rgba(245,158,11,0.15)';
+        status.style.color = '#fcd34d';
+        status.textContent = `🚫 Customer cancelled the ${methodLabel} prompt. Resend or collect cash.`;
+        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
+        stkResendTimer = setTimeout(() => {
+            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
+        }, 5000);
+
+    } else if (pd.status === 'timeout') {
+        status.style.background = 'rgba(245,158,11,0.15)';
+        status.style.color = '#fcd34d';
+        status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
+        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
+        stkResendTimer = setTimeout(() => {
+            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
+        }, 5000);
+
+    } else if (pd.status === 'insufficient_funds') {
+        status.style.background = 'rgba(239,68,68,0.15)';
+        status.style.color = '#fca5a5';
+        status.textContent = `💸 Customer has insufficient ${methodLabel} balance. Ask them to top up or pay cash.`;
+        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
+        stkResendTimer = setTimeout(() => {
+            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
+        }, 5000);
+
+    } else if (pd.status === 'failed') {
+        const reason = pd.resultDesc || 'Payment failed';
+        status.style.background = 'rgba(239,68,68,0.15)';
+        status.style.color = '#fca5a5';
+        status.textContent = '❌ ' + reason + '. Try again or collect cash.';
+        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
+        stkResendTimer = setTimeout(() => {
+            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
+        }, 5000);
+    }
+}
+
+async function sendStkPush() {
+const phone    = document.getElementById('cartMpesaId').value.trim();
+const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+const customer = document.getElementById('cartCustomer').value.trim();
+const method   = document.getElementById('cartMethod').value; 
+
+if (!phone) return alert('⚠️ Enter customer phone number first');
+if (!total)  return alert('⚠️ Cart is empty');
+
+const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
+
+const btn    = document.getElementById('stkPushBtn');
+const status = document.getElementById('stkStatus');
+btn.disabled = true;
+btn.textContent = '⏳ Sending prompt...';
+status.classList.remove('hidden');
+status.style.background = 'rgba(59,130,246,0.15)';
+status.style.color = '#93c5fd';
+status.textContent = `Sending ${method} Push to ${phone}...`;
+
+clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
+
+try {
+    let endpoint = '/mpesa/stk-push'; 
+    
+   if (method === 'Equity') {
+        endpoint = '/jenga/equity-stk-push';
+    }
+
+    const res  = await apiFetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            phone, 
+            amount: total, 
+            accountRef: safeAccountRef, 
+            customerName: safeCustomerName,
+            context: {} 
+        })
+    });
+    const data = await res.json();
+    
+    if (!data.success) {
+        status.style.background = 'rgba(239,68,68,0.15)';
+        status.style.color = '#fca5a5';
+        status.textContent = '❌ ' + data.message;
+        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
         return;
     }
 
-    try {
-        const res = await apiFetch(`${API_URL}/inventory/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                added_quantity: amount,      // Ensures it's a Number
-                delivery_note_ref: dnRef,    // Ensures it's a String
-                role: userRole,
-                userName: userName
-            })
-        });
+    currentCheckoutId = data.checkoutRequestId;
+    btn.textContent = '⏳ Waiting...';
 
-        if (!res.ok) throw new Error(await res.text());
-        
-        // Show GRN Slip with cleaned data
-        generateGRNSlip(name, amount, dnRef);
-        fetchStock();
-    } catch (err) { 
-        console.error("Operation failed");
-        alert("Error: " + err.message); 
-    }
-}
+    let secondsLeft = 60;
+    const updateCountdown = () => {
+        if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
+        secondsLeft--;
+    };
+    updateCountdown();
+    stkCountdownTimer = setInterval(() => {
+        if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
+        updateCountdown();
+    }, 1000);
 
-function generateGRNSlip(itemName, qty, dn) {
-    // Professional Date Formatting
-    const now = new Date();
-    const dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    stkPollInterval = setInterval(async () => {
+        try {
+            const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
+            const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
+            const pd = await pr.json();
 
-    const headerHtml = `
-        <div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono">
-            <h2 class="font-black text-xl uppercase text-slate-800">GOODS RECEIVED NOTE</h2>
-            <p class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">ELITE HARDWARE LTD</p>
-        </div>
-        <div class="space-y-1 mb-6 text-[11px] font-mono">
-            <div class="flex justify-between"><span>DATE:</span> <span class="font-bold">${dateStr}</span></div>
-            <div class="flex justify-between"><span>DN REF:</span> <span class="font-black text-blue-600">${dn}</span></div>
-        </div>`;
-
-    const contentHtml = `
-        <table class="w-full text-left font-mono text-[11px] mb-6">
-            <thead><tr class="border-b-2 border-slate-900 text-slate-400 text-[9px]"><th>ITEM</th><th class="text-right">QTY</th></tr></thead>
-            <tbody><tr><td class="py-4 font-black uppercase">${itemName}</td><td class="py-4 text-right font-black text-lg text-blue-600">${qty}</td></tr></tbody>
-        </table>`;
-
-    document.getElementById('receiptDate').innerHTML = headerHtml;
-    document.getElementById('receiptContent').innerHTML = contentHtml;
-    document.getElementById('receiptTotal').innerHTML = `<div class="bg-blue-600 p-4 rounded-2xl text-center text-white font-black text-xl">${qty} UNITS ADDED</div>`;
-    
-    const _grnItem = name, _grnQty = amount, _grnDn = dnRef;
-    document.getElementById('receiptButtons').innerHTML = `
-        <button onclick="silentPrintGRN('${name}', ${amount}, '${dnRef}')" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">🖨️ PRINT GRN</button>
-        <button onclick="closeReceipt()" class="w-full bg-gray-100 py-3 rounded-2xl text-gray-500 font-bold uppercase mt-2">CLOSE</button>`;
-
-    document.getElementById('receiptModal').classList.remove('hidden');
-    document.getElementById('modalOverlay').classList.remove('hidden');
-}
-        async function handleDelete(id) {
-            const item = window._itemMap[id];
-            const name = item ? item.item_name : 'this item';
-            if (!confirm(`Permanently delete ${name}?`)) return;
-            try {
-                const res = await apiFetch(`${API_URL}/inventory/${id}?role=${userRole}&userName=${userName}`, { method: 'DELETE' });
-                if(res.ok) fetchStock();
-            } catch (err) { alert("Delete failed"); }
-        }
-
-        function addToCart(id) {
-            const item = window._itemMap[id];
-            if (!item) return alert("Item not found. Please refresh.");
-            const name  = item.item_name;
-            const price = item.price;
-            const stock = item.stock_quantity;
-            const qtyInput = document.getElementById(`qty-${id}`);
-            const qty = parseInt(qtyInput.value);
-            if (!qty || qty <= 0) return alert("Enter valid quantity");
-            if (qty > stock) return alert("Insufficient Stock!");
-            
-            const existing = cart.find(i => i.itemId === id);
-            if (existing) {
-                if (existing.quantity + qty > stock) return alert("Exceeds stock!");
-                existing.quantity += qty;
-            } else {
-                cart.push({ itemId: id, itemName: name, price: price, quantity: qty });
+            if (!pr.ok || pd.status === 'not_found') {
+                clearInterval(stkPollInterval); stkPollInterval = null;
+                clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+                status.style.background = 'rgba(239,68,68,0.15)';
+                status.style.color = '#fca5a5';
+                status.textContent = '❌ Could not track payment — enter code manually.';
+                const c = document.getElementById('cartMpesaCode');
+                c.classList.remove('hidden'); c.focus();
+                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
+                return;
             }
-            qtyInput.value = ''; 
-            renderCart();
-        }
-        // resetCustomerName defined above
-        function renderCart() {
-            const section = document.getElementById('cartSection');
-            const container = document.getElementById('cartItems');
-            if (cart.length === 0) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            let total = 0;
-            container.innerHTML = cart.map((item, idx) => {
-                const sub = item.price * item.quantity; total += sub;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:0;"><span style="font-weight:900;font-size:12px;color:#f1f5f9;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${typeof escHtml === "function" ? escHtml(item.itemName) : item.itemName}</span><span style="color:#00e5a0;font-weight:700;font-size:10px;">x ${item.quantity}</span></div>
-                    <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;"><span style="font-family:'Space Mono',monospace;color:#00e5a0;font-weight:700;font-size:12px;">KES ${sub.toLocaleString()}</span>
-                    <button onclick="removeFromCart(${idx})" style="color:#64748b;background:none;border:none;cursor:pointer;font-weight:900;font-size:18px;line-height:1;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">✕</button></div>
-                </div>`;
-            }).join('');
-            document.getElementById('cartTotalLabel').innerText = `KES ${total.toLocaleString()}`;
-        }
 
-        function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
-        function clearCart() { cart = []; renderCart(); }
-        function toggleCartMpesa() {
-            const method      = document.getElementById('cartMethod').value;
-            const mpesaFields = document.getElementById('mpesaFields');
-            const stkBtn      = document.getElementById('stkPushBtn');
-            const codeField   = document.getElementById('cartMpesaCode');
-            const stkStatus   = document.getElementById('stkStatus');
-            const inC2BMode   = isC2BCheckoutMode();
-
-            if (!inC2BMode) clearStkState();
-
-            // Show phone fields if EITHER Safaricom or Equity is selected
-            if (method === 'Safaricom' || method === 'Equity') {
-                mpesaFields.classList.remove('hidden');
-                if (inC2BMode) {
-                    stkBtn.classList.add('hidden');
-                    const phoneField = document.getElementById('cartMpesaId');
-                    if (phoneField) phoneField.readOnly = true;
-                    codeField.classList.remove('hidden');
-                    codeField.readOnly = true;
-                    stkStatus.classList.remove('hidden');
-                    stkStatus.style.background = 'rgba(0,229,160,0.15)';
-                    stkStatus.style.color = '#00e5a0';
-                    stkStatus.textContent = '✅ C2B payment already received. No prompt needed.';
-                } else {
-                    stkBtn.classList.remove('hidden');
-                    // Dynamically change button text based on provider
-                    stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
-                    stkBtn.className = method === 'Equity' 
-                        ? 'w-full p-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm uppercase tracking-wider transition' 
-                        : 'w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition';
-                    
-                    const phoneField = document.getElementById('cartMpesaId');
-                    if (phoneField) phoneField.readOnly = false;
-                    codeField.readOnly = false;
-                    codeField.classList.add('hidden'); 
-                }
-            } else if (method === 'Credit') {
-                mpesaFields.classList.remove('hidden');
-                stkBtn.classList.add('hidden');
-                codeField.classList.add('hidden');
-                stkStatus.classList.add('hidden');
-                _setKraPinRequired(false);
-            } else {
-                mpesaFields.classList.add('hidden');
-                _setKraPinRequired(false);
+            if (pd.status !== 'pending') {
+                handleStkResult(pd, status, btn); 
+                return;
             }
-        }
 
-    let stkPollInterval   = null;
-    let currentCheckoutId = null;
-    let stkResendTimer    = null;
-    let stkCountdownTimer = null;
-    let stkPollCount      = 0;
+            stkPollCount++;
+            if (method === 'Safaricom' && stkPollCount >= 18) {
+                try {
+                    const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
+                    const qd = await qr.json();
+                    if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
+                } catch(e) {}
+            }
+        } catch(e) {}
+    }, 3000);
 
-    function clearStkState() {
-        clearInterval(stkPollInterval);
-        clearTimeout(stkResendTimer);
-        clearInterval(stkCountdownTimer);
-        stkPollInterval   = null;
-        stkResendTimer    = null;
-        stkCountdownTimer = null;
-        stkPollCount      = 0;
-        currentCheckoutId = null;
-        stkResolved = false;
-        const s = document.getElementById('stkStatus');
-        s.classList.add('hidden'); s.textContent = '';
-        document.getElementById('cartMpesaCode').value = '';
-        const btn = document.getElementById('stkPushBtn');
-        if (btn) {
-            const m = document.getElementById('cartMethod')?.value || 'Safaricom';
-            btn.disabled = false;
-            btn.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
-            btn.onclick = sendStkPush;
-        }
-    }
-
-    function toggleManualCode() {
-        clearStkState();
-        const c = document.getElementById('cartMpesaCode');
-        c.classList.remove('hidden');
-        c.focus();
-        document.getElementById('stkPushBtn').classList.add('hidden');
-        document.getElementById('manualCodeBtn').textContent = '📲 Use STK Push instead';
-        document.getElementById('manualCodeBtn').onclick = () => {
-            c.classList.add('hidden');
-            document.getElementById('stkPushBtn').classList.remove('hidden');
-            document.getElementById('manualCodeBtn').onclick = toggleManualCode;
-        };
-    }
-    let stkResolved = false;
-    function handleStkResult(pd, status, btn) {
-        clearInterval(stkPollInterval); stkPollInterval = null;
-        clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-        stkResolved = true; // block the 60s timeout from overwriting this real result
-        stkResolved = true;
-
-        const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
-        const methodLabel   = currentMethod === 'Equity' ? 'Equity' : 'M-Pesa';
-
-        if (pd.status === 'confirmed') {
-            document.getElementById('cartMpesaCode').value = pd.mpesaCode || '';
-            status.style.background = 'rgba(0,229,160,0.15)';
-            status.style.color = '#00e5a0';
-            status.textContent = `✅ Payment confirmed! Code: ${pd.mpesaCode}`;
-            btn.textContent = '✅ Paid — Complete Sale';
-            btn.disabled = false;
-            btn.onclick = () => finalizeCartSale();
-
-        } else if (pd.status === 'cancelled') {
-            status.style.background = 'rgba(245,158,11,0.15)';
-            status.style.color = '#fcd34d';
-            status.textContent = `🚫 Customer cancelled the ${methodLabel} prompt. Resend or collect cash.`;
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-            }, 5000);
-
-        } else if (pd.status === 'timeout') {
+   setTimeout(() => {
+        if (!stkResolved) { 
+            clearInterval(stkPollInterval); stkPollInterval = null;
+            clearInterval(stkCountdownTimer); stkCountdownTimer = null;
             status.style.background = 'rgba(245,158,11,0.15)';
             status.style.color = '#fcd34d';
             status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-            }, 5000);
-
-        } else if (pd.status === 'insufficient_funds') {
-            status.style.background = 'rgba(239,68,68,0.15)';
-            status.style.color = '#fca5a5';
-            status.textContent = `💸 Customer has insufficient ${methodLabel} balance. Ask them to top up or pay cash.`;
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-            }, 5000);
-
-        } else if (pd.status === 'failed') {
-            const reason = pd.resultDesc || 'Payment failed';
-            status.style.background = 'rgba(239,68,68,0.15)';
-            status.style.color = '#fca5a5';
-            status.textContent = '❌ ' + reason + '. Try again or collect cash.';
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            stkResendTimer = setTimeout(() => {
-                btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-            }, 5000);
+            btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
+            btn.onclick = sendStkPush;
         }
-    }
+    }, 60000);
 
-   async function sendStkPush() {
-    const phone    = document.getElementById('cartMpesaId').value.trim();
-    const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const customer = document.getElementById('cartCustomer').value.trim();
-    const method   = document.getElementById('cartMethod').value; // 'Safaricom' or 'Equity'
-
-    if (!phone) return alert('⚠️ Enter customer phone number first');
-    if (!total)  return alert('⚠️ Cart is empty');
-    
-    const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
-    const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
-
-    const btn    = document.getElementById('stkPushBtn');
-    const status = document.getElementById('stkStatus');
-    btn.disabled = true;
-    btn.textContent = '⏳ Sending prompt...';
-    status.classList.remove('hidden');
-    status.style.background = 'rgba(59,130,246,0.15)';
-    status.style.color = '#93c5fd';
-    status.textContent = `Sending ${method} Push to ${phone}...`;
-
-    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
-    stkResolved = false;
-
-    try {
-        let endpoint = '/mpesa/stk-push'; // Default: Safaricom Daraja
-        
-        // Equity selected → always equity-stk-push for both 07xx and 01xx.
-        // The server detects Safaricom vs Equitel from the phone prefix and
-        // sets the correct Jenga `telco` field. No frontend routing needed.
-       if (method === 'Equity') {
-            endpoint = '/jenga/equity-stk-push';
-        }
-
-        const res  = await apiFetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                phone, 
-                amount: total, 
-                accountRef: safeAccountRef, 
-                customerName: safeCustomerName,
-                context: {} 
-            })
-        });
-        const data = await res.json();
-        
-        if (!data.success) {
-            status.style.background = 'rgba(239,68,68,0.15)';
-            status.style.color = '#fca5a5';
-            status.textContent = '❌ ' + data.message;
-            btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
-            return;
-        }
-
-        currentCheckoutId = data.checkoutRequestId;
-        btn.textContent = '⏳ Waiting...';
-
-        let secondsLeft = 60;
-        const updateCountdown = () => {
-            if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
-            secondsLeft--;
-        };
-        updateCountdown();
-        stkCountdownTimer = setInterval(() => {
-            if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
-            updateCountdown();
-        }, 1000);
-
-        // Polling (Works for both Daraja and Jenga because we routed them to the same table!)
-        stkPollInterval = setInterval(async () => {
-            try {
-                // If Equity, poll Jenga status. If Safaricom, poll Daraja status.
-                const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
-                const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
-                const pd = await pr.json();
-
-                if (!pr.ok || pd.status === 'not_found') {
-                    clearInterval(stkPollInterval); stkPollInterval = null;
-                    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                    status.style.background = 'rgba(239,68,68,0.15)';
-                    status.style.color = '#fca5a5';
-                    status.textContent = '❌ Could not track payment — enter code manually.';
-                    const c = document.getElementById('cartMpesaCode');
-                    c.classList.remove('hidden'); c.focus();
-                    btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
-                    return;
-                }
-
-                if (pd.status !== 'pending') {
-                    handleStkResult(pd, status, btn); 
-                    return;
-                }
-
-                // Safaricom Manual Query Fallback (Only run if method is Safaricom)
-                stkPollCount++;
-                if (method === 'Safaricom' && stkPollCount >= 18) {
-                    try {
-                        const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
-                        const qd = await qr.json();
-                        if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
-                    } catch(e) {}
-                }
-            } catch(e) {}
-        }, 3000);
-
-       setTimeout(() => {
-            // 3. THE FIX: Check stkResolved, not stkPollInterval
-            if (!stkResolved) { 
-                clearInterval(stkPollInterval); stkPollInterval = null;
-                clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                status.style.background = 'rgba(245,158,11,0.15)';
-                status.style.color = '#fcd34d';
-                status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
-                btn.onclick = sendStkPush;
-            }
-        }, 60000);
-
-    } catch(e) {
-        status.style.background = 'rgba(239,68,68,0.15)';
-        status.style.color = '#fca5a5';
-        status.textContent = '❌ Error: ' + e.message;
-        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
-    }
+} catch(e) {
+    status.style.background = 'rgba(239,68,68,0.15)';
+    status.style.color = '#fca5a5';
+    status.textContent = '❌ Error: ' + e.message;
+    btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
+}
 }
 
-        // ── Recent sales with pagination ─────────────────────────────────
         let _recentAll  = [];
         let _recentPage = 1;
         const _recentPer = 10;
 
         async function fetchRecentSales() {
-            // Guard: same auth-race protection as fetchStock
             if (typeof window.apiFetch !== 'function') return;
             try {
-                // BUG FIX 1 — Date timezone mismatch:
-                // new Date().toISOString() returns UTC. In Kenya (UTC+3), after midnight
-                // local time but before 03:00 UTC, this produces yesterday's date — so the
-                // server returns no sales for "today" even though sales exist.
-                // Fix: build the date string from local clock, not UTC.
                 const _now    = new Date();
                 const _yyyy   = _now.getFullYear();
                 const _mm     = String(_now.getMonth() + 1).padStart(2, '0');
                 const _dd     = String(_now.getDate()).padStart(2, '0');
-                const localDateStr = `${_yyyy}-${_mm}-${_dd}`; // always Nairobi local date
+                const localDateStr = `${_yyyy}-${_mm}-${_dd}`;
 
                 const res = await apiFetch(`${API_URL}/reports/sales?role=${userRole}&date=${localDateStr}`);
-                if (!res) return; // 401 → apiFetch redirects to login
+                if (!res) return; 
                 const sales = await res.json();
 
-                // BUG FIX 2 — userName race condition:
-                // `userName` is a const set at script-parse time from window.EliteAuth?.name.
-                // On a hard refresh, auth.js hasn't resolved yet when the inline script runs,
-                // so window.EliteAuth is undefined and userName becomes 'Staff'.
-                // fetchRecentSales is only ever called AFTER apiFetch is available (meaning
-                // auth.js HAS resolved), so we re-read the name here from the live object
-                // rather than relying on the stale const.
-                const _sellerName = (window.EliteAuth && window.EliteAuth.name)
-                    ? window.EliteAuth.name
-                    : userName; // fall back to const if somehow still set correctly
+                const _sellerName = (window.EliteAuth && window.EliteAuth.name) ? window.EliteAuth.name : userName; 
 
-                // Show all of today's sales for this user (no hard slice)
-                _recentAll  = Array.isArray(sales)
-                    ? sales.filter(s => s.sold_by === _sellerName)
-                    : [];
+                _recentAll  = Array.isArray(sales) ? sales.filter(s => s.sold_by === _sellerName) : [];
                 _recentPage = 1;
-                window._recentSaleMap = {}; // clear stale map on fresh fetch
+                window._recentSaleMap = {}; 
                 _renderRecentSales();
             } catch (e) { console.error("Recent sales failed:", e.message); }
         }
 
-        // ── Group raw sale rows into transactions (one row per receipt/invoice) ──
-        function _groupSalesIntoTransactions(rows) {// ── Group raw sale rows into transactions (one row per receipt/invoice) ──
+        function _groupSalesIntoTransactions(rows) {
             const grouped = [];
-            const seen    = new Map(); // key → index in grouped[]
+            const seen    = new Map(); 
 
             for (const s of rows) {
-                // Use receipt_number or invoice_number as the grouping key.
-                // Falls back to a unique per-row key so single-item sales still appear.
                 const key = s.receipt_number || s.invoice_number || ('solo_' + s.id);
 
                 if (seen.has(key)) {
                     const tx = grouped[seen.get(key)];
-                    // Accumulate total
                     tx._total += Number(s.total_amount) || 0;
-                    // Append item
                     tx._items.push({
                         itemName: s.item_name     || 'Item',
                         quantity: s.quantity_sold || 1,
                         price:    s.unit_price    || 0
                     });
-                    // Carry over eTIMS fields if not yet set on the group
                     if (!tx['Kra_Receipt_No'])      tx['Kra_Receipt_No']      = s['Kra_Receipt_No']      || null;
                     if (!tx.kra_qr_url)             tx.kra_qr_url             = s.kra_qr_url             || null;
                     if (!tx['Control_unit_number']) tx['Control_unit_number'] = s['Control_unit_number'] || null;
                     
-                    // ✨ THE FIX: Ensure payment data (M-Pesa method & code) is carried over 
-                    // from whichever cart item actually has it attached in the database.
                     if (Array.isArray(s.payments) && s.payments.length > 0) {
                         if (!Array.isArray(tx.payments) || tx.payments.length === 0) {
                             tx.payments = s.payments;
@@ -1884,7 +1391,6 @@ function generateGRNSlip(itemName, qty, dn) {
                     if (!tx.mpesa_code && s.mpesa_code) tx.mpesa_code = s.mpesa_code;
 
                 } else {
-                    // First row for this transaction becomes the representative object
                     const tx = Object.assign({}, s, {
                         _total: Number(s.total_amount) || 0,
                         _items: [{
@@ -1903,7 +1409,6 @@ function generateGRNSlip(itemName, qty, dn) {
             const body  = document.getElementById('recentSalesBody');
             const pgDiv = document.getElementById('recentSalesPagination');
 
-            // Group raw rows into one-per-transaction before counting/paging
             const grouped = _groupSalesIntoTransactions(_recentAll);
             const total   = grouped.length;
 
@@ -1917,7 +1422,6 @@ function generateGRNSlip(itemName, qty, dn) {
             const start = (_recentPage - 1) * _recentPer;
             const slice = grouped.slice(start, start + _recentPer);
 
-            // Store grouped transaction data so printRecentReceipt can access it
             window._recentSaleMap = window._recentSaleMap || {};
             slice.forEach((s, idx) => { window._recentSaleMap['rs_' + (start + idx)] = s; });
 
@@ -1928,23 +1432,24 @@ function generateGRNSlip(itemName, qty, dn) {
                     ? 'bg-orange-100 text-orange-700'
                     : 'bg-red-100 text-red-700';
                 const globalIdx  = start + idx;
-                // Build a compact item summary, e.g. "Hammer x2, Nails x10, ..."
                 const itemSummary = s._items.length === 1
                     ? `${escHtml(s._items[0].itemName)} <span class="font-black text-slate-300">x${s._items[0].quantity}</span>`
                     : s._items.map(i => `${escHtml(i.itemName)} <span class="font-black text-slate-300">x${i.quantity}</span>`).join(', ');
 
-                // Derive payment method — payment_method lives in the joined payments[] row.
-                // Every sale row now has its own payments entry (server fix), so this is reliable.
-                // Last-resort fallback checks mpesa_code / mpesa_id for old rows in DB.
-                const method = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
+                const _rawMethod = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
                     ? 'Credit'
                     : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
                         ? s.payments[0].payment_method
                         : (s.mpesa_code || s.mpesaCode || s.mpesa_id ? 'M-Pesa' : 'Cash');
+                const method = /equity|equitel/i.test(_rawMethod) ? 'Equity Mobile'
+                    : (_rawMethod === 'Safaricom' || /^safaricom/i.test(_rawMethod)) ? 'M-Pesa'
+                    : _rawMethod;
                 const methodStyle = method === 'M-Pesa'
                     ? 'background:rgba(0,229,160,0.12);color:#00e5a0;'
                     : method === 'Credit'
                     ? 'background:rgba(255,77,109,0.12);color:#ff4d6d;'
+                    : method === 'Equity Mobile'
+                    ? 'background:rgba(245,158,11,0.12);color:#f59e0b;'
                     : 'background:rgba(86,156,214,0.12);color:#569cd6;';
 
                 return `<tr class="border-t border-slate-50 hover:bg-slate-50 transition">
@@ -1966,7 +1471,6 @@ function generateGRNSlip(itemName, qty, dn) {
                 </tr>`;
             }).join('');
 
-            // Pagination controls
             if (!pgDiv) return;
             if (pages <= 1) { pgDiv.innerHTML = ''; return; }
 
@@ -1995,7 +1499,7 @@ function generateGRNSlip(itemName, qty, dn) {
             _recentPage = Math.max(1, Math.min(pages, _recentPage + dir));
             _renderRecentSales();
         }
-// ── KRA PIN field state helper ────────────────────────────────────────────
+
 function _setKraPinRequired(required) {
     const badge = document.getElementById('kraPinBadge');
     const hint  = document.getElementById('kraPinHint');
@@ -2029,9 +1533,6 @@ async function finalizeCartSale() {
     const phone    = c2bMode ? (phoneInput || (_activeC2BCheckoutTask?.phone || '')) : phoneInput;
     const code     = c2bMode ? (codeInput || (_activeC2BCheckoutTask?.mpesaCode || '')) : codeInput;
 
-    // Canonical method sent to server — must match server enum
-    // 'Safaricom' → 'M-Pesa'  (server accepts both but normalises internally)
-    // 'Equity'    → 'Equity'  (server maps to 'Equity Paybill' for DB)
     const serverMethod = effectiveMethod === 'Safaricom' ? 'M-Pesa' : effectiveMethod;
 
     if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
@@ -2045,7 +1546,6 @@ async function finalizeCartSale() {
         return alert("⚠️ Invalid KRA PIN format.\n\nFormat should be: 1 letter + 9 digits + 1 letter (e.g. A012345678B)");
     }
 
-    // ── OFFLINE PATH ────────────────────────────────────────────────────────
     if (!isOnline) {
         isFinalizing = true;
         document.getElementById('checkoutBtn').innerText = "SAVING OFFLINE...";
@@ -2057,41 +1557,36 @@ async function finalizeCartSale() {
                 totalAmount += (item.price * item.quantity);
             });
 
-            // Provisional receipt number — replaced by real one when synced.
-            // Format: OFF-<timestamp> so it's unique and obviously offline-issued.
             const offlineReceiptNo = 'OFF-' + Date.now();
 
             await OfflineQueue.add({
                 isBulkCart:      true,
-                items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
+                items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
                 paymentMethod:   serverMethod,
                 mpesaId:         phone,
                 mpesaCode:       code,
                 customerName:    customer,
                 customerPin:     customerPin || null,
                 amountPaid:      serverMethod === 'Credit' ? 0 : totalAmount,
-                offlineReceipt:  offlineReceiptNo
+                offlineReceipt:  offlineReceiptNo,
+                priceTier:       document.getElementById('cartPriceTier')?.value || 'retail'
             });
 
-           // ── Deduct stock from in-memory cache immediately so the UI
-            //    reflects the sale and a second cashier can't oversell the
-            //    same item before connectivity is restored.
             receiptItems.forEach(soldItem => {
                 const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
                 if (itemInMemory) {
-                    itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - soldItem.quantity);
+                    const item = window._itemMap[soldItem.itemId];
+                    const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
+                        ? soldItem.quantity / parseFloat(item.sub_unit_qty)
+                        : soldItem.quantity;
+                    itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
                 }
             });
-            // Persist the updated stock to IndexedDB so the deduction
-            // survives a page reload while still offline.
             try { await StockCache.save(allStock); } catch(ce) { console.warn('[offline] StockCache save failed:', ce); }
             renderInventory();
 
-            // Pass provisional receipt number so the printed receipt has a
-            // reference number instead of "N/A".
             showMultiReceipt(customer, effectiveMethod, totalAmount, receiptItems, phone, code, offlineReceiptNo);
 
-            // UI RESET
             clearCart();
             document.getElementById('cartCustomer').value = '';
             document.getElementById('cartMpesaId').value = '';
@@ -2109,7 +1604,6 @@ async function finalizeCartSale() {
         return;
     }
 
-    // ── ONLINE PATH ────────────────────────────────────────────────────────
     isFinalizing = true;
     document.getElementById('checkoutBtn').innerText = "PROCESSING...";
 
@@ -2118,25 +1612,24 @@ async function finalizeCartSale() {
         let totalAmount = 0;
         cart.forEach(item => { totalAmount += item.price * item.quantity; });
 
-        // 1. Send sale to backend
         const cartRes = await apiFetch(`${API_URL}/sell/cart`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
-                items: cart.map(item => ({ itemId: item.itemId, quantity: item.quantity })),
+                items:         cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
                 paymentMethod: serverMethod,
                 mpesaId:       phone,
                 mpesaCode:     code,
                 customerName:  customer,
                 customerPin:   customerPin || null,
                 amountPaid:    serverMethod === 'Credit' ? 0 : totalAmount,
-                isC2B:         c2bMode 
+                isC2B:         c2bMode,
+                priceTier:     document.getElementById('cartPriceTier')?.value || 'retail'
             })
         });
         const cartData = await cartRes.json();
         if (!cartData.success) throw new Error(cartData.message);
 
-        // 2. Show Receipt Immediately
         showMultiReceipt(
             customer, effectiveMethod, totalAmount, receiptItems, phone, code, 
             cartData.receiptNumber, cartData.invoiceNumber, cartData.dnNumber, 
@@ -2144,7 +1637,6 @@ async function finalizeCartSale() {
             cartData.kraQrDataUrl
         );
 
-        // 3. INSTANT UI RESET: Clear cart and unlock UI immediately
         clearCart();
         document.getElementById('cartCustomer').value = '';
         document.getElementById('cartMpesaId').value = '';
@@ -2152,11 +1644,14 @@ async function finalizeCartSale() {
         if (document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value = '';
         _setKraPinRequired(false);
 
-        // Deduct local stock so UI updates without hitting server
         receiptItems.forEach(soldItem => {
             const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
             if (itemInMemory) {
-                itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - soldItem.quantity);
+                const item = window._itemMap[soldItem.itemId];
+                const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
+                    ? soldItem.quantity / parseFloat(item.sub_unit_qty)
+                    : soldItem.quantity;
+                itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
             }
         });
         renderInventory();
@@ -2165,12 +1660,9 @@ async function finalizeCartSale() {
         document.getElementById('checkoutBtn').innerText = "COMPLETE TRANSACTION";
         document.getElementById('cartMethod').disabled = false;
 
-        // Fetch recent sales in the background quietly
         setTimeout(() => { fetchRecentSales(); }, 500);
 
-        // 4. FIRE AND FORGET: C2B Resolve happens in the background, non-blocking
         if (c2bMode && _activeC2BCheckoutTask?.c2bId) {
-            // Self-executing async function runs without blocking the rest of the app
             (async () => {
                 let resolveAttempts = 0;
                 const maxAttempts = 3;
@@ -2193,7 +1685,6 @@ async function finalizeCartSale() {
                         if (resolveRes.ok && resolveData.success) {
                             clearC2BInventoryTask();
                             _activeC2BCheckoutTask = null;
-                            // REMOVED: Blocking alert() and page redirect
                             console.log('✅ C2B silently matched in background');
                             break; 
                         } else {
@@ -2213,7 +1704,6 @@ async function finalizeCartSale() {
 
     } catch (err) {
         alert("Error: " + err.message);
-        // Only reset buttons if there is an error, otherwise they were already reset above
         isFinalizing = false;
         document.getElementById('checkoutBtn').innerText = "COMPLETE TRANSACTION";
         document.getElementById('cartMethod').disabled = false;
@@ -2226,7 +1716,6 @@ async function finalizeCartSale() {
 let BUSINESS_PIN = '';   // populated by fetchBusinessInfo()
 const VAT_RATE   = 0.16; // Standard Kenya VAT rate — fixed
 
-// Resolves when BUSINESS_PIN is available — receipt waits on this if needed
 let _businessInfoReady = false;
 let _businessInfoPromise = null;
 
@@ -2252,11 +1741,19 @@ function fetchBusinessInfo() {
 }
 
 async function showMultiReceipt(customer, method, total, items, phone = '', code = '', receiptNumber = null, invoiceNumber = null, dnNumber = null, kraReceiptNo = null, kraQrUrl = null, controlUnitNumber = null, kraQrDataUrl = null) {
-    // Wait for KRA PIN to be fetched — avoids PENDING on receipt
     if (!_businessInfoReady) await fetchBusinessInfo();
     const date = new Date().toLocaleString();
     const hardwareName = "ELITE HARDWARE LTD";
-    
+
+    const _methodRaw = (method || '').trim();
+    if (/equity|equitel/i.test(_methodRaw)) {
+        method = 'Equity Mobile Money';
+    } else if (_methodRaw === 'Safaricom' || /^safaricom/i.test(_methodRaw)) {
+        method = 'M-Pesa';
+    } else if (_methodRaw === 'M-Pesa STK (pending reconciliation)') {
+        method = 'M-Pesa';
+    }
+
     let maskedPhone = phone;
     if (phone && phone.length >= 10) {
         maskedPhone = phone.substring(0, 4) + "xxx" + phone.substring(phone.length - 3);
@@ -2272,9 +1769,10 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
         methodColor = "text-red-600";
     } else if (method === 'M-Pesa') {
         methodColor = "text-emerald-600";
+    } else if (method === 'Equity Mobile Money') {
+        methodColor = "text-amber-500";
     }
 
-    // ADDED ID="receiptDocType" so we can target it in printDeliveryNote()
     const headerHtml = `
         <div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono">
             <h2 class="font-black text-xl uppercase tracking-tighter text-slate-800">${hardwareName}</h2>
@@ -2323,7 +1821,6 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
         </table>
     `;
 
-    // VAT back-calculation — prices are VAT-inclusive (16/116)
     const totalAmt   = parseFloat(total);
     const vatAmount  = totalAmt * VAT_RATE / (1 + VAT_RATE);
     const exVatTotal = totalAmt - vatAmount;
@@ -2396,7 +1893,6 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
     window._currentInvoiceNumber = invoiceNumber;
     window._currentDnNumber      = dnNumber;
 
-    // Store structured data for silent ESC/POS printing
     window._lastReceiptData = {
         customer, method, total, items,
         phone, code, receiptNumber, invoiceNumber, dnNumber,
@@ -2411,7 +1907,6 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
 
     const buttonContainer = document.getElementById('receiptButtons');
     
-    // Removed "PRINT ALL" and made "PRINT DN" available for ALL payment methods
     buttonContainer.innerHTML = `
         <button type="button" onclick="printTwoCopies();" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg mb-2 hover:bg-black transition-all">
             🖨️ ${mainButtonLabel} (2 COPIES)
@@ -2427,9 +1922,6 @@ async function showMultiReceipt(customer, method, total, items, phone = '', code
     document.getElementById('receiptModal').classList.remove('hidden');
     document.getElementById('modalOverlay').classList.remove('hidden');
 }
-// ══════════════════════════════════════════════════════════════
-//  UNIFIED PRINTING LOGIC (Invoice, DN, and Combined)
-// ══════════════════════════════════════════════════════════════
 
 async function silentPrintDN(data) {
     if (!LIVE_PRINT) { _browserPrintFallback(data, true, false); return; }
@@ -2442,10 +1934,9 @@ async function silentPrintDN(data) {
         });
         if (!res.ok) throw new Error('Print server error ' + res.status);
         
-        // --- THE FIX: Check the server's JSON response for the Virtual URL ---
         const result = await res.json();
         if (result.url) {
-            window.open(result.url, '_blank'); // Open the virtual PDF!
+            window.open(result.url, '_blank'); 
             showPrintToast('✅ Opened virtual DN');
         } else if (result.success) {
             showPrintToast('✅ Delivery Note printed — 2 copies');
@@ -2461,7 +1952,6 @@ async function silentPrintDN(data) {
 }
 
 function printDeliveryNote() {
-    // Always use browser print for DN — never thermal printer
     _browserPrintFallback(window._lastReceiptData, true, false);
 }
 
@@ -2473,7 +1963,6 @@ function printTwoCopies() {
     _browserPrintFallback(window._lastReceiptData, false, false);
 }
 
-// ── BROWSER PRINT FALLBACK (Handles Watermarks & 2 Copies) ──────────────
 function _browserPrintFallback(data, onlyDN = false, printAll = false) {
     const d = data || window._lastReceiptData || {};
     const dnNumber      = d.dnNumber      || window._currentDnNumber      || ('DN-' + Date.now().toString().slice(-6));
@@ -2558,7 +2047,6 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
     const printArea = document.createElement('div');
     printArea.id = 'tempPrintArea';
     if (onlyDN) printArea.classList.add('dn-print');
-    // DN uses browser default (A4) page; invoice copies use 80mm thermal
     const pageSize = onlyDN ? 'A4' : '80mm auto';
     printArea.innerHTML = htmlString + `<style>
         @media print { 
@@ -2589,9 +2077,6 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
 
     document.body.appendChild(printArea);
 
-    // Wait for the QR code image to fully load before printing.
-    // The QR is fetched from an external URL (api.qrserver.com) and may not be
-    // ready within a fixed 250ms timeout — this caused blank QR codes on receipts.
     const qrImg = printArea.querySelector('img[alt="KRA eTIMS QR"]');
     const doPrint = () => {
         window.print();
@@ -2599,44 +2084,25 @@ function _browserPrintFallback(data, onlyDN = false, printAll = false) {
     };
     if (qrImg && !qrImg.complete) {
         qrImg.onload  = doPrint;
-        qrImg.onerror = doPrint; // print anyway if QR server fails
-        // Safety net: print after 5s even if neither event fires
+        qrImg.onerror = doPrint; 
         setTimeout(doPrint, 5000);
     } else {
-        setTimeout(doPrint, 250); // already loaded (or no QR image)
+        setTimeout(doPrint, 250); 
     }
 }
 
-/**
- * printRecentReceipt(idx)
- * ─────────────────────────────────────────────────────────────────────────────
- * Reopens the full eTIMS receipt for a past sale from Recent Transactions.
- * This is READ-ONLY — it NEVER posts to /sell or creates any new sale record.
- *
- * Offline behaviour: eTIMS fields (kraReceiptNo, kraQrUrl, controlUnitNumber)
- * will show as PENDING if the sale hasn't synced yet, which is expected.
- * ─────────────────────────────────────────────────────────────────────────────
- */
-/**
- * clientGenerateQrDataUrl(text)
- * Generates a QR code as a base64 PNG entirely in the browser using qrcode.js.
- * Used for reprints where no server call is made. Falls back to null if the
- * library isn't loaded (receipt will fall back to api.qrserver.com).
- */
 async function clientGenerateQrDataUrl(text) {
     return new Promise(resolve => {
         try {
             const container = document.createElement('div');
             container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
             document.body.appendChild(container);
-            // QRCode.js renders into a div and creates a canvas+img inside it
             const qr = new QRCode(container, {
                 text:           text,
                 width:          140,
                 height:         140,
                 correctLevel:   QRCode.CorrectLevel.M,
             });
-            // QRCode.js is synchronous — canvas is ready on next tick
             setTimeout(() => {
                 try {
                     const canvas = container.querySelector('canvas');
@@ -2649,7 +2115,7 @@ async function clientGenerateQrDataUrl(text) {
                 }
             }, 50);
         } catch(e) {
-            resolve(null); // library not loaded — will fall back to api.qrserver.com
+            resolve(null); 
         }
     });
 }
@@ -2661,7 +2127,6 @@ async function printRecentReceipt(idx) {
         return;
     }
 
-    // Build the items array from the grouped transaction (_items was assembled in _groupSalesIntoTransactions)
     const items = (Array.isArray(s._items) && s._items.length > 0)
         ? s._items
         : [{
@@ -2670,7 +2135,6 @@ async function printRecentReceipt(idx) {
             price:    s.unit_price    || (s.total_amount / (s.quantity_sold || 1))
           }];
 
-    // If the API returned grouped items for this sale, use those instead
     if (Array.isArray(s.items) && s.items.length > 0) {
         items.splice(0, items.length, ...s.items.map(i => ({
             itemName: i.item_name || i.itemName || 'Item',
@@ -2679,8 +2143,6 @@ async function printRecentReceipt(idx) {
         })));
     }
 
-    // Pull eTIMS fields — exact DB column names from the Sales table:
-    //   Kra_Receipt_No (mixed case), kra_qr_url (lowercase), Control_unit_number (mixed)
     const receiptNumber     = s.receipt_number          || s.receiptNumber      || null;
     const invoiceNumber     = s.invoice_number          || s.invoiceNumber      || null;
     const dnNumber          = s.dn_number               || s.dnNumber           || null;
@@ -2688,22 +2150,16 @@ async function printRecentReceipt(idx) {
     const kraQrUrl          = s.kra_qr_url              || s.kraQrUrl           || null;
     const controlUnitNumber = s['Control_unit_number']  || s.control_unit_number|| s.controlUnitNumber || null;
 
-    // mpesa_code comes from the joined payments[] array (select('*, payments(...)')).
     const mpesaCode = (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].mpesa_code)
         ? s.payments[0].mpesa_code
         : (s.mpesa_code || s.mpesaCode || '');
 
-    // payment_method lives in the joined payments[] row.
-    // Every sale row now has its own payments entry (server fix), so this is reliable.
-    // Final fallback checks mpesa_code / mpesa_id so C2B rows never show 'Cash'.
  const paymentMethod = (s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.is_credit_sale)
         ? 'Credit'
         : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
             ? s.payments[0].payment_method
             : (mpesaCode || s.mpesa_code || s.mpesa_id ? 'M-Pesa' : 'Cash');
 
-    // Show the standard receipt modal — purely for display/print, no sale is posted
-    // Generate QR client-side for reprints (no server round-trip needed)
     const reprintQrData = kraQrUrl ||
         ('PIN:A014661185V|REF:' + (receiptNumber || invoiceNumber || 'N/A') +
          '|AMT:' + (s._total || Number(s.total_amount)) +
@@ -2726,271 +2182,6 @@ async function printRecentReceipt(idx) {
         reprintQrDataUrl
     );
 }
-
-function closeReceipt() { 
-    document.getElementById('receiptModal').classList.add('hidden'); 
-    document.getElementById('modalOverlay').classList.add('hidden');
-}
-        function filterTable() { currentPage = 1; renderInventory(); }
-
-        // ── Show/hide table vs mobile cards based on viewport ────────────────
-        function applyResponsiveLayout() {
-    const isMobile = window.innerWidth <= 768;
-    // Target the inventory table specifically by looking for its body ID
-    const inventoryTable = document.getElementById('inventoryBody')?.closest('table');
-    const mobileEl = document.getElementById('mobileCardsContainer');
-    
-    if (inventoryTable) inventoryTable.style.display = isMobile ? 'none' : '';
-    if (mobileEl) mobileEl.style.display = isMobile ? 'flex' : 'none';
-}
-        applyResponsiveLayout();
-        window.addEventListener('resize', applyResponsiveLayout);
-
-        // ── Defer initial data load until auth.js has finished its async
-        //    verify-session call and set window.apiFetch.
-        //    Rapid page switching (inventory ↔ POS) can load this script
-        //    before auth.js resolves, causing apiFetch to be undefined,
-        //    which lands in the catch → "Server error — showing cached stock".
-        waitForAuthThenLoad();
-
-    // ── OFFLINE MODE LOGIC ─────────────────────────────────────────────────
-
-    let isOnline = navigator.onLine;
-
-    function updateOfflineBanner() {
-        const banner = document.getElementById('offlineBanner');
-        const btn    = document.getElementById('checkoutBtn');
-        if (!banner) return;
-
-        if (!isOnline) {
-            banner.classList.remove('hidden');
-            // Push content down so banner doesn't cover it
-            document.body.style.paddingTop = '56px';
-            if (btn) btn.innerText = 'SAVE OFFLINE';
-        } else {
-            banner.classList.add('hidden');
-            document.body.style.paddingTop = '';
-            if (btn) btn.innerText = 'COMPLETE TRANSACTION';
-        }
-        updatePendingBadge();
-    }
-
-    async function updatePendingBadge() {
-        try {
-            const count = await OfflineQueue.count();
-            const badge = document.getElementById('pendingBadge');
-            const num   = document.getElementById('pendingCount');
-            if (!badge || !num) return;
-            if (count > 0) {
-                badge.classList.remove('hidden');
-                num.innerText = count;
-            } else {
-                badge.classList.add('hidden');
-            }
-        } catch(e) {}
-    }
-
-    function showSyncToast(msg) {
-        const toast = document.getElementById('syncToast');
-        const msgEl = document.getElementById('syncToastMsg');
-        if (!toast) return;
-        if (msgEl) msgEl.innerText = msg;
-        toast.classList.remove('hidden');
-        setTimeout(() => toast.classList.add('hidden'), 4000);
-    }
-
-   async function syncPendingSales() {
-        if (!isOnline) return;
-        let pending;
-        try { pending = await OfflineQueue.getAll(); } catch(e) { return; }
-        if (!pending || pending.length === 0) return;
-
-        let synced = 0, failed = 0;
-        const failedItems = []; 
-        const failedIds = []; // Track IDs so we can let the user delete stuck sales
-
-        for (const sale of pending) {
-            try {
-                // Extract the isBulkCart flag to determine the endpoint
-                const { offline_id, queued_at, sync_status, isBulkCart, offlineReceipt, ...payload } = sale;
-                const endpoint = isBulkCart ? `${API_URL}/sell/cart` : `${API_URL}/sell`;
-
-                const res = await apiFetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!res) {
-                    failed++;
-                    failedItems.push(`• ${sale.customerName || 'Unknown'} — Session expired or blocked`);
-                    failedIds.push(offline_id);
-                    continue;
-                }
-
-                // Safely parse the response to prevent crashes on 502 Bad Gateway HTML pages
-                const text = await res.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch (parseErr) {
-                    failed++;
-                    failedItems.push(`• ${sale.customerName || 'Unknown'} — Server error (${res.status})`);
-                    failedIds.push(offline_id);
-                    continue;
-                }
-
-                if (data.success) {
-                    await OfflineQueue.remove(offline_id);
-                    synced++;
-                } else {
-                    failed++;
-                    failedItems.push(`• ${sale.customerName || 'Unknown'} (${offlineReceipt || offline_id}) — ${data.message || 'Server rejected'}`);
-                    failedIds.push(offline_id);
-                }
-            } catch(e) {
-                failed++;
-                // Show the ACTUAL error message instead of hardcoding "network error"
-                failedItems.push(`• ${sale.customerName || 'Unknown'} — ${e.message || 'Failed to reach server'}`);
-                failedIds.push(sale.offline_id);
-            }
-        }
-
-        if (synced > 0) {
-            showSyncToast(`${synced} sale${synced > 1 ? 's' : ''} synced to server.`);
-            fetchStock();
-            fetchRecentSales();
-        }
-
-        // ── Surface failures clearly and offer an escape hatch ──
-        if (failed > 0) {
-            const detail = failedItems.join('\n');
-            // Ask the cashier if they want to clear the stuck items
-            const confirmClear = confirm(
-                `⚠️ ${failed} offline sale${failed > 1 ? 's' : ''} could NOT be synced and remain queued:\n\n${detail}\n\n` +
-                `Do you want to permanently DELETE these failed sales from your device?\n` +
-                `(Click OK to delete them, or Cancel to keep them and try again later)`
-            );
-            
-            if (confirmClear) {
-                for (const id of failedIds) {
-                    await OfflineQueue.remove(id);
-                }
-                alert('Stuck sales have been cleared from the queue.');
-            }
-        }
-
-        updatePendingBadge();
-    }
-    // Listen for online/offline events
-    window.addEventListener('online',  () => { isOnline = true;  updateOfflineBanner(); syncPendingSales(); });
-    window.addEventListener('offline', () => { isOnline = false; updateOfflineBanner(); });
-
-    // Warn cashier before reloading while there are unsynced sales.
-    // Reads the #pendingCount badge synchronously as a proxy for queue depth —
-    // avoids an async IndexedDB read inside beforeunload (which browsers ignore).
-    // Also fires when isOnline has flicked back to true but sales haven't synced yet.
-    window.addEventListener('beforeunload', e => {
-        const badge       = document.getElementById('pendingCount');
-        const hasPending  = badge && parseInt(badge.innerText || '0', 10) > 0;
-        if (!isOnline || hasPending) {
-            e.preventDefault();
-            e.returnValue = '⚠️ You have unsynced offline sales. Closing this tab now is safe — they are stored locally and will sync when you reopen and reconnect. Continue?';
-        }
-    });
-
-    // Initial state
-    updateOfflineBanner();
-    // Try to sync any leftover pending sales on page load
-    if (isOnline) syncPendingSales();
-    // ── SALES ORDER FULFILLMENT CATCHER ──────────────────────────────────────────
-async function processSalesOrderFulfillment() {
-    const qp = new URLSearchParams(window.location.search);
-    const soId = qp.get('fulfill_so');
-    if (!soId) return;
-
-    try {
-        // 1. Fetch the specific Sales Order
-        const res = await apiFetch(`${API_URL}/sales-orders/${soId}`);
-        if (!res || !res.ok) throw new Error('Could not load Sales Order');
-        const so = await res.json();
-
-        // 2. Populate the Customer Name & Phone in the POS
-        document.getElementById('cartCustomer').value = so.customer_name || '';
-        const phoneField = document.getElementById('cartMpesaId');
-        if (phoneField && so.customer_phone) {
-            phoneField.value = so.customer_phone;
-        }
-
-        // 3. Push items into the POS Cart
-        so.sales_order_items.forEach(item => {
-            // Check if item already exists in cart to avoid duplicates if they clicked twice
-            const existing = cart.find(i => String(i.itemId) === String(item.inventory_id));
-            if (existing) {
-                existing.quantity += parseInt(item.qty_ordered);
-            } else {
-                cart.push({
-                    itemId: item.inventory_id,
-                    itemName: item.item_name,
-                    price: parseFloat(item.unit_price), // Uses the locked-in Quote price
-                    quantity: parseInt(item.qty_ordered)
-                });
-            }
-        });
-
-        // 4. Render the cart and show it
-        renderCart();
-
-        // 5. Silently update the SO status to 'Fulfilled' so it stops showing as pending
-        apiFetch(`${API_URL}/sales-orders/${soId}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'Fulfilled' })
-        }).catch(()=>{});
-
-        // 6. Clean the URL so refreshing the page doesn't duplicate the items
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        showPrintToast(`✅ Quote ${so.so_number} loaded into Cart!`);
-
-    } catch (err) {
-        console.error('[SO FULFILL ERROR]', err);
-        alert('Failed to load Sales Order items into the cart.');
-    }
-}
-
-    </script>
-    <div id="printContainer" class="hidden"></div>
-                <div id="modalOverlay" class="fixed inset-0 bg-black/60 hidden z-[110] backdrop-blur-sm"></div>
-          <div id="receiptModal" class="hidden font-mono text-sm shadow-2xl rounded-3xl" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-    
-    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar receipt-watermark" style="min-height:0; position:relative;">
-        <div id="receiptDate" class="mb-4"></div> 
-        
-        <div id="receiptContent" class="py-2 space-y-1 border-t border-dashed border-gray-400">
-            </div>
-        
-        <div class="border-t border-dashed border-gray-400 pt-2 mt-2">
-            <div class="flex justify-between font-black text-lg text-slate-900">
-                <span>TOTAL:</span>
-                <span id="receiptTotal"></span>
-            </div>
-        </div>
-    </div>
-
-    <div id="receiptButtons" class="p-4 border-t flex flex-col gap-2 no-print" style="border-color:var(--border);background:var(--surface2);">
-        <button onclick="printTwoCopies()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all">
-            🖨️ PRINT RECEIPT (2 COPIES)
-        </button>
-        
-        <button onclick="printDeliveryNote()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all">
-            PRINT DELIVERY NOTE (BROWSER)
-        </button>
-        
-        <button onclick="closeReceipt()" class="w-full bg-white border border-gray-200 py-3 rounded-2xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">
-            CLOSE
-        </button>
-    </div>
-</div>
+</script>
 </body>
 </html>
