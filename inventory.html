@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="/src/pages/auth.js"></script>
@@ -11,301 +10,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventory | Elite Hardware Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-   <link rel="stylesheet" href="/src/tailwind.css">
-   <style>
-
-/* --- RECEIPT MODAL SCROLL FIX --- */
-    #receiptModal {
-        position: fixed !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        background: white;
-        padding: 24px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        z-index: 120;
-        width: 90%;
-        max-width: 400px;
-        max-height: 90vh; 
-        overflow-y: auto;
-        border-radius: 24px;
-    }
-
-    /* --- PROFESSIONAL PRINT FIXES --- */
-    @media print {
-        @page { size: 80mm auto; margin: 2mm 1mm; }
-
-        body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
-        body:has(#tempPrintArea) #tempPrintArea,
-        body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
-
-        body:not(:has(#tempPrintArea)) * { visibility: hidden !important; }
-        body:not(:has(#tempPrintArea)) #receiptModal,
-        body:not(:has(#tempPrintArea)) #receiptModal * { visibility: visible !important; }
-
-        #receiptModal, #tempPrintArea {
-            position: absolute !important;
-            left: 0 !important; right: 0 !important; top: 0 !important;
-            margin: 0 auto !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
-            padding: 4px !important;
-            border: none !important; box-shadow: none !important;
-            max-height: none !important; overflow: visible !important;
-            transform: none !important;
-            color: #000 !important; background: #fff !important;
-            font-family: 'Courier New', monospace !important;
-            font-size: 11px !important;
-            opacity: 1 !important;
+    <link rel="stylesheet" href="/src/tailwind.css">
+    <style>
+        /* --- RECEIPT MODAL SCROLL FIX --- */
+        #receiptModal {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            background: white;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 120;
+            width: 90%;
+            max-width: 400px;
+            max-height: 90vh; 
+            overflow-y: auto;
+            border-radius: 24px;
         }
 
-        #tempPrintArea.dn-print {
-            width: 100% !important;
-            max-width: 100% !important;
+        /* --- PROFESSIONAL PRINT FIXES --- */
+        @media print {
+            @page { size: 80mm auto; margin: 2mm 1mm; }
+            body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
+            body:has(#tempPrintArea) #tempPrintArea,
+            body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
+            body:not(:has(#tempPrintArea)) * { visibility: hidden !important; }
+            body:not(:has(#tempPrintArea)) #receiptModal,
+            body:not(:has(#tempPrintArea)) #receiptModal * { visibility: visible !important; }
+            #receiptModal, #tempPrintArea {
+                position: absolute !important;
+                left: 0 !important; right: 0 !important; top: 0 !important;
+                margin: 0 auto !important;
+                width: 80mm !important;
+                max-width: 80mm !important;
+                padding: 4px !important;
+                border: none !important; box-shadow: none !important;
+                max-height: none !important; overflow: visible !important;
+                transform: none !important;
+                color: #000 !important; background: #fff !important;
+                font-family: 'Courier New', monospace !important;
+                font-size: 11px !important;
+                opacity: 1 !important;
+            }
+            #tempPrintArea.dn-print {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            #receiptButtons, .no-print, #sidebarMenu, #modalOverlay { display: none !important; }
+            .receipt-watermark::before {
+                content: 'ELITE HARDWARE';
+                position: absolute; top: 50%; left: 50%;
+                transform: translate(-50%,-50%) rotate(-35deg);
+                font-size: 22px; font-weight: 900;
+                color: rgba(0,0,0,0.07);
+                letter-spacing: 0.18em; text-transform: uppercase;
+                white-space: nowrap; pointer-events: none;
+            }
+            .receipt-watermark { position: relative !important; }
+            .receipt-watermark > * { position: relative !important; z-index: 1 !important; }
+            .copy-badge {
+                display: block !important;
+                text-align: center;
+                font-size: 8px; font-weight: 900;
+                letter-spacing: 0.2em;
+                border: 1px dashed #999;
+                padding: 3px; margin-bottom: 4px;
+            }
+            .print-copy-break { page-break-after: always; }
         }
 
-        #receiptButtons, .no-print, #sidebarMenu, #modalOverlay { display: none !important; }
-
-        .receipt-watermark::before {
-            content: 'ELITE HARDWARE';
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%,-50%) rotate(-35deg);
-            font-size: 22px; font-weight: 900;
-            color: rgba(0,0,0,0.07);
-            letter-spacing: 0.18em; text-transform: uppercase;
-            white-space: nowrap; pointer-events: none;
-        }
-        .receipt-watermark { position: relative !important; }
-        .receipt-watermark > * { position: relative !important; z-index: 1 !important; }
-
-        .copy-badge {
-            display: block !important;
-            text-align: center;
-            font-size: 8px; font-weight: 900;
-            letter-spacing: 0.2em;
-            border: 1px dashed #999;
-            padding: 3px; margin-bottom: 4px;
-        }
-        .print-copy-break { page-break-after: always; }
-    }
-
-    .low-stock-row { background-color: #fef2f2; border-left: 4px solid #ef4444; }
-
+        /* --- DARK THEME GLOBALS --- */
         :root {
             --bg: #090a0fd0; --surface: #14171f; --surface2: #1e222d;
             --border: rgba(255,255,255,0.08);
-            --green: #10b981; --green-dim: rgba(16,185,129,0.12);
-            --red: #ef4444;   --red-dim: rgba(239,68,68,0.12);
-            --blue: #3b82f6;  --blue-dim: rgba(59,130,246,0.12);
-            --amber: #f59e0b; --amber-dim: rgba(245,158,11,0.12);
-            --purple: #8b5cf6; --purple-dim: rgba(139,92,246,0.12);
+            --green: #10b981; --red: #ef4444; --blue: #3b82f6; --amber: #f59e0b;
             --text: #f8fafc; --muted: #94a3b8;
             --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
         }
-        
-        body.light {
-            --bg: #eceff1e8;        
-            --surface: #eceff1e8;      
-            --surface2: #eceff1e8;      
-            --border: rgba(15,23,42,0.15); 
-            --green: #059669; --green-dim: rgba(5,150,105,0.10);
-            --red: #dc2626;   --red-dim: rgba(220,38,38,0.10);
-            --blue: #2563eb;  --blue-dim: rgba(37,99,235,0.10);
-            --amber: #d97706; --amber-dim: rgba(217,119,6,0.10);
-            --purple: #7c3aed; --purple-dim: rgba(124,58,237,0.10);
-            --text: #0f172a;       
-            --muted: #475569;      
-        }
         * { box-sizing: border-box; }
         body { font-family: var(--sans) !important; background: var(--bg) !important; color: var(--text) !important; }
-
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
 
-        .bg-white                          { background: var(--surface)  !important; }
-        .bg-gray-50, .bg-gray-100          { background: var(--surface2) !important; }
-        .bg-slate-50, .bg-slate-100        { background: var(--surface2) !important; }
-        .bg-slate-200                      { background: #1e2d40         !important; }
-        .bg-slate-700, .bg-slate-800       { background: #1e2d40         !important; }
-        .bg-slate-50\/50, .bg-slate-50\/30 { background: rgba(255,255,255,0.03) !important; }
-
-        .bg-emerald-50, .bg-emerald-100    { background: rgba(0,229,160,0.10)  !important; }
-        .bg-emerald-500, .bg-emerald-600   { background: var(--green)          !important; color:#000 !important; }
-        .bg-red-50, .bg-red-100            { background: rgba(255,77,109,0.10) !important; }
-        .bg-red-500, .bg-red-600, .bg-red-700 { background: var(--red)         !important; color:#fff !important; }
-        .bg-blue-50, .bg-blue-100          { background: rgba(59,130,246,0.10) !important; }
-        .bg-blue-600, .bg-blue-700         { background: var(--blue)           !important; color:#fff !important; }
-        .bg-orange-50, .bg-orange-100      { background: rgba(245,158,11,0.10) !important; }
-        .bg-yellow-100                     { background: rgba(245,158,11,0.10) !important; }
-        .bg-amber-100                      { background: rgba(245,158,11,0.10) !important; }
-        .bg-blue-900\/50                   { background: rgba(59,130,246,0.15) !important; }
-
+        .bg-white { background: var(--surface) !important; }
+        .bg-gray-50, .bg-slate-50, .bg-slate-100 { background: var(--surface2) !important; }
         .bg-slate-900:not(#sidebar):not([style]) { background: var(--green) !important; color: #000 !important; }
-        .hover\:bg-slate-800:hover         { background: #00c98e !important; }
-        .hover\:bg-emerald-500:hover       { background: #00c98e !important; color: #000 !important; }
-
-        .text-slate-900, .text-slate-800   { color: var(--text)  !important; }
-        .text-slate-700                    { color: #cbd5e1      !important; }
-        .text-slate-600, .text-slate-500, .text-slate-400 { color: var(--muted) !important; }
-        .text-white                        { color: #fff         !important; }
-        .text-emerald-600, .text-emerald-500 { color: var(--green) !important; }
-        .text-red-600,  .text-red-500      { color: var(--red)   !important; }
-        .text-blue-600, .text-blue-500     { color: var(--blue)  !important; }
-        .text-orange-600                   { color: var(--amber) !important; }
-
-        .border, .border-b, .border-t, .border-l, .border-r,
-        .border-slate-100, .border-slate-200, .border-slate-300,
-        .divide-y > *                      { border-color: var(--border) !important; }
-        .border-emerald-500                { border-color: var(--green)  !important; }
-        .border-red-500, .border-red-600   { border-color: var(--red)    !important; }
-        .border-blue-500                   { border-color: var(--blue)   !important; }
-        .border-slate-800                  { border-color: #334155       !important; }
-
-        input:not([type=range]), select, textarea {
-            background: var(--surface2) !important;
-            color: var(--text)          !important;
-            border-color: rgba(255,255,255,0.1) !important;
-        }
-        input::placeholder, textarea::placeholder { color: var(--muted) !important; }
-
-        .border-t-4 { border-top-width: 4px !important; }
-
-        #cartSection                          { background: #0f172a !important; color: #f1f5f9 !important; }
-        #cartSection h2                       { color: #f1f5f9 !important; }
-        #cartSection .cart-item-row           { background: #1e293b !important; }
-        #cartSection #cartItems > div         { background: #1e293b !important; outline: 1px solid rgba(255,255,255,0.08); }
-        #cartSection #cartCustomer,
-        #cartSection #cartMethod,
-        #cartSection #cartMpesaId,
-        #cartSection #cartMpesaCode           { background: #1e293b !important; color: #f1f5f9 !important;
-                                                border: 1px solid rgba(255,255,255,0.12) !important;
-                                                box-shadow: none !important; }
-        #cartSection #cartKraPin           { background: #1e293b !important; color: #f1f5f9 !important;
-                                                border: 1px solid rgba(255,255,255,0.12) !important;
-                                                box-shadow: none !important; }
-        #cartSection #cartCustomer::placeholder,
-        #cartSection #cartMpesaId::placeholder,
-        #cartSection #cartMpesaCode::placeholder { color: #64748b !important; }
-        #cartSection #cartMethod option       { background: #1e293b !important; color: #f1f5f9 !important; }
-        #cartSection #mpesaFields             { background: transparent !important; }
-        #cartSection #stkStatus               { background: #1e293b !important; }
-        #cartSection .text-slate-500          { color: #94a3b8 !important; }
-        #cartSection .text-red-400            { color: #f87171 !important; }
-        #cartSection .border-slate-800        { border-color: rgba(255,255,255,0.08) !important; }
-        #cartSection button.absolute          { background: #334155 !important; color: #cbd5e1 !important; border-color: #475569 !important; }
-        #cartSection #stkPushBtn              { background: #16a34a !important; color: #fff !important; }
-        #cartSection #manualCodeBtn           { color: #60a5fa !important; background: transparent !important; }
-
-        .rounded-3xl, .rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
-        main, .page-main { background: var(--bg) !important; }
-
-        @media (max-width: 1024px) and (min-width: 769px) {
-            .p-6.md\:p-8 { padding: 16px !important; }
-            #searchInput { width: 260px !important; }
+        .text-slate-900, .text-slate-800 { color: var(--text) !important; }
+        .text-slate-500, .text-slate-400 { color: var(--muted) !important; }
+        .border, .border-b, .border-t { border-color: var(--border) !important; }
+        
+        #cartSection { background: #0f172a !important; color: #f1f5f9 !important; }
+        #cartSection h2 { color: #f1f5f9 !important; }
+        #cartSection #cartCustomer, #cartSection #cartMethod, #cartSection #cartMpesaId, #cartSection #cartMpesaCode, #cartSection #cartKraPin, #cartSection #cartPriceTier { 
+            background: #1e293b !important; color: #f1f5f9 !important; border: 1px solid rgba(255,255,255,0.12) !important; 
         }
 
+        /* --- MOBILE LAYOUT --- */
         @media (max-width: 768px) {
-            main { padding: 8px !important; }
+            main { padding: 8px !important; overflow-x: hidden; }
             .p-6.md\:p-8.flex { flex-direction: column !important; gap: 10px !important; padding: 14px !important; }
             #searchInput { width: 100% !important; padding: 11px 14px !important; font-size: 16px !important; }
-
-            .p-6.bg-slate-50 { padding: 10px 14px !important; }
-            .p-6.bg-slate-50 .flex { flex-wrap: wrap; gap: 8px; }
-            .p-6.bg-slate-50 button { flex: 1; }
-
             #cartSection { padding: 14px !important; margin-bottom: 12px !important; border-radius: 16px !important; }
-            #cartSection h2 { font-size: 16px !important; }
-            #cartSection .grid.grid-cols-1.md\:grid-cols-2 { grid-template-columns: 1fr !important; gap: 14px !important; }
-            #cartTotalLabel { font-size: 28px !important; }
-            #cartMpesaCode, #cartMpesaId, #cartCustomer { font-size: 16px !important; }
-
-            #recentSalesBody td:nth-child(2),
-            #recentSalesBody td:nth-child(3) { display: none !important; }
-            #recentSalesBody td { padding: 8px 10px !important; font-size: 11px !important; }
-
-            #lowStockAlert { border-radius: 12px !important; padding: 10px 14px !important; }
-
-            #receiptModal {
-                top: auto !important; bottom: 0 !important;
-                left: 0 !important; right: 0 !important;
-                transform: none !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                border-radius: 24px 24px 0 0 !important;
-                max-height: 92vh !important;
-            }
-
-            #offlineBanner .text-sm { font-size: 11px !important; }
-            #offlineBanner .text-xs { font-size: 9px !important; }
-            
-            #recentSalesBody td { padding: 10px 8px !important; font-size: 11px !important; }
-            .p-6.border-b { padding: 12px 14px !important; }
-            .rounded-3xl { border-radius: 16px !important; }
+            #cartSection .grid { grid-template-columns: 1fr !important; gap: 14px !important; }
+            #recentSalesBody td:nth-child(2), #recentSalesBody td:nth-child(3) { display: none !important; }
+            #receiptModal { top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important; transform: none !important; width: 100% !important; max-width: 100% !important; border-radius: 24px 24px 0 0 !important; max-height: 92vh !important; }
         }
-
-    .receipt-watermark {
-        position: relative;
-    }
-    .receipt-watermark::before {
-        content: 'ELITE HARDWARE';
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%,-50%) rotate(-35deg);
-        font-size: 28px;
-        font-weight: 900;
-        color: rgba(0,0,0,0.055);
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        white-space: nowrap;
-        pointer-events: none;
-        z-index: 0;
-        font-family: 'Courier New', monospace;
-    }
-    .receipt-watermark > * { position: relative; z-index: 1; }
-
-    @media print {
-        @page { size: 80mm auto; margin: 2mm; }
-        .print-copy-break { page-break-after: always; break-after: page; }
-        .copy-badge {
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-size: 8px;
-            font-weight: 900;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            border: 1px dashed #999;
-            padding: 3px 6px;
-            margin: 6px 0 2px;
-            display: block !important;
-        }
-        .copy-badge-customer { color: #000; border-color: #000; }
-        .copy-badge-shop     { color: #555; border-color: #aaa; }
-        .receipt-watermark::before {
-            color: rgba(0,0,0,0.07) !important;
-            font-size: 24px !important;
-        }
-    }
-
-    .copy-badge {
-        display: inline-block;
-        font-family: 'Courier New', monospace;
-        font-size: 9px;
-        font-weight: 900;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        border: 1px dashed #cbd5e1;
-        padding: 2px 8px;
-        border-radius: 3px;
-        margin-bottom: 4px;
-        color: #64748b;
-    }
     </style>
 </head>
 <body class="antialiased">
     <!-- Offline Mode Banner -->
-    <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-[999] bg-amber-500 text-slate-900 px-4 py-2  items-center justify-between shadow-lg no-print">
+    <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-[999] bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between shadow-lg no-print">
         <div class="flex items-center gap-3">
             <span class="text-lg">📡</span>
             <div>
@@ -319,7 +136,7 @@
     </div>
 
     <!-- Sync Success Toast -->
-    <div id="syncToast" class="hidden fixed bottom-6 right-6 z-[999] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl  items-center gap-3 no-print">
+    <div id="syncToast" class="hidden fixed bottom-6 right-6 z-[999] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 no-print">
         <span>✅</span>
         <div>
             <p class="font-black text-sm">Sales Synced!</p>
@@ -331,8 +148,9 @@
         <div id="sidebarMount"></div>
        
         <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto overflow-x-hidden custom-scrollbar">
-
-             <div style="display:flex;flex-direction:column;gap:0;margin-bottom:0;">
+            <div style="display:flex;flex-direction:column;gap:0;margin-bottom:0;">
+                
+                <!-- Low Stock Alert -->
                 <div id="lowStockAlert" class="hidden mb-4 shadow-lg" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid rgba(255,100,100,0.3);border-radius:18px;padding:16px 20px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
                         <div style="display:flex;align-items:center;gap:10px;">
@@ -347,60 +165,44 @@
                     <div id="lowStockAlertItems" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
                 </div>
                 
+                <!-- POS Cart Section -->
                 <div id="cartSection" class="bg-slate-900 rounded-3xl p-4 md:p-6 mb-6 text-white hidden shadow-2xl border-b-8 border-emerald-500 no-print transition-all">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg md:text-2xl font-black">Current Basket</h2>
                         <button onclick="clearCart()" class="text-red-400 text-xs font-bold uppercase border border-red-400/30 px-3 py-1 rounded-full hover:bg-red-400/10">Empty Cart</button>
                     </div>
                     <div id="cartItems" class="space-y-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
+                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-end border-t border-slate-800 pt-4">
                         <div class="space-y-4">
                             <div class="relative flex items-center">
-                                <input type="text" id="cartCustomer" placeholder="Customer Name" 
-                                    class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none text-white font-bold ring-1 ring-slate-700 focus:ring-emerald-500 transition-all pr-20">
-                                <button onclick="resetCustomerName()" type="button"
-                                        class="absolute right-3 bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-lg border border-slate-600">
-                                    NEW
-                                </button>
+                                <input type="text" id="cartCustomer" placeholder="Customer Name" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none text-white font-bold ring-1 ring-slate-700 focus:ring-emerald-500 transition-all pr-20">
+                                <button onclick="resetCustomerName()" type="button" class="absolute right-3 bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-lg border border-slate-600">NEW</button>
                             </div>
 
                             <div id="kraPinWrap" class="relative flex items-center gap-2">
-                                <input type="text" id="cartKraPin"
-                                    placeholder="Customer KRA PIN (e.g. A012345678B)"
-                                    maxlength="11"
-                                    oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
-                                    class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-mono font-bold ring-1 ring-slate-700 focus:ring-amber-400 transition-all text-white uppercase"
-                                    style="letter-spacing:2px;">
-                                <span id="kraPinBadge"
-                                    style="position:absolute;right:12px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">
-                                    OPTIONAL
-                                </span>
+                                <input type="text" id="cartKraPin" placeholder="Customer KRA PIN (e.g. A012345678B)" maxlength="11" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-mono font-bold ring-1 ring-slate-700 focus:ring-amber-400 transition-all text-white uppercase" style="letter-spacing:2px;">
+                                <span id="kraPinBadge" style="position:absolute;right:12px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">OPTIONAL</span>
                             </div>
-                            <p id="kraPinHint" style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:-6px;">
-                                KRA PIN is optional but recommended for B2B / credit invoices on eTIMS
-                            </p>
 
                             <div class="flex flex-col gap-2">
-                            <!-- Price Tier Selector -->
-                            <select id="cartPriceTier" onchange="applyPriceTierToCart()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-                                <option value="retail">🏷️ Retail Price (Walk-in)</option>
-                                <option value="fundi">🔨 Fundi Price (Contractor)</option>
-                                <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
-                            </select>
-                            <p id="tierHint" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden"></p>
+                                <select id="cartPriceTier" onchange="applyPriceTierToCart()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+                                    <option value="retail">🏷️ Retail Price (Walk-in)</option>
+                                    <option value="fundi">🔨 Fundi Price (Contractor)</option>
+                                    <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
+                                </select>
+                                <p id="tierHint" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden"></p>
 
-                            <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-                                <option value="Cash">Cash Sale</option>
-                                <option value="Safaricom">Safaricom M-Pesa</option>
-                                <option value="Equity">Equity Mobile</option>
-                                <option value="Credit">Credit (Debt)</option>
-                            </select>
+                                <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
+                                    <option value="Cash">Cash Sale</option>
+                                    <option value="Safaricom">Safaricom M-Pesa</option>
+                                    <option value="Equity">Equity Mobile</option>
+                                    <option value="Credit">Credit (Debt)</option>
+                                </select>
                                 
-                                <div id="mpesaFields" class="hidden  flex-col gap-2 w-full">
+                                <div id="mpesaFields" class="hidden flex-col gap-2 w-full">
                                     <input type="text" id="cartMpesaId" placeholder="Phone Number e.g. 0712345678" class="w-full p-4 rounded-2xl bg-blue-900/50 border-none outline-none font-mono ring-1 ring-blue-500 text-white">
-                                    <button id="stkPushBtn" onclick="sendStkPush()" class="hidden w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition">
-                                        📲 Send M-Pesa Prompt
-                                    </button>
+                                    <button id="stkPushBtn" onclick="sendStkPush()" class="hidden w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition">📲 Send M-Pesa Prompt</button>
                                     <div id="stkStatus" class="hidden p-3 rounded-2xl text-xs font-bold text-center"></div>
                                     <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto-filled or enter manually)" class="hidden flex-1 p-4 rounded-2xl bg-blue-900/50 border-none outline-none uppercase font-mono ring-1 ring-blue-500 text-white">
                                 </div>
@@ -412,15 +214,14 @@
                                 <p style="color:#94a3b8;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Payable Amount</p>
                                 <h2 id="cartTotalLabel" style="font-size:clamp(24px,6vw,42px);font-weight:900;color:#ffffff;font-family:'Space Mono',monospace;line-height:1;margin:0;">KES 0</h2>
                             </div>
-                            <button onclick="finalizeCartSale()" id="checkoutBtn"
-                                    style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px;border-radius:16px;font-weight:900;font-size:clamp(13px,3.5vw,16px);border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(37,99,235,0.5);transition:opacity 0.15s;"
-                                    onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                            <button onclick="finalizeCartSale()" id="checkoutBtn" style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px;border-radius:16px;font-weight:900;font-size:clamp(13px,3.5vw,16px);border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(37,99,235,0.5);transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                                 COMPLETE TRANSACTION
                             </button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Command Center Grid -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8 no-print">
                     <div class="p-6 md:p-8 flex flex-col md:flex-row justify-between gap-4 border-b border-slate-100">
                         <div class="flex items-center gap-3">
@@ -430,28 +231,22 @@
                         <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search items or categories..." class="w-full md:w-96 p-4 bg-slate-50 border-none rounded-2xl outline-none ring-1 ring-slate-100 focus:ring-slate-300">
                     </div>
 
-                    <!-- NEW GRID COMMAND CENTER -->
                     <div class="p-6 md:p-8 bg-[#0a0f1e]">
                         <div id="inventoryGrid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <!-- Cards will be injected here by JS -->
+                            <!-- Cards injected by JS -->
                         </div>
                     </div>
 
                     <div class="p-6 bg-slate-900 border-t border-slate-800 flex items-center justify-between no-print">
-                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">
-                            Showing 1 - 10 of 0
-                        </span>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">Showing 1 - 10 of 0</span>
                         <div class="flex gap-2">
-                            <button onclick="changePage(-1)" id="prevBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                                Previous
-                            </button>
-                            <button onclick="changePage(1)" id="nextBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                                Next
-                            </button>
+                            <button onclick="changePage(-1)" id="prevBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">Previous</button>
+                            <button onclick="changePage(1)" id="nextBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">Next</button>
                         </div>
                     </div>
                 </div>
 
+                <!-- Recent Transactions -->
                 <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden no-print mb-8">
                     <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                         <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Your Recent Transactions</h3>
@@ -480,71 +275,37 @@
         </main>
     </div>
 
-    <script>
-// Fallback in case sidebar.js hasn't set API_URL yet
-const API_URL  = 'https://hardware-pos-backend.onrender.com/api';
-const API_BASE = 'https://hardware-pos-backend.onrender.com/api';
+    <!-- Receipt Modal & Print UI -->
+    <div id="printContainer" class="hidden"></div>
+    <div id="modalOverlay" class="fixed inset-0 bg-black/60 hidden z-[110] backdrop-blur-sm"></div>
+    <div id="receiptModal" class="hidden font-mono text-sm shadow-2xl rounded-3xl" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar receipt-watermark" style="min-height:0; position:relative;">
+            <div id="receiptDate" class="mb-4"></div> 
+            <div id="receiptContent" class="py-2 space-y-1 border-t border-dashed border-gray-400"></div>
+            <div class="border-t border-dashed border-gray-400 pt-2 mt-2">
+                <div class="flex justify-between font-black text-lg text-slate-900">
+                    <span>TOTAL:</span><span id="receiptTotal"></span>
+                </div>
+            </div>
+        </div>
+        <div id="receiptButtons" class="p-4 border-t flex flex-col gap-2 no-print" style="border-color:var(--border);background:var(--surface2);">
+            <button onclick="printTwoCopies()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all">🖨️ PRINT RECEIPT (2 COPIES)</button>
+            <button onclick="printDeliveryNote()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all">PRINT DELIVERY NOTE (BROWSER)</button>
+            <button onclick="closeReceipt()" class="w-full bg-white border border-gray-200 py-3 rounded-2xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">CLOSE</button>
+        </div>
+    </div>
 
-const LIVE_PRINT        = true;
-const PRINT_SERVER_URL  = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
-const GRN_SERVER_URL    = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
+<script>
+// ══════════════════════════════════════════════════════════════
+//  INITIALIZATION & GLOBALS
+// ══════════════════════════════════════════════════════════════
+const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+const LIVE_PRINT       = true;
+const PRINT_SERVER_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
+const GRN_SERVER_URL   = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
 
-async function silentPrint(data) {
-    if (!LIVE_PRINT) { window.print(); return; }
-    try {
-        showPrintToast('🖨️ Sending to printer...', false, true);
-        const res = await fetch(PRINT_SERVER_URL, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-            body:    JSON.stringify({ ...data, copies: 2 })
-        });
-        if (!res.ok) throw new Error('Print server error ' + res.status);
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error || 'Print failed');
-        if (result.url) window.open(result.url, '_blank');
-        showPrintToast('✅ Receipt saved — 2 copies');
-    } catch (err) {
-        showPrintToast('⚠️ v-printer offline — using browser print', true);
-        setTimeout(() => window.print(), 800);
-    }
-}
-
-async function silentPrintGRN(itemName, qty, dnRef) {
-    if (!LIVE_PRINT) { window.print(); return; }
-    try {
-        const res = await fetch(GRN_SERVER_URL, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-            body:    JSON.stringify({ itemName, qty, dnRef, servedBy: userName })
-        });
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error);
-        showPrintToast('✅ GRN printed');
-    } catch (err) {
-        showPrintToast('⚠️ GRN printer error — ' + err.message, true);
-    }
-}
-
-function showPrintToast(msg, isError = false, isInfo = false) {
-    let toast = document.getElementById('_printToast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = '_printToast';
-        toast.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.4s;pointer-events:none;';
-        document.body.appendChild(toast);
-    }
-    toast.style.background = isError ? '#ef4444' : isInfo ? '#3b82f6' : '#00e5a0';
-    toast.style.color      = isError ? '#fff'    : isInfo ? '#fff'    : '#000';
-    toast.textContent      = msg;
-    toast.style.opacity    = '1';
-    clearTimeout(toast._t);
-    if (!isInfo) toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
-}
-
-window._lastReceiptData = null;
-
-const userName = window.EliteAuth?.name || 'Staff';
-const userRole = window.EliteAuth?.role || 'Staff'; 
+// Core State Variables
 let cart = [];
 let allStock = [];
 let currentPage = 1;
@@ -552,40 +313,21 @@ const itemsPerPage = 10;
 let isFinalizing = false;
 let _activeC2BCheckoutTask = null;
 let _c2bTaskHandled = false;
+window._itemMap = {}; 
+window._lastReceiptData = null;
 
+const userName = window.EliteAuth?.name || 'Staff';
+const userRole = window.EliteAuth?.role || 'Staff'; 
 const isAuthorized = ['admin', 'manager'].includes(userRole.toLowerCase());
+
 if(isAuthorized) {
     const adminBadge = document.getElementById('adminBadge');
     if (adminBadge) { adminBadge.innerText = userRole + ' MODE'; adminBadge.classList.remove('hidden'); }
 }
 
-function resetCustomerName() {
-    const nameInput = document.getElementById('cartCustomer');
-    nameInput.value = ""; 
-    nameInput.classList.remove('ring-emerald-500', 'ring-blue-400');
-    nameInput.focus();    
-}
-
-document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
-    const phone = e.target.value.trim();
-    const nameInput = document.getElementById('cartCustomer');
-    nameInput.classList.remove('ring-emerald-500', 'ring-blue-400');
-    if (phone.length >= 10) {
-        try {
-            const res = await apiFetch(`${API_URL}/customers/${phone}`);
-            if (res.ok) {
-                const customer = await res.json();
-                if (nameInput.value.trim() === "") {
-                    nameInput.value = customer.name;
-                    nameInput.classList.add('ring-2', 'ring-emerald-500');
-                } else {
-                    nameInput.classList.add('ring-2', 'ring-blue-400');
-                }
-            }
-        } catch (err) {}
-    }
-});
-
+// ══════════════════════════════════════════════════════════════
+//  AUTH WAIT & LOAD
+// ══════════════════════════════════════════════════════════════
 function waitForAuthThenLoad() {
     if (typeof window.apiFetch === 'function') {
         fetchBusinessInfo(); 
@@ -595,35 +337,7 @@ function waitForAuthThenLoad() {
         });
         
         if (window.EliteAuth && window.EliteAuth.readOnly) {
-            (function() {
-                const isLifetime = (window.EliteAuth.subPlan === 'lifetime');
-                const thing = isLifetime ? 'annual service fee' : 'subscription';
-                const days  = window.EliteAuth.daysUntilExpiry;
-                const dAgo  = days !== null ? Math.abs(days) : '?';
-                const bar   = document.createElement('div');
-                bar.id      = 'pageSubBanner';
-                bar.innerHTML = `<span style="font-size:18px;">🔒</span>
-                    <span><strong>POS IS READ-ONLY</strong> — ${thing} expired ${dAgo} day(s) ago.
-                    New sales and edits are blocked. Data export is still available.</span>
-                    <button onclick="window.location.href='/'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>`;
-                bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;' +
-                    'background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));' +
-                    'border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
-                const header = document.querySelector('header') || document.querySelector('.page-header');
-                if (header && header.parentNode) {
-                    header.parentNode.insertBefore(bar, header.nextSibling);
-                } else {
-                    const main = document.querySelector('main') || document.body;
-                    main.insertBefore(bar, main.firstChild);
-                }
-            })();
-            const _b0 = document.getElementById('checkoutBtn');
-            if (_b0) { _b0.disabled = true; _b0.style.opacity='0.35'; _b0.style.cursor='not-allowed'; _b0.title='POS is read-only — subscription expired'; }
-            document.querySelectorAll('[onclick*="addToCart"]').forEach(b => {
-                b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
-            });
-            const panel = document.getElementById('cartPanel') || document.getElementById('checkoutPanel');
-            if (panel) { panel.style.opacity = '0.6'; panel.style.pointerEvents = 'none'; }
+            applyReadOnlyLock();
         }
         return;
     }
@@ -639,6 +353,7 @@ function waitForAuthThenLoad() {
                 processSalesOrderFulfillment(); 
             });
             fetchRecentSales();
+            if (window.EliteAuth && window.EliteAuth.readOnly) applyReadOnlyLock();
         } else if (attempts >= MAX_ATTEMPTS) {
             clearInterval(poll);
             console.warn('[Auth] apiFetch not ready after 3 s — loading from cache');
@@ -650,125 +365,42 @@ function waitForAuthThenLoad() {
     }, 50);
 }
 
-function getC2BInventoryTask() {
-    try {
-        const raw = localStorage.getItem('c2b_inventory_task');
-        if (!raw) return null;
-        const task = JSON.parse(raw);
-        if (!task || typeof task !== 'object') return null;
-        return task;
-    } catch { return null; }
-}
-
-function clearC2BInventoryTask() { localStorage.removeItem('c2b_inventory_task'); }
-
-function isC2BCheckoutMode() {
-    const qp = new URLSearchParams(window.location.search);
-    return qp.get('c2b') === 'checkout' && !!_activeC2BCheckoutTask;
-}
-
-async function processC2BInventoryTask() {
-    if (_c2bTaskHandled) return;
-    const qp = new URLSearchParams(window.location.search);
-    if (qp.get('c2b') !== 'checkout') {
-        _activeC2BCheckoutTask = null;
-        _c2bTaskHandled = true;
-        return;
-    }
-    const task = getC2BInventoryTask();
-    if (!task) return;
-
-    if (task.mode === 'print_only') {
-        const items = Array.isArray(task.items) ? task.items : [];
-        const total = parseFloat(task.amountSelected || 0) || items.reduce((s, i) => s + (parseFloat(i.price || 0) * parseFloat(i.quantity || 0)), 0);
-        if (items.length) {
-            showMultiReceipt(
-                task.customer || 'Walk-in',
-                'M-Pesa',
-                total,
-                items,
-                task.phone || '',
-                task.mpesaCode || '',
-                task.receiptNumber || null
-            );
-        }
-        clearC2BInventoryTask();
-        _c2bTaskHandled = true;
-        return;
-    }
-
-    if (task.mode !== 'checkout') return;
-    if (!Array.isArray(task.items) || !task.items.length) return;
-
-    const indexed = {};
-    (allStock || []).forEach(s => { indexed[String(s.id)] = s; });
-    const mappedItems = [];
-    for (const incoming of task.items) {
-        const stockRow = indexed[String(incoming.itemId)];
-        if (!stockRow) continue;
-        const qty = Math.max(1, parseInt(incoming.quantity || 1));
-        mappedItems.push({
-            itemId: stockRow.id,
-            itemName: stockRow.item_name,
-            price: parseFloat(stockRow.price || incoming.price || 0),
-            quantity: qty,
-            sellUnit: incoming.sellUnit || 'bulk',
-            displayUnit: incoming.displayUnit || stockRow.unit
-        });
-    }
-    if (!mappedItems.length) return;
-
-    let resolvedPhone = task.phone || '';
-    let resolvedCode  = task.mpesaCode || '';
-    if ((!resolvedPhone || !resolvedCode) && task.c2bId) {
-        try {
-            const r = await apiFetch(`${API_URL}/c2b/payments`);
-            if (r?.ok) {
-                const rows = await r.json();
-                const hit = (rows || []).find(x => String(x.id) === String(task.c2bId));
-                if (hit) {
-                    resolvedPhone = resolvedPhone || hit.phone || '';
-                    resolvedCode  = resolvedCode  || hit.mpesa_code || '';
-                }
-            }
-        } catch {}
-    }
-
-    _activeC2BCheckoutTask = {
-        c2bId: task.c2bId,
-        phone: resolvedPhone,
-        mpesaCode: resolvedCode
-    };
-    cart = mappedItems;
-    renderCart();
-    document.getElementById('cartCustomer').value = task.customer || '';
+function applyReadOnlyLock() {
+    const isLifetime = (window.EliteAuth.subPlan === 'lifetime');
+    const thing = isLifetime ? 'annual service fee' : 'subscription';
+    const days  = window.EliteAuth.daysUntilExpiry;
+    const dAgo  = days !== null ? Math.abs(days) : '?';
+    const bar   = document.createElement('div');
+    bar.id      = 'pageSubBanner';
+    bar.innerHTML = `<span style="font-size:18px;">🔒</span>
+        <span><strong>POS IS READ-ONLY</strong> — ${thing} expired ${dAgo} day(s) ago.
+        New sales and edits are blocked. Data export is still available.</span>
+        <button onclick="window.location.href='/'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>`;
+    bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
     
-    const methodDropdown = document.getElementById('cartMethod');
-    methodDropdown.value = 'M-Pesa';
-    methodDropdown.disabled = true; 
-    
-    if (typeof toggleCartMpesa === 'function') toggleCartMpesa();
-    const phoneField = document.getElementById('cartMpesaId');
-    if (phoneField) {
-        phoneField.value = resolvedPhone;
-        phoneField.classList.remove('hidden'); 
+    const header = document.querySelector('header') || document.querySelector('.page-header');
+    if (header && header.parentNode) {
+        header.parentNode.insertBefore(bar, header.nextSibling);
+    } else {
+        const main = document.querySelector('main') || document.body;
+        main.insertBefore(bar, main.firstChild);
     }
-    const codeField = document.getElementById('cartMpesaCode');
-    codeField.value = resolvedCode;
-    codeField.classList.remove('hidden');
-    const stkBtn = document.getElementById('stkPushBtn');
-    if (stkBtn) stkBtn.classList.add('hidden');
-    _c2bTaskHandled = true;
-    const stkStatus = document.getElementById('stkStatus');
-    if (stkStatus && (!resolvedPhone || !resolvedCode)) {
-        stkStatus.classList.remove('hidden');
-        stkStatus.style.background = 'rgba(239,68,68,0.15)';
-        stkStatus.style.color = '#fca5a5';
-        stkStatus.textContent = '⚠️ C2B details incomplete: phone or M-Pesa code missing. Refresh dashboard payment and try again.';
-    }
-    alert('C2B goods loaded. Complete transaction in POS to register sale and print M-Pesa receipt.');
+
+    const _b0 = document.getElementById('checkoutBtn');
+    if (_b0) { _b0.disabled = true; _b0.style.opacity='0.35'; _b0.style.cursor='not-allowed'; _b0.title='POS is read-only — subscription expired'; }
+    document.querySelectorAll('[onclick*="addToCart"]').forEach(b => {
+        b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
+    });
+    const panel = document.getElementById('cartSection');
+    if (panel) { panel.style.opacity = '0.6'; panel.style.pointerEvents = 'none'; }
 }
 
+document.addEventListener('eliteAuthReady', () => { waitForAuthThenLoad(); });
+window.addEventListener('load', () => { if (typeof window.apiFetch === 'function' && allStock.length === 0) waitForAuthThenLoad(); });
+
+// ══════════════════════════════════════════════════════════════
+//  STOCK FETCHING & COMMAND CENTER RENDERING
+// ══════════════════════════════════════════════════════════════
 async function fetchStock() {
     if (!navigator.onLine) {
         try {
@@ -784,15 +416,11 @@ async function fetchStock() {
                 return;
             }
         } catch(ce) {}
-        document.getElementById('inventoryGrid').innerHTML =
-            `<div class="col-span-full p-10 text-center text-slate-400 font-black uppercase">
-                📡 Offline — No cached stock available.<br>
-                <span class="text-xs font-normal normal-case">Go online at least once to cache stock for offline use.</span>
-            </div>`;
+        document.getElementById('inventoryGrid').innerHTML = `<div class="col-span-full p-10 text-center text-slate-400 font-black uppercase">📡 Offline — No cached stock available.<br><span class="text-xs font-normal normal-case">Go online at least once to cache stock for offline use.</span></div>`;
         return;
     }
 
-    if (typeof window.apiFetch !== 'function') { return; }
+    if (typeof window.apiFetch !== 'function') return;
 
     try {
         const res  = await apiFetch(`${API_URL}/inventory?role=${userRole}`);
@@ -817,30 +445,23 @@ async function fetchStock() {
                 return;
             }
         } catch(ce) {}
-        document.getElementById('inventoryGrid').innerHTML =
-            `<div class="col-span-full p-10 text-center text-red-400 font-black uppercase">
-                ⚠️ Could not load stock. Check server connection.
-            </div>`;
+        document.getElementById('inventoryGrid').innerHTML = `<div class="col-span-full p-10 text-center text-red-400 font-black uppercase">⚠️ Could not load stock. Check server connection.</div>`;
     }
 }
 
-// ── THE REINVENTED COMMAND CENTER RENDERER ──────────────────────────────────
 function renderInventory() {
     const grid = document.getElementById('inventoryGrid');
     if (!grid) return;
 
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const verifiedRole = (localStorage.getItem('userRole') || '').toLowerCase();
-    const isAdmin = verifiedRole === 'admin';
+    const isAdmin = isAuthorized;
 
-    // 1. Filter
     const filteredItems = allStock.filter(item => 
         (item.item_name || '').toLowerCase().includes(searchTerm) || 
         (item.category || '').toLowerCase().includes(searchTerm) ||
         (item.barcode || '').toLowerCase().includes(searchTerm)
     );
 
-    // 2. Paginate
     const totalItems = filteredItems.length;
     const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
     if (currentPage > totalPages) currentPage = totalPages;
@@ -850,28 +471,24 @@ function renderInventory() {
     const end = start + itemsPerPage;
     const paginatedItems = filteredItems.slice(start, end);
 
-    // 3. Update Pagination UI
     const pageInfo = document.getElementById('pageInfo');
     if (pageInfo) pageInfo.innerText = `Showing ${totalItems === 0 ? 0 : start + 1} - ${Math.min(end, totalItems)} of ${totalItems}`;
     document.getElementById('prevBtn').disabled = (currentPage === 1);
     document.getElementById('nextBtn').disabled = (currentPage === totalPages || totalItems === 0);
 
-    window._itemMap = window._itemMap || {};
+    window._itemMap = {};
     paginatedItems.forEach(item => { window._itemMap[String(item.id)] = item; });
 
-    // 4. Render Cards
     grid.innerHTML = paginatedItems.map(item => {
         const isLow = (item.stock_quantity || 0) <= 10;
         const isOutOfStock = (item.stock_quantity || 0) <= 0;
         const safeName = window.escHtml ? window.escHtml(item.item_name) : item.item_name;
-        
-        const isSubUnit = item.sub_unit && item.sub_unit_qty;
+        const isSubUnit = item.sub_unit !== null && item.sub_unit_qty !== null && item.sub_unit_price !== null;
         
         let subText = '';
         let pricingHtml = '';
 
         if (isSubUnit) {
-            // RENDER: BULK / FRACTIONAL CARD
             subText = `1 ${item.bulk_unit || item.unit} = ${item.sub_unit_qty} ${item.sub_unit}s`;
             pricingHtml = `
                 <div class="flex justify-between items-center mt-5 pt-5 border-t border-slate-700/50">
@@ -886,7 +503,6 @@ function renderInventory() {
                 </div>
             `;
         } else {
-            // RENDER: MULTI-TIER PRICING CARD
             subText = isAdmin ? `Base Cost: KES ${Number(item.cost_price).toLocaleString()} / ${item.unit}` : `${item.category}`;
             pricingHtml = `
                 <div class="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-slate-700/50">
@@ -941,9 +557,10 @@ function renderInventory() {
         `;
     }).join('');
     
+    // Low stock banner processing
     const lowStockAlert = document.getElementById('lowStockAlert');
     if (lowStockAlert) {
-        const critItems = (typeof filteredItems !== "undefined" ? filteredItems : paginatedItems).filter(i => (i.stock_quantity || 0) <= 10);
+        const critItems = filteredItems.filter(i => (i.stock_quantity || 0) <= 10);
         lowStockAlert.classList.toggle('hidden', critItems.length === 0);
         if (critItems.length) {
             const titleEl = document.getElementById('lowStockAlertTitle');
@@ -956,7 +573,7 @@ function renderInventory() {
                     const label = isOut ? 'OUT OF STOCK' : `${qty} left`;
                     const bg    = isOut ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.15)';
                     return `<span style="display:inline-flex;align-items:center;gap:5px;background:${bg};color:#fff;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:900;font-family:'Space Mono',monospace;text-transform:uppercase;white-space:nowrap;border:1px solid rgba(255,255,255,0.2);">
-                        ${isOut ? '🔴' : '⚠️'} ${window.escHtml(i.item_name)} <span style="opacity:0.65;font-size:9px;">· ${label}</span>
+                        ${isOut ? '🔴' : '⚠️'} ${window.escHtml ? window.escHtml(i.item_name) : i.item_name} <span style="opacity:0.65;font-size:9px;">· ${label}</span>
                     </span>`;
                 }).join('') + (critItems.length > 10 ? `<span style="color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;font-family:'Space Mono',monospace;align-self:center;">+${critItems.length - 10} more</span>` : '');
             }
@@ -971,11 +588,23 @@ function changePage(direction) {
     mainEl.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+let _searchDebounceTimer;
+document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(_searchDebounceTimer);
+    _searchDebounceTimer = setTimeout(() => {
+        currentPage = 1;
+        renderInventory();
+    }, 150);
+});
+
 function filterTable() {
     currentPage = 1; 
     renderInventory();
 }
 
+// ══════════════════════════════════════════════════════════════
+//  PRICING & CART LOGIC
+// ══════════════════════════════════════════════════════════════
 function resolveTierPrice(item, sellUnit) {
     const tier = document.getElementById('cartPriceTier')?.value || 'retail';
     if (sellUnit === 'sub' && item.sub_unit_price) return { price: item.sub_unit_price, tier: 'sub' };
@@ -1003,7 +632,6 @@ function applyPriceTierToCart() {
     renderCart();
 }
 
-// ── THE FRACTIONAL / SUB-UNIT ADD TO CART LOGIC ──
 function addToCart(id) {
     const item = window._itemMap[id];
     if (!item) return alert("Item not found. Please refresh.");
@@ -1038,7 +666,7 @@ function addToCart(id) {
 
     const { price: basePrice } = resolveTierPrice(item, sellUnit);
 
-    const existing = cart.find(i => i.itemId === id && i.sellUnit === sellUnit);
+    const existing = cart.find(i => String(i.itemId) === String(id) && i.sellUnit === sellUnit);
     if (existing) {
         const newStockCheck = (sellUnit === 'sub' && hasSubUnits)
             ? (existing.quantity + qty) / parseFloat(item.sub_unit_qty)
@@ -1064,7 +692,7 @@ function renderCart() {
     container.innerHTML = cart.map((item, idx) => {
         const sub = item.price * item.quantity; total += sub;
         return `<div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:0;"><span style="font-weight:900;font-size:12px;color:#f1f5f9;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${typeof escHtml === "function" ? escHtml(item.itemName) : item.itemName}</span><span style="color:#00e5a0;font-weight:700;font-size:10px;">x ${item.quantity} ${item.displayUnit || ''}</span></div>
+            <div style="flex:1;min-width:0;"><span style="font-weight:900;font-size:12px;color:#f1f5f9;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${window.escHtml ? window.escHtml(item.itemName) : item.itemName}</span><span style="color:#00e5a0;font-weight:700;font-size:10px;">x ${item.quantity} ${item.displayUnit || ''}</span></div>
             <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;"><span style="font-family:'Space Mono',monospace;color:#00e5a0;font-weight:700;font-size:12px;">KES ${sub.toLocaleString()}</span>
             <button onclick="removeFromCart(${idx})" style="color:#64748b;background:none;border:none;cursor:pointer;font-weight:900;font-size:18px;line-height:1;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">✕</button></div>
         </div>`;
@@ -1075,6 +703,9 @@ function renderCart() {
 function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
 function clearCart() { cart = []; renderCart(); }
 
+// ══════════════════════════════════════════════════════════════
+//  CHECKOUT & M-PESA STK PUSH
+// ══════════════════════════════════════════════════════════════
 function toggleCartMpesa() {
     const method      = document.getElementById('cartMethod').value;
     const mpesaFields = document.getElementById('mpesaFields');
@@ -1126,6 +757,7 @@ let currentCheckoutId = null;
 let stkResendTimer    = null;
 let stkCountdownTimer = null;
 let stkPollCount      = 0;
+let stkResolved       = false;
 
 function clearStkState() {
     clearInterval(stkPollInterval);
@@ -1136,7 +768,7 @@ function clearStkState() {
     stkCountdownTimer = null;
     stkPollCount      = 0;
     currentCheckoutId = null;
-    stkResolved = false;
+    stkResolved       = false;
     const s = document.getElementById('stkStatus');
     s.classList.add('hidden'); s.textContent = '';
     document.getElementById('cartMpesaCode').value = '';
@@ -1149,20 +781,6 @@ function clearStkState() {
     }
 }
 
-function toggleManualCode() {
-    clearStkState();
-    const c = document.getElementById('cartMpesaCode');
-    c.classList.remove('hidden');
-    c.focus();
-    document.getElementById('stkPushBtn').classList.add('hidden');
-    document.getElementById('manualCodeBtn').textContent = '📲 Use STK Push instead';
-    document.getElementById('manualCodeBtn').onclick = () => {
-        c.classList.add('hidden');
-        document.getElementById('stkPushBtn').classList.remove('hidden');
-        document.getElementById('manualCodeBtn').onclick = toggleManualCode;
-    };
-}
-let stkResolved = false;
 function handleStkResult(pd, status, btn) {
     clearInterval(stkPollInterval); stkPollInterval = null;
     clearInterval(stkCountdownTimer); stkCountdownTimer = null;
@@ -1220,285 +838,120 @@ function handleStkResult(pd, status, btn) {
 }
 
 async function sendStkPush() {
-const phone    = document.getElementById('cartMpesaId').value.trim();
-const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-const customer = document.getElementById('cartCustomer').value.trim();
-const method   = document.getElementById('cartMethod').value; 
+    const phone    = document.getElementById('cartMpesaId').value.trim();
+    const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+    const customer = document.getElementById('cartCustomer').value.trim();
+    const method   = document.getElementById('cartMethod').value; 
 
-if (!phone) return alert('⚠️ Enter customer phone number first');
-if (!total)  return alert('⚠️ Cart is empty');
-
-const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
-const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
-
-const btn    = document.getElementById('stkPushBtn');
-const status = document.getElementById('stkStatus');
-btn.disabled = true;
-btn.textContent = '⏳ Sending prompt...';
-status.classList.remove('hidden');
-status.style.background = 'rgba(59,130,246,0.15)';
-status.style.color = '#93c5fd';
-status.textContent = `Sending ${method} Push to ${phone}...`;
-
-clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
-
-try {
-    let endpoint = '/mpesa/stk-push'; 
+    if (!phone) return alert('⚠️ Enter customer phone number first');
+    if (!total)  return alert('⚠️ Cart is empty');
     
-   if (method === 'Equity') {
-        endpoint = '/jenga/equity-stk-push';
-    }
+    const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
 
-    const res  = await apiFetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            phone, 
-            amount: total, 
-            accountRef: safeAccountRef, 
-            customerName: safeCustomerName,
-            context: {} 
-        })
-    });
-    const data = await res.json();
-    
-    if (!data.success) {
-        status.style.background = 'rgba(239,68,68,0.15)';
-        status.style.color = '#fca5a5';
-        status.textContent = '❌ ' + data.message;
-        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
-        return;
-    }
+    const btn    = document.getElementById('stkPushBtn');
+    const status = document.getElementById('stkStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ Sending prompt...';
+    status.classList.remove('hidden');
+    status.style.background = 'rgba(59,130,246,0.15)';
+    status.style.color = '#93c5fd';
+    status.textContent = `Sending ${method} Push to ${phone}...`;
 
-    currentCheckoutId = data.checkoutRequestId;
-    btn.textContent = '⏳ Waiting...';
+    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
 
-    let secondsLeft = 60;
-    const updateCountdown = () => {
-        if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
-        secondsLeft--;
-    };
-    updateCountdown();
-    stkCountdownTimer = setInterval(() => {
-        if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
+    try {
+        let endpoint = '/mpesa/stk-push'; 
+        if (method === 'Equity') endpoint = '/jenga/equity-stk-push';
+
+        const res  = await apiFetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                phone, 
+                amount: total, 
+                accountRef: safeAccountRef, 
+                customerName: safeCustomerName,
+                context: {} 
+            })
+        });
+        const data = await res.json();
+        
+        if (!data.success) {
+            status.style.background = 'rgba(239,68,68,0.15)';
+            status.style.color = '#fca5a5';
+            status.textContent = '❌ ' + data.message;
+            btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
+            return;
+        }
+
+        currentCheckoutId = data.checkoutRequestId;
+        btn.textContent = '⏳ Waiting...';
+
+        let secondsLeft = 60;
+        const updateCountdown = () => {
+            if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
+            secondsLeft--;
+        };
         updateCountdown();
-    }, 1000);
+        stkCountdownTimer = setInterval(() => {
+            if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
+            updateCountdown();
+        }, 1000);
 
-    stkPollInterval = setInterval(async () => {
-        try {
-            const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
-            const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
-            const pd = await pr.json();
+        stkPollInterval = setInterval(async () => {
+            try {
+                const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
+                const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
+                const pd = await pr.json();
 
-            if (!pr.ok || pd.status === 'not_found') {
+                if (!pr.ok || pd.status === 'not_found') {
+                    clearInterval(stkPollInterval); stkPollInterval = null;
+                    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
+                    status.style.background = 'rgba(239,68,68,0.15)';
+                    status.style.color = '#fca5a5';
+                    status.textContent = '❌ Could not track payment — enter code manually.';
+                    const c = document.getElementById('cartMpesaCode');
+                    c.classList.remove('hidden'); c.focus();
+                    btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
+                    return;
+                }
+
+                if (pd.status !== 'pending') {
+                    handleStkResult(pd, status, btn); 
+                    return;
+                }
+
+                stkPollCount++;
+                if (method === 'Safaricom' && stkPollCount >= 18) {
+                    try {
+                        const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
+                        const qd = await qr.json();
+                        if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
+                    } catch(e) {}
+                }
+            } catch(e) {}
+        }, 3000);
+
+        setTimeout(() => {
+            if (!stkResolved) { 
                 clearInterval(stkPollInterval); stkPollInterval = null;
                 clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                status.style.background = 'rgba(239,68,68,0.15)';
-                status.style.color = '#fca5a5';
-                status.textContent = '❌ Could not track payment — enter code manually.';
-                const c = document.getElementById('cartMpesaCode');
-                c.classList.remove('hidden'); c.focus();
-                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
-                return;
+                status.style.background = 'rgba(245,158,11,0.15)';
+                status.style.color = '#fcd34d';
+                status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
+                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
+                btn.onclick = sendStkPush;
             }
+        }, 60000);
 
-            if (pd.status !== 'pending') {
-                handleStkResult(pd, status, btn); 
-                return;
-            }
-
-            stkPollCount++;
-            if (method === 'Safaricom' && stkPollCount >= 18) {
-                try {
-                    const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
-                    const qd = await qr.json();
-                    if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
-                } catch(e) {}
-            }
-        } catch(e) {}
-    }, 3000);
-
-   setTimeout(() => {
-        if (!stkResolved) { 
-            clearInterval(stkPollInterval); stkPollInterval = null;
-            clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-            status.style.background = 'rgba(245,158,11,0.15)';
-            status.style.color = '#fcd34d';
-            status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-            btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
-            btn.onclick = sendStkPush;
-        }
-    }, 60000);
-
-} catch(e) {
-    status.style.background = 'rgba(239,68,68,0.15)';
-    status.style.color = '#fca5a5';
-    status.textContent = '❌ Error: ' + e.message;
-    btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
+    } catch(e) {
+        status.style.background = 'rgba(239,68,68,0.15)';
+        status.style.color = '#fca5a5';
+        status.textContent = '❌ Error: ' + e.message;
+        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
+    }
 }
-}
-
-        let _recentAll  = [];
-        let _recentPage = 1;
-        const _recentPer = 10;
-
-        async function fetchRecentSales() {
-            if (typeof window.apiFetch !== 'function') return;
-            try {
-                const _now    = new Date();
-                const _yyyy   = _now.getFullYear();
-                const _mm     = String(_now.getMonth() + 1).padStart(2, '0');
-                const _dd     = String(_now.getDate()).padStart(2, '0');
-                const localDateStr = `${_yyyy}-${_mm}-${_dd}`;
-
-                const res = await apiFetch(`${API_URL}/reports/sales?role=${userRole}&date=${localDateStr}`);
-                if (!res) return; 
-                const sales = await res.json();
-
-                const _sellerName = (window.EliteAuth && window.EliteAuth.name) ? window.EliteAuth.name : userName; 
-
-                _recentAll  = Array.isArray(sales) ? sales.filter(s => s.sold_by === _sellerName) : [];
-                _recentPage = 1;
-                window._recentSaleMap = {}; 
-                _renderRecentSales();
-            } catch (e) { console.error("Recent sales failed:", e.message); }
-        }
-
-        function _groupSalesIntoTransactions(rows) {
-            const grouped = [];
-            const seen    = new Map(); 
-
-            for (const s of rows) {
-                const key = s.receipt_number || s.invoice_number || ('solo_' + s.id);
-
-                if (seen.has(key)) {
-                    const tx = grouped[seen.get(key)];
-                    tx._total += Number(s.total_amount) || 0;
-                    tx._items.push({
-                        itemName: s.item_name     || 'Item',
-                        quantity: s.quantity_sold || 1,
-                        price:    s.unit_price    || 0
-                    });
-                    if (!tx['Kra_Receipt_No'])      tx['Kra_Receipt_No']      = s['Kra_Receipt_No']      || null;
-                    if (!tx.kra_qr_url)             tx.kra_qr_url             = s.kra_qr_url             || null;
-                    if (!tx['Control_unit_number']) tx['Control_unit_number'] = s['Control_unit_number'] || null;
-                    
-                    if (Array.isArray(s.payments) && s.payments.length > 0) {
-                        if (!Array.isArray(tx.payments) || tx.payments.length === 0) {
-                            tx.payments = s.payments;
-                        }
-                    }
-                    if (!tx.mpesa_code && s.mpesa_code) tx.mpesa_code = s.mpesa_code;
-
-                } else {
-                    const tx = Object.assign({}, s, {
-                        _total: Number(s.total_amount) || 0,
-                        _items: [{
-                            itemName: s.item_name     || 'Item',
-                            quantity: s.quantity_sold || 1,
-                            price:    s.unit_price    || 0
-                        }]
-                    });
-                    seen.set(key, grouped.length);
-                    grouped.push(tx);
-                }
-            }
-            return grouped;
-        }
-        function _renderRecentSales() {
-            const body  = document.getElementById('recentSalesBody');
-            const pgDiv = document.getElementById('recentSalesPagination');
-
-            const grouped = _groupSalesIntoTransactions(_recentAll);
-            const total   = grouped.length;
-
-            if (!total) {
-                body.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">No sales handled by you today.</td></tr>';
-                if (pgDiv) pgDiv.innerHTML = '';
-                return;
-            }
-
-            const pages = Math.ceil(total / _recentPer);
-            const start = (_recentPage - 1) * _recentPer;
-            const slice = grouped.slice(start, start + _recentPer);
-
-            window._recentSaleMap = window._recentSaleMap || {};
-            slice.forEach((s, idx) => { window._recentSaleMap['rs_' + (start + idx)] = s; });
-
-            body.innerHTML = slice.map((s, idx) => {
-                const statusClass = s.payment_status === 'Paid'
-                    ? 'bg-green-100 text-green-700'
-                    : s.payment_status === 'Partial'
-                    ? 'bg-orange-100 text-orange-700'
-                    : 'bg-red-100 text-red-700';
-                const globalIdx  = start + idx;
-                const itemSummary = s._items.length === 1
-                    ? `${escHtml(s._items[0].itemName)} <span class="font-black text-slate-300">x${s._items[0].quantity}</span>`
-                    : s._items.map(i => `${escHtml(i.itemName)} <span class="font-black text-slate-300">x${i.quantity}</span>`).join(', ');
-
-                const _rawMethod = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
-                    ? 'Credit'
-                    : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
-                        ? s.payments[0].payment_method
-                        : (s.mpesa_code || s.mpesaCode || s.mpesa_id ? 'M-Pesa' : 'Cash');
-                const method = /equity|equitel/i.test(_rawMethod) ? 'Equity Mobile'
-                    : (_rawMethod === 'Safaricom' || /^safaricom/i.test(_rawMethod)) ? 'M-Pesa'
-                    : _rawMethod;
-                const methodStyle = method === 'M-Pesa'
-                    ? 'background:rgba(0,229,160,0.12);color:#00e5a0;'
-                    : method === 'Credit'
-                    ? 'background:rgba(255,77,109,0.12);color:#ff4d6d;'
-                    : method === 'Equity Mobile'
-                    ? 'background:rgba(245,158,11,0.12);color:#f59e0b;'
-                    : 'background:rgba(86,156,214,0.12);color:#569cd6;';
-
-                return `<tr class="border-t border-slate-50 hover:bg-slate-50 transition">
-                    <td class="p-4 font-mono text-slate-400 text-[10px]">${new Date(s.sale_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
-                    <td class="p-4 font-black text-slate-700 uppercase text-xs hidden md:table-cell">${escHtml(s.customer_name) || 'Walk-in'}</td>
-                    <td class="p-4 text-slate-500 text-xs hidden md:table-cell">${itemSummary}</td>
-                    <td class="p-4 text-center"><span style="${methodStyle}padding:3px 8px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap;">${method}</span></td>
-                    <td class="p-4 text-right font-black text-slate-800 text-xs">KES ${s._total.toLocaleString()}</td>
-                    <td class="p-4 text-center"><span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${statusClass}">${s.payment_status}</span></td>
-                    <td class="p-4 text-center">
-                        <button onclick="printRecentReceipt(${globalIdx})"
-                            style="background:linear-gradient(135deg,#1e3a5f,#1e293b);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;"
-                            onmouseover="this.style.background='linear-gradient(135deg,#00e5a0,#00c98e)';this.style.color='#000';"
-                            onmouseout="this.style.background='linear-gradient(135deg,#1e3a5f,#1e293b)';this.style.color='#00e5a0';"
-                            title="Reprint receipt — does NOT create a new sale">
-                            🖨️ Receipt
-                        </button>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            if (!pgDiv) return;
-            if (pages <= 1) { pgDiv.innerHTML = ''; return; }
-
-            const startRec = start + 1;
-            const endRec   = Math.min(start + _recentPer, total);
-            pgDiv.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-black text-slate-400 uppercase">
-                        Showing ${startRec}–${endRec} of ${total} transactions · Page ${_recentPage} of ${pages}
-                    </span>
-                    <div class="flex gap-2">
-                        <button onclick="_recentChangePage(-1)" ${_recentPage <= 1 ? 'disabled' : ''}
-                            class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                            Previous
-                        </button>
-                        <button onclick="_recentChangePage(1)" ${_recentPage >= pages ? 'disabled' : ''}
-                            class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                            Next
-                        </button>
-                    </div>
-                </div>`;
-        }
-
-        function _recentChangePage(dir) {
-            const pages = Math.ceil(_groupSalesIntoTransactions(_recentAll).length / _recentPer);
-            _recentPage = Math.max(1, Math.min(pages, _recentPage + dir));
-            _renderRecentSales();
-        }
 
 function _setKraPinRequired(required) {
     const badge = document.getElementById('kraPinBadge');
@@ -1546,16 +999,15 @@ async function finalizeCartSale() {
         return alert("⚠️ Invalid KRA PIN format.\n\nFormat should be: 1 letter + 9 digits + 1 letter (e.g. A012345678B)");
     }
 
-    if (!isOnline) {
+    // ── OFFLINE PATH ────────────────────────────────────────────────────────
+    if (!navigator.onLine) {
         isFinalizing = true;
         document.getElementById('checkoutBtn').innerText = "SAVING OFFLINE...";
         try {
             let totalAmount = 0;
             const receiptItems = [...cart];
 
-            cart.forEach(item => {
-                totalAmount += (item.price * item.quantity);
-            });
+            cart.forEach(item => { totalAmount += (item.price * item.quantity); });
 
             const offlineReceiptNo = 'OFF-' + Date.now();
 
@@ -1582,7 +1034,7 @@ async function finalizeCartSale() {
                     itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
                 }
             });
-            try { await StockCache.save(allStock); } catch(ce) { console.warn('[offline] StockCache save failed:', ce); }
+            try { await StockCache.save(allStock); } catch(ce) {}
             renderInventory();
 
             showMultiReceipt(customer, effectiveMethod, totalAmount, receiptItems, phone, code, offlineReceiptNo);
@@ -1604,6 +1056,7 @@ async function finalizeCartSale() {
         return;
     }
 
+    // ── ONLINE PATH ────────────────────────────────────────────────────────
     isFinalizing = true;
     document.getElementById('checkoutBtn').innerText = "PROCESSING...";
 
@@ -1685,17 +1138,13 @@ async function finalizeCartSale() {
                         if (resolveRes.ok && resolveData.success) {
                             clearC2BInventoryTask();
                             _activeC2BCheckoutTask = null;
-                            console.log('✅ C2B silently matched in background');
                             break; 
                         } else {
                             throw new Error(resolveData.message || 'Resolve failed');
                         }
                     } catch (c2bErr) {
                         resolveAttempts++;
-                        if (resolveAttempts >= maxAttempts) {
-                            console.error(`⚠️ C2B matching failed after retries:`, c2bErr.message);
-                            break; 
-                        }
+                        if (resolveAttempts >= maxAttempts) break;
                         await new Promise(resolve => setTimeout(resolve, 1000)); 
                     }
                 }
@@ -1709,479 +1158,303 @@ async function finalizeCartSale() {
         document.getElementById('cartMethod').disabled = false;
     } 
 }
-// ╔══════════════════════════════════════════════════════════════════════╗
-// ║  BUSINESS INFO — fetched live from DigiTax /etims-info on page load ║
-// ║  No hardcoded PIN. VAT No removed — KRA PIN IS the VAT No in Kenya. ║
-// ╚══════════════════════════════════════════════════════════════════════╝
-let BUSINESS_PIN = '';   // populated by fetchBusinessInfo()
-const VAT_RATE   = 0.16; // Standard Kenya VAT rate — fixed
 
-let _businessInfoReady = false;
-let _businessInfoPromise = null;
+// ══════════════════════════════════════════════════════════════
+//  RECENT SALES LOGIC
+// ══════════════════════════════════════════════════════════════
+let _recentAll  = [];
+let _recentPage = 1;
+const _recentPer = 10;
 
-function fetchBusinessInfo() {
-    if (_businessInfoPromise) return _businessInfoPromise; // already fetching
-    _businessInfoPromise = (async () => {
-        try {
-            const res  = await window.apiFetch(`${API_BASE}/business-info`);
-            if (!res || !res.ok) throw new Error('non-ok response');
-            const data = await res.json();
-            if (data.success && data.kraPin) {
-                BUSINESS_PIN = data.kraPin;
-            } else {
-                console.warn('[business-info] kraPin missing in DigiTax response');
-            }
-        } catch (err) {
-            console.warn('[business-info] Could not fetch from DigiTax:', err.message);
-        } finally {
-            _businessInfoReady = true;
-        }
-    })();
-    return _businessInfoPromise;
-}
-
-async function showMultiReceipt(customer, method, total, items, phone = '', code = '', receiptNumber = null, invoiceNumber = null, dnNumber = null, kraReceiptNo = null, kraQrUrl = null, controlUnitNumber = null, kraQrDataUrl = null) {
-    if (!_businessInfoReady) await fetchBusinessInfo();
-    const date = new Date().toLocaleString();
-    const hardwareName = "ELITE HARDWARE LTD";
-
-    const _methodRaw = (method || '').trim();
-    if (/equity|equitel/i.test(_methodRaw)) {
-        method = 'Equity Mobile Money';
-    } else if (_methodRaw === 'Safaricom' || /^safaricom/i.test(_methodRaw)) {
-        method = 'M-Pesa';
-    } else if (_methodRaw === 'M-Pesa STK (pending reconciliation)') {
-        method = 'M-Pesa';
-    }
-
-    let maskedPhone = phone;
-    if (phone && phone.length >= 10) {
-        maskedPhone = phone.substring(0, 4) + "xxx" + phone.substring(phone.length - 3);
-    }
-
-    let docType = "OFFICIAL SALES RECEIPT";
-    let mainButtonLabel = "PRINT RECEIPT";
-    let methodColor = "text-blue-600";
-
-    if (method === 'Credit') {
-        docType = "OFFICIAL CREDIT INVOICE";
-        mainButtonLabel = "PRINT INVOICE";
-        methodColor = "text-red-600";
-    } else if (method === 'M-Pesa') {
-        methodColor = "text-emerald-600";
-    } else if (method === 'Equity Mobile Money') {
-        methodColor = "text-amber-500";
-    }
-
-    const headerHtml = `
-        <div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono">
-            <h2 class="font-black text-xl uppercase tracking-tighter text-slate-800">${hardwareName}</h2>
-            <p id="receiptDocType" class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">${docType}</p>
-            <div class="flex justify-center gap-4 mt-1">
-                <p class="text-[8px] font-bold text-slate-400">KRA PIN: ${BUSINESS_PIN || 'PENDING'}</p>
-            </div>
-        </div>
-        <div class="space-y-1 mb-6 text-[11px] font-mono">
-            ${invoiceNumber ? `<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">INVOICE NO:</span> <span class="font-black uppercase">${invoiceNumber}</span></div>` : ''}
-            ${!invoiceNumber && receiptNumber ? `<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">RECEIPT NO:</span> <span class="font-black uppercase">${receiptNumber}</span></div>` : ''}
-            <div class="flex justify-between"><span>DATE:</span> <span class="font-bold">${date}</span></div>
-            <div class="flex justify-between border-t border-b py-2 my-2 bg-slate-50 px-1">
-                <span>CUSTOMER:</span> 
-                <span class="font-black uppercase text-slate-900">${window.escHtml(customer)}</span>
-                ...
-                ${phone ? `<div class="flex justify-between"><span>PHONE:</span> <span class="font-bold">${window.escHtml(maskedPhone)}</span></div>` : ''}
-            </div>
-            ${phone ? `<div class="flex justify-between"><span>PHONE:</span> <span class="font-bold">${window.escHtml(maskedPhone)}</span></div>` : ''}
-            <div class="flex justify-between"><span>METHOD:</span> <span class="font-bold uppercase ${methodColor}">${method}</span></div>
-            ${code ? `<div class="flex justify-between"><span>TRANS ID:</span> <span class="font-bold uppercase text-emerald-600">${code.toUpperCase()}</span></div>` : ''}
-            <div class="flex justify-between border-t pt-2 mt-1"><span>SERVED BY:</span> <span class="font-bold uppercase">${window.EliteAuth?.name || 'Staff'}</span></div>
-        </div>
-    `;
-
-    const itemsHtml = `
-        <table class="w-full text-left font-mono text-[11px] mb-4" id="receiptTable">
-            <thead>
-                <tr class="border-b-2 border-slate-900 text-slate-400 uppercase text-[9px]">
-                    <th class="py-2 pr-1">Description</th>
-                    <th class="py-2 text-center">Qty</th>
-                    <th class="py-2 text-right price-col">Unit Price</th>
-                    <th class="py-2 text-right price-col">Amount</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-100">
-                ${items.map(i => `
-                    <tr>
-                        <td class="py-2 pr-1 font-bold uppercase text-slate-800 text-[10px]">${i.itemName}</td>
-                        <td class="py-2 text-center font-bold">${i.quantity}</td>
-                        <td class="py-2 text-right price-col">${parseFloat(i.price).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                        <td class="py-2 text-right font-bold price-col">${(i.price * i.quantity).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-
-    const totalAmt   = parseFloat(total);
-    const vatAmount  = totalAmt * VAT_RATE / (1 + VAT_RATE);
-    const exVatTotal = totalAmt - vatAmount;
-
-    const totalBlock = `
-        <div id="totalDisplayBlock" style="border-top: 2px solid #000; margin-top: 10px; padding-top: 4px; font-family: 'Courier New', monospace;">
-            <div style="display: flex; justify-content: space-between; font-size: 10px; padding: 2px 0; color: #000;">
-                <span>Subtotal (ex-VAT):</span>
-                <span style="font-weight: bold;">KES ${exVatTotal.toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 10px; padding: 2px 0; color: #000;">
-                <span>VAT (16%):</span>
-                <span style="font-weight: bold;">KES ${vatAmount.toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #000; color: #fff; padding: 6px; margin-top: 4px;">
-                <span style="font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Total (incl. VAT)</span>
-                <span style="font-size: 16px; font-weight: 900;">KES ${totalAmt.toLocaleString()}</span>
-            </div>
-        </div>
-
-        <div style="font-size: 9px; text-align: center; font-style: italic; color: #000; font-family: 'Courier New', monospace; line-height: 1.3; margin: 12px 0;">
-            <p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p>
-        </div>
-
-        <div class="mt-4 pt-4" style="border-top: 1px dashed #000; text-align: center; font-family: 'Courier New', monospace; color: #000;">
-            <p style="font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">KRA eTIMS RECEIPT</p>
-
-            <div style="display: flex; justify-content: center; margin: 10px 0;">
-                <img src="${kraQrDataUrl || ('https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(
-                    kraQrUrl ||
-                    ('PIN:' + (BUSINESS_PIN || 'PENDING') +
-                     '|REF:' + (receiptNumber || invoiceNumber || Date.now()) +
-                     '|AMT:' + totalAmt +
-                     '|DATE:' + new Date().toLocaleDateString())
-                ))}"
-                     style="width: 110px; height: 110px; image-rendering: pixelated; display: block; margin: 0 auto;" alt="KRA eTIMS QR" />
-            </div>
-
-            <div style="font-size: 9px; text-align: left; padding: 0 4px;">
-                <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd;">
-                    <span style="flex-shrink: 0; margin-right: 8px;">KRA PIN:</span>
-                    <span style="font-weight: 900;">${BUSINESS_PIN}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd;">
-                    <span style="flex-shrink: 0; margin-right: 8px;">Receipt No:</span>
-                    <span style="font-weight: 900; text-align: right; word-break: break-all;">${invoiceNumber || receiptNumber || 'N/A'}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd;">
-                    <span style="flex-shrink: 0; margin-right: 8px;">Kra Receipt:</span>
-                    <span style="font-weight: 900; text-align: right; word-break: break-all;">${kraReceiptNo || 'PENDING'}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #ddd;">
-                    <span style="flex-shrink: 0; margin-right: 8px;">CU No:</span>
-                    <span style="font-weight: 900; text-align: right; word-break: break-all;">${controlUnitNumber || 'PENDING'}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span style="flex-shrink: 0; margin-right: 8px;">eTIMS Status:</span>
-                    <span style="font-weight: 900; color: ${kraReceiptNo ? 'green' : '#E8640A'};">
-                        ${kraReceiptNo ? '✓ VERIFIED' : '⏳ PENDING'}
-                    </span>
-                </div>
-            </div>
-
-            <p style="margin-top: 10px; font-size: 8px; font-weight: bold; text-transform: uppercase; text-align: center; border-top: 1px solid #000; padding-top: 4px;">
-                Verify this invoice at etims.kra.go.ke
-            </p>
-        </div>
-    `;
-    window._currentReceiptNumber = receiptNumber;
-    window._currentInvoiceNumber = invoiceNumber;
-    window._currentDnNumber      = dnNumber;
-
-    window._lastReceiptData = {
-        customer, method, total, items,
-        phone, code, receiptNumber, invoiceNumber, dnNumber,
-        kraReceiptNo, kraQrUrl, kraQrDataUrl, controlUnitNumber,
-        servedBy: window.EliteAuth?.name || 'Staff',
-        date: new Date().toLocaleString()
-    };
-
-    document.getElementById('receiptDate').innerHTML = headerHtml;
-    document.getElementById('receiptContent').innerHTML = itemsHtml;
-    document.getElementById('receiptTotal').innerHTML = totalBlock;
-
-    const buttonContainer = document.getElementById('receiptButtons');
-    
-    buttonContainer.innerHTML = `
-        <button type="button" onclick="printTwoCopies();" class="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-lg mb-2 hover:bg-black transition-all">
-            🖨️ ${mainButtonLabel} (2 COPIES)
-        </button>
-        <button type="button" onclick="printDeliveryNote();" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all mb-2">
-            PRINT DELIVERY NOTE (BROWSER)
-        </button>
-        <button type="button" onclick="closeReceipt();" class="w-full bg-gray-100 border border-gray-200 py-3 rounded-xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">
-            CLOSE
-        </button>
-    `;
-
-    document.getElementById('receiptModal').classList.remove('hidden');
-    document.getElementById('modalOverlay').classList.remove('hidden');
-}
-
-async function silentPrintDN(data) {
-    if (!LIVE_PRINT) { _browserPrintFallback(data, true, false); return; }
+async function fetchRecentSales() {
+    if (typeof window.apiFetch !== 'function') return;
     try {
-        showPrintToast('🖨️ Sending DN to printer...', false, true);
-        const res = await fetch('http://localhost:6789/print/dn', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ ...data, copies: 2 })
-        });
-        if (!res.ok) throw new Error('Print server error ' + res.status);
-        
-        const result = await res.json();
-        if (result.url) {
-            window.open(result.url, '_blank'); 
-            showPrintToast('✅ Opened virtual DN');
-        } else if (result.success) {
-            showPrintToast('✅ Delivery Note printed — 2 copies');
-        } else {
-            throw new Error('Print failed');
-        }
-        
-    } catch (err) {
-        console.error('[PRINT DN ERROR]', err);
-        showPrintToast('⚠️ v-printer offline — using browser print', true);
-        setTimeout(() => _browserPrintFallback(data, true, false), 800);
-    }
+        const _now    = new Date();
+        const _yyyy   = _now.getFullYear();
+        const _mm     = String(_now.getMonth() + 1).padStart(2, '0');
+        const _dd     = String(_now.getDate()).padStart(2, '0');
+        const localDateStr = `${_yyyy}-${_mm}-${_dd}`;
+
+        const res = await apiFetch(`${API_URL}/reports/sales?role=${userRole}&date=${localDateStr}`);
+        if (!res) return; 
+        const sales = await res.json();
+        const _sellerName = (window.EliteAuth && window.EliteAuth.name) ? window.EliteAuth.name : userName; 
+        _recentAll  = Array.isArray(sales) ? sales.filter(s => s.sold_by === _sellerName) : [];
+        _recentPage = 1;
+        window._recentSaleMap = {}; 
+        _renderRecentSales();
+    } catch (e) { console.error("Recent sales failed:", e.message); }
 }
 
-function printDeliveryNote() {
-    _browserPrintFallback(window._lastReceiptData, true, false);
-}
+function _groupSalesIntoTransactions(rows) {
+    const grouped = [];
+    const seen    = new Map(); 
 
-function printTwoCopies() {
-    if (LIVE_PRINT && window._lastReceiptData) {
-        silentPrint(window._lastReceiptData);
-        return;
-    }
-    _browserPrintFallback(window._lastReceiptData, false, false);
-}
+    for (const s of rows) {
+        const key = s.receipt_number || s.invoice_number || ('solo_' + s.id);
 
-function _browserPrintFallback(data, onlyDN = false, printAll = false) {
-    const d = data || window._lastReceiptData || {};
-    const dnNumber      = d.dnNumber      || window._currentDnNumber      || ('DN-' + Date.now().toString().slice(-6));
-    const invoiceNumber = d.invoiceNumber || window._currentInvoiceNumber || '';
-    const customer      = d.customer      || '';
-    const phone         = d.phone         || '';
-    const servedBy      = d.servedBy      || (window.EliteAuth && window.EliteAuth.name) || 'Staff';
-    const date          = d.date          || new Date().toLocaleString();
-    const maskedPhone   = phone && phone.length >= 10 ? phone.slice(0,4) + 'xxx' + phone.slice(-3) : phone;
-    const items         = Array.isArray(d.items) ? d.items : [];
-
-    const header  = document.getElementById('receiptDate').innerHTML;
-    const content = document.getElementById('receiptContent').innerHTML;
-    const total   = document.getElementById('receiptTotal').innerHTML;
-
-    const dnRows = items.map(i =>
-        `<tr style="border-bottom:1px solid #eee;">
-            <td style="padding:5px 2px;font-weight:700;text-transform:uppercase;">${(i.itemName||'').substring(0,30)}</td>
-            <td style="padding:5px 2px;text-align:center;font-weight:700;">${i.quantity||1}</td>
-        </tr>`
-    ).join('');
-
-    const makeInvoiceCopy = (label, copyClass) => `
-        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;">
-            <span class="copy-badge ${copyClass}">${label}</span>
-            ${header}
-            ${content}
-            ${total}
-            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:.1em;">*** ${label} — INVOICE ***</p>
-        </div>`;
-
-    const makeDnCopy = (label, copyClass) => `
-        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:20px 24px;color:#000;background:#fff;max-width:700px;margin:0 auto;page-break-after:always;">
-            <span class="copy-badge ${copyClass}">${label}</span>
-            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;">
-                <h1 style="font-size:15px;font-weight:900;margin:0;letter-spacing:.15em;">ELITE HARDWARE LTD</h1>
-                <p style="font-size:10px;font-weight:700;margin:4px 0;letter-spacing:.2em;">OFFICIAL DELIVERY NOTE</p>
-            </div>
-            <div style="font-size:11px;margin-bottom:10px;line-height:1.9;">
-                <div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:5px;">
-                    <span style="font-weight:900;">DN NO:</span>
-                    <span style="font-weight:900;">${dnNumber}</span>
-                </div>
-                ${invoiceNumber ? `<div style="display:flex;justify-content:space-between;"><span>INVOICE REF:</span><span style="font-weight:700;">${invoiceNumber}</span></div>` : ''}
-                <div style="display:flex;justify-content:space-between;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div>
-                ${customer ? `<div style="display:flex;justify-content:space-between;border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 0;margin:4px 0;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${customer}</span></div>` : ''}
-                ${maskedPhone ? `<div style="display:flex;justify-content:space-between;"><span>PHONE:</span><span style="font-weight:700;">${maskedPhone}</span></div>` : ''}
-                <div style="display:flex;justify-content:space-between;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div>
-            </div>
-            <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:14px;">
-                <thead>
-                    <tr style="border-bottom:2px solid #000;">
-                        <th style="text-align:left;padding:4px 0;text-transform:uppercase;font-size:9px;">Description</th>
-                        <th style="text-align:center;padding:4px 0;text-transform:uppercase;font-size:9px;width:40px;">Qty</th>
-                    </tr>
-                </thead>
-                <tbody>${dnRows}</tbody>
-            </table>
-            <div style="border-top:1px solid #000;padding-top:12px;font-size:11px;margin-top:8px;">
-                <p style="margin:14px 0;"><b>LOADED BY:</b> &nbsp;&nbsp;&nbsp;&nbsp;___________________________</p>
-                <p style="margin:14px 0;"><b>RECEIVED BY:</b> &nbsp;&nbsp;___________________________</p>
-                <p style="margin:14px 0;"><b>DATE:</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;___________________________</p>
-            </div>
-            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:16px;letter-spacing:.1em;">*** ${label} — DELIVERY NOTE ***</p>
-        </div>`;
-
-    let htmlString = '';
-    
-    if (printAll) {
-        htmlString += makeInvoiceCopy('★ CUSTOMER COPY ★', 'copy-badge-customer');
-        htmlString += makeInvoiceCopy('★ SHOP COPY ★', 'copy-badge-shop');
-        htmlString += makeDnCopy('★ CUSTOMER COPY ★', 'copy-badge-customer');
-        htmlString += makeDnCopy('★ SHOP COPY ★', 'copy-badge-shop');
-    } else if (onlyDN) {
-        htmlString += makeDnCopy('★ CUSTOMER COPY ★', 'copy-badge-customer');
-        htmlString += makeDnCopy('★ SHOP COPY ★', 'copy-badge-shop');
-    } else {
-        htmlString += makeInvoiceCopy('★ CUSTOMER COPY ★', 'copy-badge-customer');
-        htmlString += makeInvoiceCopy('★ SHOP COPY ★', 'copy-badge-shop');
-    }
-
-    const printArea = document.createElement('div');
-    printArea.id = 'tempPrintArea';
-    if (onlyDN) printArea.classList.add('dn-print');
-    const pageSize = onlyDN ? 'A4' : '80mm auto';
-    printArea.innerHTML = htmlString + `<style>
-        @media print { 
-            @page { size: ${pageSize}; margin: 2mm; } 
-            .receipt-watermark::before {
-                content: 'ELITE HARDWARE';
-                position: absolute; top: 50%; left: 50%;
-                transform: translate(-50%,-50%) rotate(-35deg);
-                font-size: 22px; font-weight: 900;
-                color: rgba(0,0,0,0.07);
-                letter-spacing: 0.18em; text-transform: uppercase;
-                white-space: nowrap; pointer-events: none;
-                font-family: 'Courier New', monospace;
-            }
-            .receipt-watermark { position: relative; }
-            .receipt-watermark > * { position: relative; z-index: 1; }
-            .copy-badge {
-                display: block !important; text-align: center;
-                font-family: 'Courier New', monospace;
-                font-size: 8px; font-weight: 900;
-                letter-spacing: 0.2em; text-transform: uppercase;
-                border: 1px dashed #999; padding: 3px 6px; margin-bottom: 6px;
-            }
-            .copy-badge-customer { color: #000; border-color: #000; }
-            .copy-badge-shop     { color: #555; border-color: #aaa; }
-        }
-    </style>`;
-
-    document.body.appendChild(printArea);
-
-    const qrImg = printArea.querySelector('img[alt="KRA eTIMS QR"]');
-    const doPrint = () => {
-        window.print();
-        setTimeout(() => printArea.remove(), 1000);
-    };
-    if (qrImg && !qrImg.complete) {
-        qrImg.onload  = doPrint;
-        qrImg.onerror = doPrint; 
-        setTimeout(doPrint, 5000);
-    } else {
-        setTimeout(doPrint, 250); 
-    }
-}
-
-async function clientGenerateQrDataUrl(text) {
-    return new Promise(resolve => {
-        try {
-            const container = document.createElement('div');
-            container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-            document.body.appendChild(container);
-            const qr = new QRCode(container, {
-                text:           text,
-                width:          140,
-                height:         140,
-                correctLevel:   QRCode.CorrectLevel.M,
+        if (seen.has(key)) {
+            const tx = grouped[seen.get(key)];
+            tx._total += Number(s.total_amount) || 0;
+            tx._items.push({
+                itemName: s.item_name     || 'Item',
+                quantity: s.quantity_sold || 1,
+                price:    s.unit_price    || 0
             });
-            setTimeout(() => {
-                try {
-                    const canvas = container.querySelector('canvas');
-                    const dataUrl = canvas ? canvas.toDataURL('image/png') : null;
-                    document.body.removeChild(container);
-                    resolve(dataUrl);
-                } catch(_) {
-                    document.body.removeChild(container);
-                    resolve(null);
+            if (!tx['Kra_Receipt_No'])      tx['Kra_Receipt_No']      = s['Kra_Receipt_No']      || null;
+            if (!tx.kra_qr_url)             tx.kra_qr_url             = s.kra_qr_url             || null;
+            if (!tx['Control_unit_number']) tx['Control_unit_number'] = s['Control_unit_number'] || null;
+            
+            if (Array.isArray(s.payments) && s.payments.length > 0) {
+                if (!Array.isArray(tx.payments) || tx.payments.length === 0) {
+                    tx.payments = s.payments;
                 }
-            }, 50);
-        } catch(e) {
-            resolve(null); 
+            }
+            if (!tx.mpesa_code && s.mpesa_code) tx.mpesa_code = s.mpesa_code;
+
+        } else {
+            const tx = Object.assign({}, s, {
+                _total: Number(s.total_amount) || 0,
+                _items: [{
+                    itemName: s.item_name     || 'Item',
+                    quantity: s.quantity_sold || 1,
+                    price:    s.unit_price    || 0
+                }]
+            });
+            seen.set(key, grouped.length);
+            grouped.push(tx);
         }
-    });
+    }
+    return grouped;
 }
 
-async function printRecentReceipt(idx) {
-    const s = window._recentSaleMap && window._recentSaleMap['rs_' + idx];
-    if (!s) {
-        alert('Receipt data not found. Please refresh the page and try again.');
+function _renderRecentSales() {
+    const body  = document.getElementById('recentSalesBody');
+    const pgDiv = document.getElementById('recentSalesPagination');
+
+    const grouped = _groupSalesIntoTransactions(_recentAll);
+    const total   = grouped.length;
+
+    if (!total) {
+        body.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">No sales handled by you today.</td></tr>';
+        if (pgDiv) pgDiv.innerHTML = '';
         return;
     }
 
-    const items = (Array.isArray(s._items) && s._items.length > 0)
-        ? s._items
-        : [{
-            itemName: s.item_name     || 'Item',
-            quantity: s.quantity_sold || 1,
-            price:    s.unit_price    || (s.total_amount / (s.quantity_sold || 1))
-          }];
+    const pages = Math.ceil(total / _recentPer);
+    const start = (_recentPage - 1) * _recentPer;
+    const slice = grouped.slice(start, start + _recentPer);
 
-    if (Array.isArray(s.items) && s.items.length > 0) {
-        items.splice(0, items.length, ...s.items.map(i => ({
-            itemName: i.item_name || i.itemName || 'Item',
-            quantity: i.quantity_sold || i.quantity || 1,
-            price:    i.unit_price   || i.price   || 0
-        })));
+    window._recentSaleMap = window._recentSaleMap || {};
+    slice.forEach((s, idx) => { window._recentSaleMap['rs_' + (start + idx)] = s; });
+
+    body.innerHTML = slice.map((s, idx) => {
+        const statusClass = s.payment_status === 'Paid'
+            ? 'bg-green-100 text-green-700'
+            : s.payment_status === 'Partial'
+            ? 'bg-orange-100 text-orange-700'
+            : 'bg-red-100 text-red-700';
+        const globalIdx  = start + idx;
+        const itemSummary = s._items.length === 1
+            ? `${window.escHtml ? window.escHtml(s._items[0].itemName) : s._items[0].itemName} <span class="font-black text-slate-300">x${s._items[0].quantity}</span>`
+            : s._items.map(i => `${window.escHtml ? window.escHtml(i.itemName) : i.itemName} <span class="font-black text-slate-300">x${i.quantity}</span>`).join(', ');
+
+        const _rawMethod = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
+            ? 'Credit'
+            : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
+                ? s.payments[0].payment_method
+                : (s.mpesa_code || s.mpesaCode || s.mpesa_id ? 'M-Pesa' : 'Cash');
+        const method = /equity|equitel/i.test(_rawMethod) ? 'Equity Mobile'
+            : (_rawMethod === 'Safaricom' || /^safaricom/i.test(_rawMethod)) ? 'M-Pesa'
+            : _rawMethod;
+        const methodStyle = method === 'M-Pesa'
+            ? 'background:rgba(0,229,160,0.12);color:#00e5a0;'
+            : method === 'Credit'
+            ? 'background:rgba(255,77,109,0.12);color:#ff4d6d;'
+            : method === 'Equity Mobile'
+            ? 'background:rgba(245,158,11,0.12);color:#f59e0b;'
+            : 'background:rgba(86,156,214,0.12);color:#569cd6;';
+
+        return `<tr class="border-t border-slate-50 hover:bg-slate-50 transition">
+            <td class="p-4 font-mono text-slate-400 text-[10px]">${new Date(s.sale_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
+            <td class="p-4 font-black text-slate-700 uppercase text-xs hidden md:table-cell">${window.escHtml ? window.escHtml(s.customer_name) : s.customer_name || 'Walk-in'}</td>
+            <td class="p-4 text-slate-500 text-xs hidden md:table-cell">${itemSummary}</td>
+            <td class="p-4 text-center"><span style="${methodStyle}padding:3px 8px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap;">${method}</span></td>
+            <td class="p-4 text-right font-black text-slate-800 text-xs">KES ${s._total.toLocaleString()}</td>
+            <td class="p-4 text-center"><span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${statusClass}">${s.payment_status}</span></td>
+            <td class="p-4 text-center">
+                <button onclick="printRecentReceipt(${globalIdx})"
+                    style="background:linear-gradient(135deg,#1e3a5f,#1e293b);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;"
+                    onmouseover="this.style.background='linear-gradient(135deg,#00e5a0,#00c98e)';this.style.color='#000';"
+                    onmouseout="this.style.background='linear-gradient(135deg,#1e3a5f,#1e293b)';this.style.color='#00e5a0';"
+                    title="Reprint receipt — does NOT create a new sale">
+                    🖨️ Receipt
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    if (!pgDiv) return;
+    if (pages <= 1) { pgDiv.innerHTML = ''; return; }
+
+    const startRec = start + 1;
+    const endRec   = Math.min(start + _recentPer, total);
+    pgDiv.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black text-slate-400 uppercase">
+                Showing ${startRec}–${endRec} of ${total} transactions · Page ${_recentPage} of ${pages}
+            </span>
+            <div class="flex gap-2">
+                <button onclick="_recentChangePage(-1)" ${_recentPage <= 1 ? 'disabled' : ''}
+                    class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    Previous
+                </button>
+                <button onclick="_recentChangePage(1)" ${_recentPage >= pages ? 'disabled' : ''}
+                    class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                    Next
+                </button>
+            </div>
+        </div>`;
+}
+
+function _recentChangePage(dir) {
+    const pages = Math.ceil(_groupSalesIntoTransactions(_recentAll).length / _recentPer);
+    _recentPage = Math.max(1, Math.min(pages, _recentPage + dir));
+    _renderRecentSales();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  OFFLINE SYNC LOGIC
+// ══════════════════════════════════════════════════════════════
+let isOnline = navigator.onLine;
+
+function updateOfflineBanner() {
+    const banner = document.getElementById('offlineBanner');
+    const btn    = document.getElementById('checkoutBtn');
+    if (!banner) return;
+    if (!isOnline) {
+        banner.classList.remove('hidden');
+        document.body.style.paddingTop = '56px';
+        if (btn) btn.innerText = 'SAVE OFFLINE';
+    } else {
+        banner.classList.add('hidden');
+        document.body.style.paddingTop = '';
+        if (btn) btn.innerText = 'COMPLETE TRANSACTION';
+    }
+    updatePendingBadge();
+}
+
+async function updatePendingBadge() {
+    try {
+        const count = await OfflineQueue.count();
+        const badge = document.getElementById('pendingBadge');
+        const num   = document.getElementById('pendingCount');
+        if (!badge || !num) return;
+        if (count > 0) {
+            badge.classList.remove('hidden');
+            num.innerText = count;
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch(e) {}
+}
+
+function showSyncToast(msg) {
+    const toast = document.getElementById('syncToast');
+    const msgEl = document.getElementById('syncToastMsg');
+    if (!toast) return;
+    if (msgEl) msgEl.innerText = msg;
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 4000);
+}
+
+async function syncPendingSales() {
+    if (!isOnline) return;
+    let pending;
+    try { pending = await OfflineQueue.getAll(); } catch(e) { return; }
+    if (!pending || pending.length === 0) return;
+
+    let synced = 0, failed = 0;
+    const failedItems = []; 
+    const failedIds = []; 
+
+    for (const sale of pending) {
+        try {
+            const { offline_id, queued_at, sync_status, isBulkCart, offlineReceipt, ...payload } = sale;
+            const endpoint = isBulkCart ? `${API_URL}/sell/cart` : `${API_URL}/sell`;
+
+            const res = await apiFetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res) {
+                failed++;
+                failedItems.push(`• ${sale.customerName || 'Unknown'} — Session expired or blocked`);
+                failedIds.push(offline_id);
+                continue;
+            }
+
+            const text = await res.text();
+            let data;
+            try { data = JSON.parse(text); } catch (parseErr) {
+                failed++;
+                failedItems.push(`• ${sale.customerName || 'Unknown'} — Server error (${res.status})`);
+                failedIds.push(offline_id);
+                continue;
+            }
+
+            if (data.success) {
+                await OfflineQueue.remove(offline_id);
+                synced++;
+            } else {
+                failed++;
+                failedItems.push(`• ${sale.customerName || 'Unknown'} (${offlineReceipt || offline_id}) — ${data.message || 'Server rejected'}`);
+                failedIds.push(offline_id);
+            }
+        } catch(e) {
+            failed++;
+            failedItems.push(`• ${sale.customerName || 'Unknown'} — ${e.message || 'Failed to reach server'}`);
+            failedIds.push(sale.offline_id);
+        }
     }
 
-    const receiptNumber     = s.receipt_number          || s.receiptNumber      || null;
-    const invoiceNumber     = s.invoice_number          || s.invoiceNumber      || null;
-    const dnNumber          = s.dn_number               || s.dnNumber           || null;
-    const kraReceiptNo      = s['Kra_Receipt_No']       || s.kra_receipt_no     || s.kraReceiptNo      || null;
-    const kraQrUrl          = s.kra_qr_url              || s.kraQrUrl           || null;
-    const controlUnitNumber = s['Control_unit_number']  || s.control_unit_number|| s.controlUnitNumber || null;
+    if (synced > 0) {
+        showSyncToast(`${synced} sale${synced > 1 ? 's' : ''} synced to server.`);
+        fetchStock();
+        fetchRecentSales();
+    }
 
-    const mpesaCode = (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].mpesa_code)
-        ? s.payments[0].mpesa_code
-        : (s.mpesa_code || s.mpesaCode || '');
-
- const paymentMethod = (s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.is_credit_sale)
-        ? 'Credit'
-        : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
-            ? s.payments[0].payment_method
-            : (mpesaCode || s.mpesa_code || s.mpesa_id ? 'M-Pesa' : 'Cash');
-
-    const reprintQrData = kraQrUrl ||
-        ('PIN:A014661185V|REF:' + (receiptNumber || invoiceNumber || 'N/A') +
-         '|AMT:' + (s._total || Number(s.total_amount)) +
-         '|DATE:' + new Date().toLocaleDateString());
-    const reprintQrDataUrl = await clientGenerateQrDataUrl(reprintQrData);
-
-    showMultiReceipt(
-        s.customer_name  || 'Walk-in',
-        paymentMethod,
-        s._total || Number(s.total_amount),
-        items,
-        s.customer_phone || s.mpesa_id || '',
-        mpesaCode,
-        receiptNumber,
-        invoiceNumber,
-        dnNumber,
-        kraReceiptNo,
-        kraQrUrl,
-        controlUnitNumber,
-        reprintQrDataUrl
-    );
+    if (failed > 0) {
+        const detail = failedItems.join('\n');
+        const confirmClear = confirm(
+            `⚠️ ${failed} offline sale${failed > 1 ? 's' : ''} could NOT be synced and remain queued:\n\n${detail}\n\n` +
+            `Do you want to permanently DELETE these failed sales from your device?\n` +
+            `(Click OK to delete them, or Cancel to keep them and try again later)`
+        );
+        if (confirmClear) {
+            for (const id of failedIds) { await OfflineQueue.remove(id); }
+            alert('Stuck sales have been cleared from the queue.');
+        }
+    }
+    updatePendingBadge();
 }
+
+window.addEventListener('online',  () => { isOnline = true;  updateOfflineBanner(); syncPendingSales(); });
+window.addEventListener('offline', () => { isOnline = false; updateOfflineBanner(); });
+
+window.addEventListener('beforeunload', e => {
+    const badge       = document.getElementById('pendingCount');
+    const hasPending  = badge && parseInt(badge.innerText || '0', 10) > 0;
+    if (!isOnline || hasPending) {
+        e.preventDefault();
+        e.returnValue = '⚠️ You have unsynced offline sales. Closing this tab now is safe — they are stored locally and will sync when you reopen and reconnect. Continue?';
+    }
+});
+
+updateOfflineBanner();
+if (isOnline) syncPendingSales();
 </script>
 </body>
 </html>
