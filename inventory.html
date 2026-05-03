@@ -6,681 +6,1194 @@
     <script src="/src/pages/auth.js"></script>
     <script src="/src/pages/sidebar.js" data-active="inventory.html"></script>
     <script src="offline-db.js"></script>
-    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventory | Elite Hardware Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/tailwind.css">
     <style>
-        /* --- RECEIPT MODAL SCROLL FIX --- */
-        #receiptModal {
-            position: fixed !important;
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            background: white;
-            padding: 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            z-index: 120;
-            width: 90%;
-            max-width: 400px;
-            max-height: 90vh; 
-            overflow-y: auto;
-            border-radius: 24px;
+    /* ─── PRINT RULES ─────────────────────────────────────────────────── */
+    @media print {
+        @page { size: 80mm auto; margin: 2mm 1mm; }
+        body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
+        body:has(#tempPrintArea) #tempPrintArea,
+        body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
+        body:not(:has(#tempPrintArea)) * { visibility: hidden !important; }
+        body:not(:has(#tempPrintArea)) #receiptModal,
+        body:not(:has(#tempPrintArea)) #receiptModal * { visibility: visible !important; }
+        #receiptModal, #tempPrintArea {
+            position: absolute !important; left: 0 !important; right: 0 !important; top: 0 !important;
+            margin: 0 auto !important; width: 80mm !important; max-width: 80mm !important;
+            padding: 4px !important; border: none !important; box-shadow: none !important;
+            max-height: none !important; overflow: visible !important; transform: none !important;
+            color: #000 !important; background: #fff !important;
+            font-family: 'Courier New', monospace !important; font-size: 11px !important; opacity: 1 !important;
         }
+        #tempPrintArea.dn-print { width: 100% !important; max-width: 100% !important; }
+        #receiptButtons, .no-print, #sidebarMenu, #modalOverlay { display: none !important; }
+        .receipt-watermark::before {
+            content: 'ELITE HARDWARE'; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%,-50%) rotate(-35deg); font-size: 22px; font-weight: 900;
+            color: rgba(0,0,0,0.07); letter-spacing: 0.18em; text-transform: uppercase;
+            white-space: nowrap; pointer-events: none;
+        }
+        .receipt-watermark { position: relative !important; }
+        .receipt-watermark > * { position: relative !important; z-index: 1 !important; }
+        .copy-badge { display: block !important; text-align: center; font-size: 8px; font-weight: 900;
+            letter-spacing: 0.2em; border: 1px dashed #999; padding: 3px; margin-bottom: 4px; }
+        .print-copy-break { page-break-after: always; }
+    }
 
-        /* --- PROFESSIONAL PRINT FIXES --- */
-        @media print {
-            @page { size: 80mm auto; margin: 2mm 1mm; }
-            body:has(#tempPrintArea) > *:not(#tempPrintArea) { display: none !important; }
-            body:has(#tempPrintArea) #tempPrintArea,
-            body:has(#tempPrintArea) #tempPrintArea * { visibility: visible !important; }
-            body:not(:has(#tempPrintArea)) * { visibility: hidden !important; }
-            body:not(:has(#tempPrintArea)) #receiptModal,
-            body:not(:has(#tempPrintArea)) #receiptModal * { visibility: visible !important; }
-            #receiptModal, #tempPrintArea {
-                position: absolute !important;
-                left: 0 !important; right: 0 !important; top: 0 !important;
-                margin: 0 auto !important;
-                width: 80mm !important;
-                max-width: 80mm !important;
-                padding: 4px !important;
-                border: none !important; box-shadow: none !important;
-                max-height: none !important; overflow: visible !important;
-                transform: none !important;
-                color: #000 !important; background: #fff !important;
-                font-family: 'Courier New', monospace !important;
-                font-size: 11px !important;
-                opacity: 1 !important;
-            }
-            #tempPrintArea.dn-print {
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-            #receiptButtons, .no-print, #sidebarMenu, #modalOverlay { display: none !important; }
-            .receipt-watermark::before {
-                content: 'ELITE HARDWARE';
-                position: absolute; top: 50%; left: 50%;
-                transform: translate(-50%,-50%) rotate(-35deg);
-                font-size: 22px; font-weight: 900;
-                color: rgba(0,0,0,0.07);
-                letter-spacing: 0.18em; text-transform: uppercase;
-                white-space: nowrap; pointer-events: none;
-            }
-            .receipt-watermark { position: relative !important; }
-            .receipt-watermark > * { position: relative !important; z-index: 1 !important; }
-            .copy-badge {
-                display: block !important;
-                text-align: center;
-                font-size: 8px; font-weight: 900;
-                letter-spacing: 0.2em;
-                border: 1px dashed #999;
-                padding: 3px; margin-bottom: 4px;
-            }
-            .print-copy-break { page-break-after: always; }
-        }
+    /* ─── DESIGN TOKENS ───────────────────────────────────────────────── */
+    :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --surface2: #1c2128;
+        --surface3: #21262d;
+        --border: rgba(255,255,255,0.08);
+        --border2: rgba(255,255,255,0.13);
+        --green: #10b981; --green-glow: rgba(16,185,129,0.18);
+        --blue: #3b82f6;  --blue-glow: rgba(59,130,246,0.18);
+        --amber: #f59e0b; --amber-glow: rgba(245,158,11,0.18);
+        --purple: #a78bfa; --purple-glow: rgba(167,139,250,0.18);
+        --red: #f87171;   --red-glow: rgba(248,113,113,0.18);
+        --text: #e6edf3; --muted: #7d8590; --muted2: #4d5566;
+        --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
+        --radius: 14px; --radius-lg: 20px;
+    }
 
-        /* --- DARK THEME GLOBALS --- */
-        :root {
-            --bg: #090a0fd0; --surface: #14171f; --surface2: #1e222d;
-            --border: rgba(255,255,255,0.08);
-            --green: #10b981; --red: #ef4444; --blue: #3b82f6; --amber: #f59e0b;
-            --text: #f8fafc; --muted: #94a3b8;
-            --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
-        }
-        * { box-sizing: border-box; }
-        body { font-family: var(--sans) !important; background: var(--bg) !important; color: var(--text) !important; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--sans) !important; background: var(--bg) !important; color: var(--text) !important; }
 
-        .bg-white { background: var(--surface) !important; }
-        .bg-gray-50, .bg-slate-50, .bg-slate-100 { background: var(--surface2) !important; }
-        .bg-slate-900:not(#sidebar):not([style]) { background: var(--green) !important; color: #000 !important; }
-        .text-slate-900, .text-slate-800 { color: var(--text) !important; }
-        .text-slate-500, .text-slate-400 { color: var(--muted) !important; }
-        .border, .border-b, .border-t { border-color: var(--border) !important; }
-        
-        #cartSection { background: #0f172a !important; color: #f1f5f9 !important; }
-        #cartSection h2 { color: #f1f5f9 !important; }
-        #cartSection #cartCustomer, #cartSection #cartMethod, #cartSection #cartMpesaId, #cartSection #cartMpesaCode, #cartSection #cartKraPin, #cartSection #cartPriceTier { 
-            background: #1e293b !important; color: #f1f5f9 !important; border: 1px solid rgba(255,255,255,0.12) !important; 
-        }
+    /* ─── SCROLLBAR ───────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 4px; }
 
-        /* --- MOBILE LAYOUT --- */
-        @media (max-width: 768px) {
-            main { padding: 8px !important; overflow-x: hidden; }
-            .p-6.md\:p-8.flex { flex-direction: column !important; gap: 10px !important; padding: 14px !important; }
-            #searchInput { width: 100% !important; padding: 11px 14px !important; font-size: 16px !important; }
-            #cartSection { padding: 14px !important; margin-bottom: 12px !important; border-radius: 16px !important; }
-            #cartSection .grid { grid-template-columns: 1fr !important; gap: 14px !important; }
-            #recentSalesBody td:nth-child(2), #recentSalesBody td:nth-child(3) { display: none !important; }
-            #receiptModal { top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important; transform: none !important; width: 100% !important; max-width: 100% !important; border-radius: 24px 24px 0 0 !important; max-height: 92vh !important; }
+    /* ─── LAYOUT ──────────────────────────────────────────────────────── */
+    main { background: var(--bg) !important; }
+
+    /* ─── TOP BAR ─────────────────────────────────────────────────────── */
+    .top-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; padding: 20px 24px; flex-wrap: wrap;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+    }
+    .top-bar-title { display: flex; align-items: center; gap: 10px; }
+    .top-bar-title h1 { font-size: 18px; font-weight: 900; color: var(--text); letter-spacing: -0.3px; }
+    #adminBadge { background: rgba(248,113,113,0.15); color: var(--red); font-size: 9px;
+        font-weight: 900; padding: 3px 10px; border-radius: 20px; text-transform: uppercase;
+        letter-spacing: 1px; border: 1px solid rgba(248,113,113,0.3); }
+    .search-wrap { position: relative; flex: 1; max-width: 400px; }
+    .search-wrap input {
+        width: 100%; padding: 10px 16px 10px 40px;
+        background: var(--surface2); border: 1px solid var(--border2);
+        border-radius: var(--radius); color: var(--text); font-size: 13px;
+        font-family: var(--sans); outline: none; transition: border-color 0.2s;
+    }
+    .search-wrap input:focus { border-color: var(--blue); }
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+        color: var(--muted); font-size: 14px; pointer-events: none; }
+
+    /* ─── PRODUCT GRID ────────────────────────────────────────────────── */
+    .product-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 12px;
+        padding: 20px 24px;
+    }
+
+    /* ─── PRODUCT CARD ────────────────────────────────────────────────── */
+    .product-card {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        cursor: default;
+    }
+    .product-card:hover { border-color: rgba(255,255,255,0.2); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .product-card.low-stock { border-left: 3px solid var(--red); }
+
+    /* card header */
+    .card-header {
+        display: flex; align-items: flex-start; justify-content: space-between;
+        padding: 16px 16px 10px;
+        gap: 12px;
+    }
+    .card-name { font-size: 15px; font-weight: 900; color: var(--text); line-height: 1.3; }
+    .card-meta { font-size: 11px; color: var(--muted); font-weight: 600; margin-top: 3px; }
+    .stock-badge {
+        flex-shrink: 0; font-size: 10px; font-weight: 900; padding: 5px 12px;
+        border-radius: 20px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;
+        font-family: var(--mono);
+    }
+    .stock-badge.in-stock { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+    .stock-badge.low { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); animation: pulse-red 1.5s infinite; }
+    @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+    /* card divider */
+    .card-divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+    /* price rows */
+    .price-section { padding: 12px 16px; }
+    .price-row {
+        display: flex; align-items: baseline; justify-content: space-between;
+        gap: 8px;
+    }
+    .price-row + .price-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+    .price-label {
+        font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px;
+        color: var(--muted); white-space: nowrap;
+    }
+    .price-label.fundi { color: var(--amber); }
+    .price-label.wholesale { color: var(--green); }
+    .price-label.sub { color: var(--purple); }
+
+    .price-value { font-family: var(--mono); font-weight: 900; font-size: 20px; color: var(--text); }
+    .price-value.retail { color: var(--text); }
+    .price-value.fundi { color: var(--amber); }
+    .price-value.wholesale { color: var(--green); }
+    .price-value.sub { color: var(--purple); }
+
+    .price-suffix { font-size: 11px; font-weight: 700; color: var(--muted); margin-left: 2px; }
+
+    /* multi-price row (retail + fundi + wholesale side by side) */
+    .price-cols { display: flex; gap: 0; padding: 12px 16px; }
+    .price-col { flex: 1; padding: 0 12px; border-right: 1px solid var(--border); }
+    .price-col:first-child { padding-left: 0; }
+    .price-col:last-child { border-right: none; }
+    .price-col .price-value { font-size: 17px; }
+
+    /* sub-unit info bar */
+    .sub-info-bar {
+        padding: 8px 16px;
+        background: var(--purple-glow);
+        border-top: 1px solid rgba(167,139,250,0.2);
+        font-size: 10px; font-weight: 700; color: var(--purple);
+        display: flex; align-items: center; gap: 6px;
+    }
+
+    /* card action bar */
+    .card-actions {
+        display: flex; gap: 8px; padding: 12px 16px;
+        border-top: 1px solid var(--border);
+        background: var(--surface2);
+    }
+    .qty-input {
+        width: 64px; padding: 9px 8px; border-radius: 10px;
+        border: 1px solid var(--border2); background: var(--surface3);
+        color: var(--text); text-align: center; font-weight: 700;
+        font-size: 13px; font-family: var(--mono); outline: none;
+        transition: border-color 0.2s;
+    }
+    .qty-input:focus { border-color: var(--blue); }
+
+    /* sell buttons */
+    .btn-sell {
+        flex: 1; padding: 9px 12px; border-radius: 10px; border: none;
+        cursor: pointer; font-weight: 900; font-size: 11px;
+        text-transform: uppercase; letter-spacing: 0.8px;
+        transition: opacity 0.15s, transform 0.1s; font-family: var(--sans);
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .btn-sell:hover { opacity: 0.85; }
+    .btn-sell:active { transform: scale(0.97); }
+    .btn-sell-retail {
+        background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+        color: #fff; box-shadow: 0 2px 10px rgba(59,130,246,0.3);
+    }
+    .btn-sell-sub {
+        background: linear-gradient(135deg, #5b21b6, #a78bfa);
+        color: #fff; box-shadow: 0 2px 10px rgba(167,139,250,0.3);
+        flex: 0.8;
+    }
+    .btn-admin-del {
+        padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(248,113,113,0.3);
+        background: rgba(248,113,113,0.08); color: var(--red);
+        cursor: pointer; font-weight: 900; font-size: 10px; text-transform: uppercase;
+        transition: background 0.15s; font-family: var(--sans);
+        white-space: nowrap;
+    }
+    .btn-admin-del:hover { background: rgba(248,113,113,0.2); }
+
+    /* batch badge */
+    .batch-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        font-size: 9px; font-weight: 900; padding: 3px 9px;
+        border-radius: 20px; cursor: pointer; text-transform: uppercase;
+        letter-spacing: 0.5px; border: none; background: none; font-family: var(--sans);
+    }
+    .batch-badge.multi { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
+    .batch-badge.final { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+    .batch-badge.depleted { background: var(--red-glow); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+
+    /* ─── EMPTY / LOADING STATE ───────────────────────────────────────── */
+    .empty-state {
+        grid-column: 1 / -1; text-align: center; padding: 60px 20px;
+        color: var(--muted); font-weight: 700;
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* ─── PAGINATION ──────────────────────────────────────────────────── */
+    .pagination-bar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 24px; border-top: 1px solid var(--border);
+        background: var(--surface); flex-wrap: wrap; gap: 10px;
+    }
+    .page-info { font-size: 10px; font-weight: 900; color: var(--muted);
+        text-transform: uppercase; letter-spacing: 1px; }
+    .page-btns { display: flex; gap: 8px; }
+    .page-btn {
+        padding: 7px 16px; border-radius: 9px; border: 1px solid var(--border2);
+        background: var(--surface2); color: var(--text); font-size: 10px;
+        font-weight: 900; text-transform: uppercase; cursor: pointer;
+        transition: background 0.15s; font-family: var(--sans); letter-spacing: 0.5px;
+    }
+    .page-btn:hover:not(:disabled) { background: var(--surface3); border-color: rgba(255,255,255,0.2); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* ─── LOW STOCK BANNER ────────────────────────────────────────────── */
+    .low-stock-banner {
+        margin: 0; padding: 14px 24px;
+        background: linear-gradient(135deg, #7f1d1d, #991b1b);
+        border-bottom: 1px solid rgba(255,100,100,0.3);
+        display: none;
+    }
+    .low-stock-banner.visible { display: block; }
+    .low-stock-banner-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .low-stock-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .low-stock-chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        background: rgba(255,255,255,0.12); color: #fff; padding: 4px 10px;
+        border-radius: 20px; font-size: 10px; font-weight: 900;
+        font-family: var(--mono); text-transform: uppercase;
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    /* ─── CART SECTION ────────────────────────────────────────────────── */
+    #cartSection {
+        background: #0d1117 !important;
+        border: 1px solid rgba(16,185,129,0.3) !important;
+        border-bottom: 4px solid #10b981 !important;
+        border-radius: 20px !important;
+        margin: 16px 24px !important;
+        padding: 20px !important;
+        color: #e6edf3 !important;
+        box-shadow: 0 0 40px rgba(16,185,129,0.08) !important;
+    }
+    #cartSection * { color: inherit; }
+    #cartSection h2 { font-size: 16px; font-weight: 900; color: #e6edf3 !important; }
+    #cartSection .cart-item-row,
+    #cartSection #cartItems > div { background: #1c2128 !important; }
+    #cartSection input,
+    #cartSection select,
+    #cartSection textarea {
+        background: #1c2128 !important; color: #e6edf3 !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+    }
+    #cartSection input::placeholder { color: #4d5566 !important; }
+    #cartSection select option { background: #1c2128 !important; }
+
+    /* ─── SELL UNIT PICKER MODAL ──────────────────────────────────────── */
+    #_sellUnitOverlay .picker-card {
+        background: var(--surface);
+        border: 1px solid var(--border2);
+        border-radius: 20px; padding: 24px;
+        max-width: 360px; width: 92vw;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    }
+    .picker-btn {
+        flex: 1; padding: 16px 12px; border-radius: 14px;
+        cursor: pointer; text-align: center; transition: transform 0.15s, box-shadow 0.15s;
+        font-family: var(--sans);
+    }
+    .picker-btn:hover { transform: translateY(-2px); }
+    .picker-btn-bulk { background: #0d2137; border: 2px solid #3b82f6; }
+    .picker-btn-sub  { background: #1a0d37; border: 2px solid #a78bfa; }
+
+    /* ─── RECEIPT MODAL ───────────────────────────────────────────────── */
+    #receiptModal {
+        position: fixed !important; top: 50% !important; left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: var(--surface) !important; border: 1px solid var(--border2) !important;
+        color: var(--text) !important;
+        width: min(95vw, 420px) !important; max-height: min(90vh, 700px) !important;
+        overflow: hidden !important; display: flex !important; flex-direction: column !important;
+        z-index: 120 !important; border-radius: 24px !important;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.7) !important;
+    }
+    #receiptModal.hidden { display: none !important; }
+    #receiptModal > .flex-1 { overflow-y: auto; flex: 1; min-height: 0; }
+    #receiptModal #receiptButtons { flex-shrink: 0; }
+    #receiptModal h1,#receiptModal h2,#receiptModal h3,
+    #receiptModal p,#receiptModal span,#receiptModal td,#receiptModal th { color: var(--text) !important; }
+    #receiptModal .text-slate-500,#receiptModal .text-gray-500 { color: var(--muted) !important; }
+    #receiptModal #receiptButtons { background: var(--surface2) !important; border-top: 1px solid var(--border) !important; }
+    #receiptModal #totalDisplayBlock { border-top: 2px solid rgba(255,255,255,0.3) !important; }
+    #receiptModal #totalDisplayBlock .bg-black { background: var(--surface2) !important; }
+    #receiptModal .receipt-watermark::before { color: rgba(255,255,255,0.04) !important; }
+    @media print {
+        #receiptModal,#receiptModal *,#tempPrintArea,#tempPrintArea * {
+            background: #fff !important; color: #000 !important; border-color: #000 !important; visibility: visible !important;
         }
+        #receiptModal .bg-black,#receiptModal #totalDisplayBlock .bg-black { background: #000 !important; color: #fff !important; }
+    }
+
+    /* ─── RECENT SALES TABLE ──────────────────────────────────────────── */
+    .recent-sales-wrap {
+        margin: 0 24px 24px; border-radius: var(--radius-lg);
+        border: 1px solid var(--border2); overflow: hidden;
+        background: var(--surface);
+    }
+    .recent-sales-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 20px; border-bottom: 1px solid var(--border);
+    }
+    .recent-sales-head h3 { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+    .today-badge { background: rgba(16,185,129,0.12); color: var(--green);
+        font-size: 9px; font-weight: 900; padding: 3px 10px; border-radius: 20px;
+        text-transform: uppercase; border: 1px solid rgba(16,185,129,0.25); }
+
+    /* ─── PRINT / WATERMARK ───────────────────────────────────────────── */
+    .receipt-watermark { position: relative; }
+    .receipt-watermark::before {
+        content: 'ELITE HARDWARE'; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%,-50%) rotate(-35deg); font-size: 28px; font-weight: 900;
+        color: rgba(0,0,0,0.055); letter-spacing: 0.18em; text-transform: uppercase;
+        white-space: nowrap; pointer-events: none; z-index: 0; font-family: 'Courier New', monospace;
+    }
+    .receipt-watermark > * { position: relative; z-index: 1; }
+    .copy-badge {
+        display: inline-block; font-family: 'Courier New', monospace;
+        font-size: 9px; font-weight: 900; letter-spacing: 0.18em; text-transform: uppercase;
+        border: 1px dashed #cbd5e1; padding: 2px 8px; border-radius: 3px;
+        margin-bottom: 4px; color: #64748b;
+    }
+
+    /* ─── OFFLINE BANNER ──────────────────────────────────────────────── */
+    #offlineBanner { font-family: var(--sans); }
+
+    /* ─── MOBILE ──────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+        .product-grid { grid-template-columns: 1fr; padding: 12px; gap: 8px; }
+        .top-bar { padding: 14px; }
+        .search-wrap { max-width: 100%; width: 100%; }
+        .pagination-bar { padding: 12px 14px; }
+        #cartSection { margin: 12px !important; padding: 14px !important; }
+        .recent-sales-wrap { margin: 0 12px 16px; }
+        #receiptModal { top: auto !important; bottom: 0 !important; left: 0 !important;
+            right: 0 !important; transform: none !important; width: 100% !important;
+            max-width: 100% !important; border-radius: 24px 24px 0 0 !important; max-height: 92vh !important; }
+    }
+
+    /* inputs/selects global dark */
+    input:not([type=range]), select, textarea {
+        background: var(--surface2) !important; color: var(--text) !important;
+        border-color: var(--border2) !important;
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted) !important; }
+
+    /* Tailwind utility resets for dark theme */
+    .bg-white { background: var(--surface) !important; }
+    .bg-gray-50,.bg-gray-100,.bg-slate-50,.bg-slate-100 { background: var(--surface2) !important; }
+    .text-slate-800,.text-slate-900 { color: var(--text) !important; }
+    .text-slate-600,.text-slate-500,.text-slate-400 { color: var(--muted) !important; }
+    .border,.border-b,.border-t,.border-slate-100,.border-slate-200 { border-color: var(--border) !important; }
+    .divide-y > * { border-color: var(--border) !important; }
+    .hover\:bg-slate-50:hover { background: var(--surface2) !important; }
+    .bg-emerald-100 { background: var(--green-glow) !important; }
+    .text-emerald-700 { color: var(--green) !important; }
+    .bg-green-100 { background: var(--green-glow) !important; }
+    .text-green-700 { color: var(--green) !important; }
+    .bg-orange-100 { background: var(--amber-glow) !important; }
+    .text-orange-700 { color: var(--amber) !important; }
+    .bg-red-100 { background: var(--red-glow) !important; }
+    .text-red-700,.text-red-600,.text-red-500 { color: var(--red) !important; }
+    .bg-blue-900\/50 { background: rgba(59,130,246,0.15) !important; }
+    .rounded-3xl,.rounded-2xl { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
+    main,.page-main { background: var(--bg) !important; }
+
+    /* Recent sales row */
+    #recentSalesBody tr { border-bottom: 1px solid var(--border); }
+    #recentSalesBody tr:hover { background: var(--surface2); }
+    #recentSalesBody td { padding: 10px 16px; font-size: 12px; color: var(--text); }
+    thead th { padding: 10px 16px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
     </style>
 </head>
 <body class="antialiased">
-    <!-- Offline Mode Banner -->
-    <div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-[999] bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between shadow-lg no-print">
-        <div class="flex items-center gap-3">
-            <span class="text-lg">📡</span>
-            <div>
-                <p class="font-black text-sm uppercase tracking-wide">Offline Mode</p>
-                <p class="text-xs font-bold opacity-80">Sales are being saved locally and will sync when connected.</p>
-            </div>
-        </div>
-        <div id="pendingBadge" class="bg-slate-900 text-amber-400 px-3 py-1 rounded-full text-xs font-black hidden">
-            <span id="pendingCount">0</span> pending
-        </div>
-    </div>
 
-    <!-- Sync Success Toast -->
-    <div id="syncToast" class="hidden fixed bottom-6 right-6 z-[999] bg-emerald-600 text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 no-print">
-        <span>✅</span>
+<!-- Offline Banner -->
+<div id="offlineBanner" class="hidden fixed top-0 left-0 right-0 z-[999] no-print"
+     style="background:#f59e0b;color:#0d1117;padding:10px 20px;display:none;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,0.4);">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:18px;">📡</span>
         <div>
-            <p class="font-black text-sm">Sales Synced!</p>
-            <p id="syncToastMsg" class="text-xs opacity-80"></p>
+            <p style="font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">Offline Mode</p>
+            <p class="text-xs" style="font-size:11px;opacity:0.75;font-weight:600;">Sales saved locally · will sync on reconnect</p>
         </div>
     </div>
-
-    <div class="flex min-h-screen">
-        <div id="sidebarMount"></div>
-       
-        <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <div style="display:flex;flex-direction:column;gap:0;margin-bottom:0;">
-                
-                <!-- Low Stock Alert -->
-                <div id="lowStockAlert" class="hidden mb-4 shadow-lg" style="background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid rgba(255,100,100,0.3);border-radius:18px;padding:16px 20px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <span style="font-size:22px;">🚨</span>
-                            <div>
-                                <p style="font-weight:900;font-size:13px;color:#fff;text-transform:uppercase;letter-spacing:0.5px;line-height:1;" id="lowStockAlertTitle">CRITICAL LOW STOCK</p>
-                                <p style="font-size:10px;color:rgba(255,255,255,0.65);font-weight:700;text-transform:uppercase;margin-top:3px;">Items below 10 units — immediate restock required</p>
-                            </div>
-                        </div>
-                        <button onclick="this.closest('#lowStockAlert').classList.add('hidden')" style="color:rgba(255,255,255,0.5);font-size:16px;background:none;border:none;cursor:pointer;font-weight:900;flex-shrink:0;">✕</button>
-                    </div>
-                    <div id="lowStockAlertItems" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-                </div>
-                
-                <!-- POS Cart Section -->
-                <div id="cartSection" class="bg-slate-900 rounded-3xl p-4 md:p-6 mb-6 text-white hidden shadow-2xl border-b-8 border-emerald-500 no-print transition-all">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg md:text-2xl font-black">Current Basket</h2>
-                        <button onclick="clearCart()" class="text-red-400 text-xs font-bold uppercase border border-red-400/30 px-3 py-1 rounded-full hover:bg-red-400/10">Empty Cart</button>
-                    </div>
-                    <div id="cartItems" class="space-y-2 mb-4 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-end border-t border-slate-800 pt-4">
-                        <div class="space-y-4">
-                            <div class="relative flex items-center">
-                                <input type="text" id="cartCustomer" placeholder="Customer Name" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none text-white font-bold ring-1 ring-slate-700 focus:ring-emerald-500 transition-all pr-20">
-                                <button onclick="resetCustomerName()" type="button" class="absolute right-3 bg-slate-700 text-slate-300 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded-xl text-[10px] font-black transition-all shadow-lg border border-slate-600">NEW</button>
-                            </div>
-
-                            <div id="kraPinWrap" class="relative flex items-center gap-2">
-                                <input type="text" id="cartKraPin" placeholder="Customer KRA PIN (e.g. A012345678B)" maxlength="11" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-mono font-bold ring-1 ring-slate-700 focus:ring-amber-400 transition-all text-white uppercase" style="letter-spacing:2px;">
-                                <span id="kraPinBadge" style="position:absolute;right:12px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:1px;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">OPTIONAL</span>
-                            </div>
-
-                            <div class="flex flex-col gap-2">
-                                <select id="cartPriceTier" onchange="applyPriceTierToCart()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-                                    <option value="retail">🏷️ Retail Price (Walk-in)</option>
-                                    <option value="fundi">🔨 Fundi Price (Contractor)</option>
-                                    <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
-                                </select>
-                                <p id="tierHint" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest hidden"></p>
-
-                                <select id="cartMethod" onchange="toggleCartMpesa()" class="w-full p-4 rounded-2xl bg-slate-800 border-none outline-none font-bold ring-1 ring-slate-700 text-white">
-                                    <option value="Cash">Cash Sale</option>
-                                    <option value="Safaricom">Safaricom M-Pesa</option>
-                                    <option value="Equity">Equity Mobile</option>
-                                    <option value="Credit">Credit (Debt)</option>
-                                </select>
-                                
-                                <div id="mpesaFields" class="hidden flex-col gap-2 w-full">
-                                    <input type="text" id="cartMpesaId" placeholder="Phone Number e.g. 0712345678" class="w-full p-4 rounded-2xl bg-blue-900/50 border-none outline-none font-mono ring-1 ring-blue-500 text-white">
-                                    <button id="stkPushBtn" onclick="sendStkPush()" class="hidden w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition">📲 Send M-Pesa Prompt</button>
-                                    <div id="stkStatus" class="hidden p-3 rounded-2xl text-xs font-bold text-center"></div>
-                                    <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto-filled or enter manually)" class="hidden flex-1 p-4 rounded-2xl bg-blue-900/50 border-none outline-none uppercase font-mono ring-1 ring-blue-500 text-white">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="text-align:right;">
-                            <div style="background:linear-gradient(135deg,#1e3a5f,#1e293b);border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:16px 20px;margin-bottom:14px;">
-                                <p style="color:#94a3b8;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Payable Amount</p>
-                                <h2 id="cartTotalLabel" style="font-size:clamp(24px,6vw,42px);font-weight:900;color:#ffffff;font-family:'Space Mono',monospace;line-height:1;margin:0;">KES 0</h2>
-                            </div>
-                            <button onclick="finalizeCartSale()" id="checkoutBtn" style="width:100%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px;border-radius:16px;font-weight:900;font-size:clamp(13px,3.5vw,16px);border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(37,99,235,0.5);transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                                COMPLETE TRANSACTION
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Command Center Grid -->
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8 no-print">
-                    <div class="p-6 md:p-8 flex flex-col md:flex-row justify-between gap-4 border-b border-slate-100">
-                        <div class="flex items-center gap-3">
-                            <h1 class="text-2xl font-black text-slate-800">Hardware Stock</h1>
-                            <span id="adminBadge" class="hidden bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded uppercase">Admin Mode</span>
-                        </div>
-                        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search items or categories..." class="w-full md:w-96 p-4 bg-slate-50 border-none rounded-2xl outline-none ring-1 ring-slate-100 focus:ring-slate-300">
-                    </div>
-
-                    <div class="p-6 md:p-8 bg-[#0a0f1e]">
-                        <div id="inventoryGrid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <!-- Cards injected by JS -->
-                        </div>
-                    </div>
-
-                    <div class="p-6 bg-slate-900 border-t border-slate-800 flex items-center justify-between no-print">
-                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest" id="pageInfo">Showing 1 - 10 of 0</span>
-                        <div class="flex gap-2">
-                            <button onclick="changePage(-1)" id="prevBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">Previous</button>
-                            <button onclick="changePage(1)" id="nextBtn" class="px-4 py-2 bg-slate-800 border border-slate-700 text-white rounded-xl text-[10px] font-black uppercase hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition">Next</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Transactions -->
-                <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden no-print mb-8">
-                    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
-                        <h3 class="font-black text-slate-800 text-xs tracking-widest uppercase">Your Recent Transactions</h3>
-                        <span class="bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase">Today Only</span>
-                    </div>
-                    <div class="overflow-x-auto" style="-webkit-overflow-scrolling:touch;">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--text);background:rgba(255,255,255,0.04);border-bottom:1px solid var(--border);">
-                                    <th class="p-4">Time</th>
-                                    <th class="p-4 hidden md:table-cell">Customer</th>
-                                    <th class="p-4 hidden md:table-cell">Item</th>
-                                    <th class="p-4 text-center">Method</th>
-                                    <th class="p-4 text-right">Amount</th>
-                                    <th class="p-4 text-center">Status</th>
-                                    <th class="p-4 text-center">Receipt</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recentSalesBody" class="divide-y divide-slate-50 text-sm"></tbody>
-                        </table>
-                    </div>
-                    <div id="recentSalesPagination" class="p-4 border-t border-slate-100 no-print"></div>
-                </div>
-
-            </div>
-        </main>
+    <div id="pendingBadge" class="hidden" style="background:#0d1117;color:#f59e0b;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:900;">
+        <span id="pendingCount">0</span> pending
     </div>
+</div>
 
-    <!-- Receipt Modal & Print UI -->
-    <div id="printContainer" class="hidden"></div>
-    <div id="modalOverlay" class="fixed inset-0 bg-black/60 hidden z-[110] backdrop-blur-sm"></div>
-    <div id="receiptModal" class="hidden font-mono text-sm shadow-2xl rounded-3xl" style="box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar receipt-watermark" style="min-height:0; position:relative;">
-            <div id="receiptDate" class="mb-4"></div> 
-            <div id="receiptContent" class="py-2 space-y-1 border-t border-dashed border-gray-400"></div>
-            <div class="border-t border-dashed border-gray-400 pt-2 mt-2">
-                <div class="flex justify-between font-black text-lg text-slate-900">
-                    <span>TOTAL:</span><span id="receiptTotal"></span>
+<!-- Sync Toast -->
+<div id="syncToast" class="hidden fixed bottom-6 right-6 z-[999] no-print"
+     style="background:#10b981;color:#000;padding:12px 18px;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,0.4);display:none;align-items:center;gap:10px;">
+    <span>✅</span>
+    <div>
+        <p style="font-weight:900;font-size:13px;">Sales Synced!</p>
+        <p id="syncToastMsg" style="font-size:11px;opacity:0.7;"></p>
+    </div>
+</div>
+
+<div class="flex min-h-screen">
+    <div id="sidebarMount"></div>
+
+    <main class="flex-1 h-screen overflow-y-auto" style="background:var(--bg);">
+
+        <!-- Low Stock Banner -->
+        <div id="lowStockAlert" class="low-stock-banner">
+            <div class="low-stock-banner-inner">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:20px;">🚨</span>
+                    <div>
+                        <p id="lowStockAlertTitle" style="font-weight:900;font-size:12px;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">CRITICAL LOW STOCK</p>
+                        <p style="font-size:10px;color:rgba(255,255,255,0.6);font-weight:600;margin-top:2px;">Items below 10 units — immediate restock required</p>
+                    </div>
+                </div>
+                <button onclick="this.closest('#lowStockAlert').classList.remove('visible')" style="color:rgba(255,255,255,0.5);background:none;border:none;cursor:pointer;font-size:18px;font-weight:900;">✕</button>
+            </div>
+            <div id="lowStockAlertItems" class="low-stock-chips"></div>
+        </div>
+
+        <!-- CART SECTION -->
+        <div id="cartSection" class="hidden no-print">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2>🛒 Current Basket</h2>
+                <button onclick="clearCart()" style="color:var(--red);font-size:11px;font-weight:900;text-transform:uppercase;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.25);padding:5px 12px;border-radius:20px;cursor:pointer;letter-spacing:0.5px;">Empty Cart</button>
+            </div>
+            <div id="cartItems" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:200px;overflow-y:auto;padding-right:4px;"></div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px;">
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <!-- Customer -->
+                    <div style="position:relative;">
+                        <input type="text" id="cartCustomer" placeholder="Customer Name"
+                            style="width:100%;padding:12px 50px 12px 14px;border-radius:12px;font-weight:700;font-size:13px;outline:none;transition:border-color 0.2s;">
+                        <button onclick="resetCustomerName()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.08);border:none;color:var(--muted);padding:4px 10px;border-radius:8px;font-size:9px;font-weight:900;cursor:pointer;text-transform:uppercase;">NEW</button>
+                    </div>
+                    <!-- KRA PIN -->
+                    <div style="position:relative;">
+                        <input type="text" id="cartKraPin" placeholder="KRA PIN (e.g. A012345678B)" maxlength="11"
+                            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                            style="width:100%;padding:12px 70px 12px 14px;border-radius:12px;font-weight:700;font-size:12px;outline:none;letter-spacing:1.5px;font-family:var(--mono);">
+                        <span id="kraPinBadge" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:8px;font-weight:900;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:rgba(245,158,11,0.18);color:#f59e0b;white-space:nowrap;">OPTIONAL</span>
+                    </div>
+                    <p id="kraPinHint" style="font-size:9px;color:var(--muted2);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:-4px;">KRA PIN optional · recommended for B2B credit</p>
+
+                    <!-- Price Tier -->
+                    <select id="cartPriceTier" onchange="applyPriceTierToCart()" style="width:100%;padding:12px 14px;border-radius:12px;font-weight:700;font-size:13px;outline:none;cursor:pointer;">
+                        <option value="retail">🏷️ Retail Price</option>
+                        <option value="fundi">🔨 Fundi Price (Contractor)</option>
+                        <option value="wholesale">📦 Wholesale Price</option>
+                    </select>
+                    <p id="tierHint" style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;display:none;"></p>
+
+                    <!-- Payment -->
+                    <select id="cartMethod" onchange="toggleCartMpesa()" style="width:100%;padding:12px 14px;border-radius:12px;font-weight:700;font-size:13px;outline:none;cursor:pointer;">
+                        <option value="Cash">💵 Cash Sale</option>
+                        <option value="Safaricom">📱 Safaricom M-Pesa</option>
+                        <option value="Equity">💛 Equity Mobile</option>
+                        <option value="Credit">📋 Credit (Debt)</option>
+                    </select>
+
+                    <div id="mpesaFields" class="hidden" style="display:none;flex-direction:column;gap:8px;">
+                        <input type="text" id="cartMpesaId" placeholder="Phone e.g. 0712345678" style="width:100%;padding:12px 14px;border-radius:12px;font-family:var(--mono);font-weight:700;outline:none;">
+                        <button id="stkPushBtn" onclick="sendStkPush()" class="hidden" style="width:100%;padding:10px;border-radius:12px;background:#16a34a;color:#fff;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer;">📲 Send M-Pesa Prompt</button>
+                        <div id="stkStatus" class="hidden" style="padding:10px 14px;border-radius:10px;font-size:11px;font-weight:700;text-align:center;"></div>
+                        <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto or manual)" class="hidden" style="width:100%;padding:12px 14px;border-radius:12px;font-family:var(--mono);font-weight:700;text-transform:uppercase;outline:none;">
+                    </div>
+                </div>
+
+                <!-- Right: total + checkout -->
+                <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:12px;text-align:right;">
+                    <div style="background:linear-gradient(135deg,#0d2137,#0d1117);border:1px solid rgba(59,130,246,0.25);border-radius:16px;padding:16px 20px;">
+                        <p style="color:var(--muted);font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Payable Amount</p>
+                        <h2 id="cartTotalLabel" style="font-size:clamp(22px,5vw,38px);font-weight:900;color:#fff;font-family:var(--mono);line-height:1;">KES 0</h2>
+                    </div>
+                    <button onclick="finalizeCartSale()" id="checkoutBtn"
+                        style="width:100%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:14px;border-radius:14px;font-weight:900;font-size:14px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:2px;box-shadow:0 4px 20px rgba(59,130,246,0.4);">
+                        COMPLETE TRANSACTION
+                    </button>
                 </div>
             </div>
         </div>
-        <div id="receiptButtons" class="p-4 border-t flex flex-col gap-2 no-print" style="border-color:var(--border);background:var(--surface2);">
-            <button onclick="printTwoCopies()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all">🖨️ PRINT RECEIPT (2 COPIES)</button>
-            <button onclick="printDeliveryNote()" class="w-full bg-blue-600 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider hover:bg-blue-700 transition-all">PRINT DELIVERY NOTE (BROWSER)</button>
-            <button onclick="closeReceipt()" class="w-full bg-white border border-gray-200 py-3 rounded-2xl text-gray-500 font-bold uppercase tracking-tight hover:bg-gray-50 transition-all">CLOSE</button>
+
+        <!-- TOP BAR -->
+        <div class="top-bar no-print">
+            <div class="top-bar-title">
+                <h1>Hardware Stock</h1>
+                <span id="adminBadge" class="hidden">Admin</span>
+            </div>
+            <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search by name, category or barcode…">
+            </div>
         </div>
-    </div>
+
+        <!-- PRODUCT GRID -->
+        <div id="productGrid" class="product-grid"></div>
+
+        <!-- PAGINATION -->
+        <div class="pagination-bar no-print">
+            <span class="page-info" id="pageInfo">Showing 0 of 0</span>
+            <div class="page-btns">
+                <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>← Prev</button>
+                <button class="page-btn" id="nextBtn" onclick="changePage(1)" disabled>Next →</button>
+            </div>
+        </div>
+
+        <!-- RECENT SALES -->
+        <div class="recent-sales-wrap no-print">
+            <div class="recent-sales-head">
+                <h3>Recent Transactions</h3>
+                <span class="today-badge">Today Only</span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;min-width:500px;">
+                    <thead style="background:var(--surface2);">
+                        <tr>
+                            <th>Time</th>
+                            <th class="hidden md:table-cell">Customer</th>
+                            <th class="hidden md:table-cell">Item</th>
+                            <th style="text-align:center;">Method</th>
+                            <th style="text-align:right;">Amount</th>
+                            <th style="text-align:center;">Status</th>
+                            <th style="text-align:center;">Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentSalesBody"></tbody>
+                </table>
+            </div>
+            <div id="recentSalesPagination" style="padding:12px 16px;border-top:1px solid var(--border);"></div>
+        </div>
+
+    </main>
+</div>
 
 <script>
-// ══════════════════════════════════════════════════════════════
-//  INITIALIZATION & GLOBALS
-// ══════════════════════════════════════════════════════════════
-const API_URL  = window.API_URL  || 'https://hardware-pos-backend.onrender.com/api';
-const API_BASE = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
-const LIVE_PRINT       = true;
-const PRINT_SERVER_URL = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
-const GRN_SERVER_URL   = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
+const API_URL  = 'https://hardware-pos-backend.onrender.com/api';
+const API_BASE = 'https://hardware-pos-backend.onrender.com/api';
+const LIVE_PRINT        = true;
+const PRINT_SERVER_URL  = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print';
+const GRN_SERVER_URL    = 'https://unpicketed-unappliable-rena.ngrok-free.dev/print/grn';
 
-// Core State Variables
+// ── escHtml helper (XSS protection) ─────────────────────────────────────
+window.escHtml = window.escHtml || function(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+};
+
+async function silentPrint(data) {
+    if (!LIVE_PRINT) { window.print(); return; }
+    try {
+        showPrintToast('🖨️ Sending to printer...', false, true);
+        const res = await fetch(PRINT_SERVER_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ ...data, copies: 2 })
+        });
+        if (!res.ok) throw new Error('Print server error ' + res.status);
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error || 'Print failed');
+        if (result.url) window.open(result.url, '_blank');
+        showPrintToast('✅ Receipt saved — 2 copies');
+    } catch (err) {
+        showPrintToast('⚠️ v-printer offline — using browser print', true);
+        setTimeout(() => window.print(), 800);
+    }
+}
+
+async function silentPrintGRN(itemName, qty, dnRef) {
+    if (!LIVE_PRINT) { window.print(); return; }
+    try {
+        const res = await fetch(GRN_SERVER_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ itemName, qty, dnRef, servedBy: userName })
+        });
+        const result = await res.json();
+        if (!result.success) throw new Error(result.error);
+        showPrintToast('✅ GRN printed');
+    } catch (err) { showPrintToast('⚠️ GRN printer error — ' + err.message, true); }
+}
+
+function showPrintToast(msg, isError = false, isInfo = false) {
+    let toast = document.getElementById('_printToast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = '_printToast';
+        toast.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:700;font-family:DM Sans,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:opacity 0.4s;pointer-events:none;';
+        document.body.appendChild(toast);
+    }
+    toast.style.background = isError ? '#f87171' : isInfo ? '#3b82f6' : '#10b981';
+    toast.style.color = isError || isInfo ? '#fff' : '#000';
+    toast.textContent = msg; toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    if (!isInfo) toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+window._lastReceiptData = null;
+const userName = window.EliteAuth?.name || 'Staff';
+const userRole = window.EliteAuth?.role || 'Staff';
 let cart = [];
 let allStock = [];
 let currentPage = 1;
-const itemsPerPage = 10;
+const itemsPerPage = 15;
 let isFinalizing = false;
 let _activeC2BCheckoutTask = null;
 let _c2bTaskHandled = false;
-window._itemMap = {}; 
-window._lastReceiptData = null;
 
-const userName = window.EliteAuth?.name || 'Staff';
-const userRole = window.EliteAuth?.role || 'Staff'; 
-const isAuthorized = ['admin', 'manager'].includes(userRole.toLowerCase());
-
-if(isAuthorized) {
-    const adminBadge = document.getElementById('adminBadge');
-    if (adminBadge) { adminBadge.innerText = userRole + ' MODE'; adminBadge.classList.remove('hidden'); }
+// Admin badge
+const isAuthorized = ['admin','manager'].includes(userRole.toLowerCase());
+if (isAuthorized) {
+    const b = document.getElementById('adminBadge');
+    if (b) { b.innerText = userRole + ' MODE'; b.classList.remove('hidden'); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  AUTH WAIT & LOAD
-// ══════════════════════════════════════════════════════════════
+function resetCustomerName() {
+    const n = document.getElementById('cartCustomer');
+    n.value = ''; n.classList.remove('ring-emerald-500','ring-blue-400'); n.focus();
+}
+
+document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
+    const phone = e.target.value.trim();
+    const nameInput = document.getElementById('cartCustomer');
+    nameInput.classList.remove('ring-emerald-500','ring-blue-400');
+    if (phone.length >= 10) {
+        try {
+            const res = await apiFetch(`${API_URL}/customers/${phone}`);
+            if (res.ok) {
+                const customer = await res.json();
+                if (nameInput.value.trim() === '') { nameInput.value = customer.name; nameInput.classList.add('ring-2','ring-emerald-500'); }
+                else { nameInput.classList.add('ring-2','ring-blue-400'); }
+            }
+        } catch(err) {}
+    }
+});
+
+// ── AUTH WAIT ────────────────────────────────────────────────────────────
 function waitForAuthThenLoad() {
     if (typeof window.apiFetch === 'function') {
-        fetchBusinessInfo(); 
-        fetchStock().then(() => {
-            processC2BInventoryTask();
-            processSalesOrderFulfillment(); 
-        });
-        
-        if (window.EliteAuth && window.EliteAuth.readOnly) {
-            applyReadOnlyLock();
-        }
+        fetchBusinessInfo();
+        fetchStock().then(() => { processC2BInventoryTask(); processSalesOrderFulfillment(); });
+        if (window.EliteAuth && window.EliteAuth.readOnly) { _applyReadOnlyLock(); }
         return;
     }
     let attempts = 0;
-    const MAX_ATTEMPTS = 200; 
     const poll = setInterval(() => {
         attempts++;
         if (typeof window.apiFetch === 'function') {
             clearInterval(poll);
-            fetchBusinessInfo(); 
-            fetchStock().then(() => {
-                processC2BInventoryTask();
-                processSalesOrderFulfillment(); 
-            });
+            fetchBusinessInfo();
+            fetchStock().then(() => { processC2BInventoryTask(); processSalesOrderFulfillment(); });
             fetchRecentSales();
-            if (window.EliteAuth && window.EliteAuth.readOnly) applyReadOnlyLock();
-        } else if (attempts >= MAX_ATTEMPTS) {
+        } else if (attempts >= 200) {
             clearInterval(poll);
-            console.warn('[Auth] apiFetch not ready after 3 s — loading from cache');
-            fetchStock().then(() => {
-                processC2BInventoryTask();
-                processSalesOrderFulfillment(); 
-            });
+            fetchStock().then(() => { processC2BInventoryTask(); processSalesOrderFulfillment(); });
         }
     }, 50);
 }
 
-function applyReadOnlyLock() {
+function _applyReadOnlyLock() {
     const isLifetime = (window.EliteAuth.subPlan === 'lifetime');
-    const thing = isLifetime ? 'annual service fee' : 'subscription';
-    const days  = window.EliteAuth.daysUntilExpiry;
-    const dAgo  = days !== null ? Math.abs(days) : '?';
-    const bar   = document.createElement('div');
-    bar.id      = 'pageSubBanner';
-    bar.innerHTML = `<span style="font-size:18px;">🔒</span>
-        <span><strong>POS IS READ-ONLY</strong> — ${thing} expired ${dAgo} day(s) ago.
-        New sales and edits are blocked. Data export is still available.</span>
-        <button onclick="window.location.href='/'" style="background:#00e5a0;color:#000;border:none;border-radius:8px;padding:5px 12px;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;flex-shrink:0;">Renew →</button>`;
-    bar.style.cssText = 'display:flex;align-items:center;gap:10px;padding:12px 18px;margin-bottom:18px;background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));border:1px solid rgba(239,68,68,0.4);border-radius:14px;font-size:12px;color:#f1f5f9;flex-wrap:wrap;';
-    
-    const header = document.querySelector('header') || document.querySelector('.page-header');
-    if (header && header.parentNode) {
-        header.parentNode.insertBefore(bar, header.nextSibling);
-    } else {
-        const main = document.querySelector('main') || document.body;
-        main.insertBefore(bar, main.firstChild);
-    }
-
-    const _b0 = document.getElementById('checkoutBtn');
-    if (_b0) { _b0.disabled = true; _b0.style.opacity='0.35'; _b0.style.cursor='not-allowed'; _b0.title='POS is read-only — subscription expired'; }
-    document.querySelectorAll('[onclick*="addToCart"]').forEach(b => {
-        b.style.opacity = '0.3'; b.style.pointerEvents = 'none';
-    });
-    const panel = document.getElementById('cartSection');
-    if (panel) { panel.style.opacity = '0.6'; panel.style.pointerEvents = 'none'; }
+    const dAgo = Math.abs(window.EliteAuth.daysUntilExpiry || 0);
+    const bar = document.createElement('div');
+    bar.innerHTML = `🔒 <strong>POS IS READ-ONLY</strong> — ${isLifetime ? 'annual service fee' : 'subscription'} expired ${dAgo} day(s) ago. <button onclick="window.location.href='/'" style="background:#10b981;color:#000;border:none;border-radius:8px;padding:4px 12px;font-weight:900;font-size:10px;cursor:pointer;margin-left:8px;">Renew →</button>`;
+    bar.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 20px;background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:12px;font-size:12px;color:#e6edf3;margin:16px 24px;flex-wrap:wrap;';
+    const main = document.querySelector('main');
+    if (main) main.insertBefore(bar, main.firstChild);
+    const btn = document.getElementById('checkoutBtn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.35'; btn.style.cursor = 'not-allowed'; }
 }
 
-document.addEventListener('eliteAuthReady', () => { waitForAuthThenLoad(); });
-window.addEventListener('load', () => { if (typeof window.apiFetch === 'function' && allStock.length === 0) waitForAuthThenLoad(); });
+// ── C2B ──────────────────────────────────────────────────────────────────
+function getC2BInventoryTask() { try { const r = localStorage.getItem('c2b_inventory_task'); return r ? JSON.parse(r) : null; } catch { return null; } }
+function clearC2BInventoryTask() { localStorage.removeItem('c2b_inventory_task'); }
+function isC2BCheckoutMode() { return new URLSearchParams(window.location.search).get('c2b') === 'checkout' && !!_activeC2BCheckoutTask; }
 
-// ══════════════════════════════════════════════════════════════
-//  STOCK FETCHING & COMMAND CENTER RENDERING
-// ══════════════════════════════════════════════════════════════
+async function processC2BInventoryTask() {
+    if (_c2bTaskHandled) return;
+    const qp = new URLSearchParams(window.location.search);
+    if (qp.get('c2b') !== 'checkout') { _activeC2BCheckoutTask = null; _c2bTaskHandled = true; return; }
+    const task = getC2BInventoryTask();
+    if (!task) return;
+    if (task.mode === 'print_only') {
+        const items = Array.isArray(task.items) ? task.items : [];
+        const total = parseFloat(task.amountSelected || 0) || items.reduce((s,i) => s + parseFloat(i.price||0)*parseFloat(i.quantity||0), 0);
+        if (items.length) showMultiReceipt(task.customer||'Walk-in','M-Pesa',total,items,task.phone||'',task.mpesaCode||'',task.receiptNumber||null);
+        clearC2BInventoryTask(); _c2bTaskHandled = true; return;
+    }
+    if (task.mode !== 'checkout' || !Array.isArray(task.items) || !task.items.length) return;
+    const indexed = {}; (allStock||[]).forEach(s => { indexed[String(s.id)] = s; });
+    const mappedItems = [];
+    for (const incoming of task.items) {
+        const stockRow = indexed[String(incoming.itemId)];
+        if (!stockRow) continue;
+        mappedItems.push({ itemId: stockRow.id, itemName: stockRow.item_name, price: parseFloat(stockRow.price||incoming.price||0), quantity: Math.max(1,parseInt(incoming.quantity||1)) });
+    }
+    if (!mappedItems.length) return;
+    let resolvedPhone = task.phone||'', resolvedCode = task.mpesaCode||'';
+    if ((!resolvedPhone||!resolvedCode) && task.c2bId) {
+        try { const r = await apiFetch(`${API_URL}/c2b/payments`); if (r?.ok) { const rows = await r.json(); const hit = (rows||[]).find(x => String(x.id)===String(task.c2bId)); if (hit) { resolvedPhone = resolvedPhone||hit.phone||''; resolvedCode = resolvedCode||hit.mpesa_code||''; } } } catch {}
+    }
+    _activeC2BCheckoutTask = { c2bId: task.c2bId, phone: resolvedPhone, mpesaCode: resolvedCode };
+    cart = mappedItems; renderCart();
+    document.getElementById('cartCustomer').value = task.customer || '';
+    const md = document.getElementById('cartMethod'); md.value = 'M-Pesa'; md.disabled = true;
+    if (typeof toggleCartMpesa === 'function') toggleCartMpesa();
+    const pf = document.getElementById('cartMpesaId'); if (pf) { pf.value = resolvedPhone; pf.classList.remove('hidden'); }
+    const cf = document.getElementById('cartMpesaCode'); cf.value = resolvedCode; cf.classList.remove('hidden');
+    const sb = document.getElementById('stkPushBtn'); if (sb) sb.classList.add('hidden');
+    _c2bTaskHandled = true;
+    alert('C2B goods loaded. Complete transaction in POS.');
+}
+
+// ── FETCH STOCK ──────────────────────────────────────────────────────────
 async function fetchStock() {
     if (!navigator.onLine) {
         try {
-            const cached   = await StockCache.load();
-            const lastSync = await StockCache.getLastSync();
+            const cached = await StockCache.load(), lastSync = await StockCache.getLastSync();
             if (cached && cached.length > 0) {
-                allStock    = cached;
-                currentPage = 1;
-                renderInventory();
-                const syncTime  = lastSync ? new Date(lastSync).toLocaleString() : 'unknown';
-                const bannerSub = document.querySelector('#offlineBanner .text-xs');
-                if (bannerSub) bannerSub.innerHTML = `Sales saved locally &amp; will sync when connected. &nbsp;|&nbsp; <b>Stock as of: ${syncTime}</b>`;
+                allStock = cached; currentPage = 1; renderInventory();
+                const sub = document.querySelector('#offlineBanner .text-xs');
+                if (sub) sub.innerHTML = `Offline · <b>Stock as of: ${lastSync ? new Date(lastSync).toLocaleString() : 'unknown'}</b>`;
                 return;
             }
         } catch(ce) {}
-        document.getElementById('inventoryGrid').innerHTML = `<div class="col-span-full p-10 text-center text-slate-400 font-black uppercase">📡 Offline — No cached stock available.<br><span class="text-xs font-normal normal-case">Go online at least once to cache stock for offline use.</span></div>`;
+        document.getElementById('productGrid').innerHTML = '<div class="empty-state"><div class="icon">📡</div><p>Offline — No cached stock available</p></div>';
+        return;
+    }
+    if (typeof window.apiFetch !== 'function') return;
+    try {
+        const res = await apiFetch(`${API_URL}/inventory?role=${userRole}`);
+        if (!res) return;
+        const data = await res.json();
+        allStock = data.items || data;
+        try { await StockCache.save(allStock); } catch(e) {}
+        currentPage = 1; renderInventory();
+    } catch(e) {
+        try {
+            const cached = await StockCache.load(), lastSync = await StockCache.getLastSync();
+            if (cached && cached.length > 0) {
+                allStock = cached; currentPage = 1; renderInventory();
+                const pi = document.getElementById('pageInfo');
+                if (pi) pi.innerHTML += ` <span style="color:var(--amber);font-size:9px;">⚠️ Cached as of ${new Date(lastSync).toLocaleString()}</span>`;
+                return;
+            }
+        } catch(ce) {}
+        document.getElementById('productGrid').innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>Could not load stock. Check connection.</p></div>';
+    }
+}
+
+// ── RENDER INVENTORY ─────────────────────────────────────────────────────
+function renderInventory() {
+    const grid = document.getElementById('productGrid');
+    if (!grid) return;
+    const searchTerm = (document.getElementById('searchInput')?.value || '').toLowerCase();
+    const verifiedRole = (localStorage.getItem('userRole') || '').toLowerCase();
+    const isAdmin = verifiedRole === 'admin';
+
+    const filtered = allStock.filter(item =>
+        (item.item_name||'').toLowerCase().includes(searchTerm) ||
+        (item.category||'').toLowerCase().includes(searchTerm) ||
+        (item.barcode||'').toLowerCase().includes(searchTerm)
+    );
+
+    const totalItems = filtered.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    currentPage = Math.max(1, Math.min(currentPage, totalPages));
+    const start = (currentPage - 1) * itemsPerPage;
+    const paginated = filtered.slice(start, start + itemsPerPage);
+
+    // Update pagination
+    const pi = document.getElementById('pageInfo');
+    if (pi) pi.innerText = `Showing ${totalItems === 0 ? 0 : start + 1}–${Math.min(start + itemsPerPage, totalItems)} of ${totalItems}`;
+    document.getElementById('prevBtn').disabled = currentPage === 1;
+    document.getElementById('nextBtn').disabled = currentPage === totalPages || totalItems === 0;
+
+    // Build _itemMap
+    window._itemMap = {};
+    allStock.forEach(item => { window._itemMap[String(item.id)] = item; });
+
+    // Low stock banner
+    const critItems = filtered.filter(i => (i.stock_quantity||0) <= 10);
+    const lsa = document.getElementById('lowStockAlert');
+    if (lsa) {
+        if (critItems.length > 0) {
+            lsa.classList.add('visible');
+            const t = document.getElementById('lowStockAlertTitle');
+            if (t) t.textContent = `${critItems.length} ITEM${critItems.length>1?'S':''} CRITICALLY LOW`;
+            const ie = document.getElementById('lowStockAlertItems');
+            if (ie) ie.innerHTML = critItems.slice(0,10).map(i => {
+                const qty = Number(i.stock_quantity), isOut = qty <= 0;
+                return `<span class="low-stock-chip">${isOut?'🔴':'⚠️'} ${window.escHtml(i.item_name)} · ${isOut?'OUT':qty+' left'}</span>`;
+            }).join('') + (critItems.length>10 ? `<span class="low-stock-chip">+${critItems.length-10} more</span>` : '');
+        } else {
+            lsa.classList.remove('visible');
+        }
+    }
+
+    if (paginated.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><div class="icon">📦</div><p>No items found</p></div>';
         return;
     }
 
-    if (typeof window.apiFetch !== 'function') return;
-
-    try {
-        const res  = await apiFetch(`${API_URL}/inventory?role=${userRole}`);
-        if (!res) return; 
-        const data = await res.json();
-        allStock   = data.items || data;
-        try { await StockCache.save(allStock); } catch(e) {}
-        currentPage = 1;
-        renderInventory();
-    } catch (e) {
-        if (typeof window.apiFetch !== 'function') return; 
-        try {
-            const cached   = await StockCache.load();
-            const lastSync = await StockCache.getLastSync();
-            if (cached && cached.length > 0) {
-                allStock    = cached;
-                currentPage = 1;
-                renderInventory();
-                const syncTime = lastSync ? new Date(lastSync).toLocaleString() : 'unknown';
-                const pageInfo = document.getElementById('pageInfo');
-                if (pageInfo) pageInfo.innerHTML += ` &nbsp;<span class="text-amber-500 text-xs">⚠️ Server error — showing cached stock as of ${syncTime}</span>`;
-                return;
-            }
-        } catch(ce) {}
-        document.getElementById('inventoryGrid').innerHTML = `<div class="col-span-full p-10 text-center text-red-400 font-black uppercase">⚠️ Could not load stock. Check server connection.</div>`;
-    }
+    grid.innerHTML = paginated.map(item => buildProductCard(item, isAdmin)).join('');
 }
 
-function renderInventory() {
-    const grid = document.getElementById('inventoryGrid');
-    if (!grid) return;
+// ── BUILD PRODUCT CARD ────────────────────────────────────────────────────
+function buildProductCard(item, isAdmin) {
+    const isLow = (item.stock_quantity || 0) <= 10;
+    const isOut = (item.stock_quantity || 0) <= 0;
+    const safeName = window.escHtml(item.item_name);
+    const safeCat  = window.escHtml(item.category || 'General');
+    const unit     = window.escHtml(item.bulk_unit || item.unit || 'pcs');
+    const qty      = item.stock_quantity || 0;
 
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const isAdmin = isAuthorized;
+    // Has sub-unit conversion?
+    const hasSub = !!(item.sub_unit && item.sub_unit_qty);
+    const subUnit = item.sub_unit || '';
+    const bulkUnit = item.bulk_unit || item.unit || 'pcs';
 
-    const filteredItems = allStock.filter(item => 
-        (item.item_name || '').toLowerCase().includes(searchTerm) || 
-        (item.category || '').toLowerCase().includes(searchTerm) ||
-        (item.barcode || '').toLowerCase().includes(searchTerm)
-    );
+    // Has fundi / wholesale pricing?
+    const hasFundi = !!item.fundi_price;
+    const hasWholesale = !!item.wholesale_price;
 
-    const totalItems = filteredItems.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
+    // Stock badge
+    const stockBadgeClass = isLow ? 'low' : 'in-stock';
+    const stockText = isOut ? 'Out of Stock' : `In Stock: ${qty} ${unit}`;
 
-    const start = (currentPage - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    const paginatedItems = filteredItems.slice(start, end);
+    // Meta line
+    let metaLine = '';
+    if (hasSub) metaLine = `1 ${bulkUnit} = ${item.sub_unit_qty} ${subUnit}`;
+    else if (item.barcode) metaLine = `SKU: ${window.escHtml(item.barcode)}`;
 
-    const pageInfo = document.getElementById('pageInfo');
-    if (pageInfo) pageInfo.innerText = `Showing ${totalItems === 0 ? 0 : start + 1} - ${Math.min(end, totalItems)} of ${totalItems}`;
-    document.getElementById('prevBtn').disabled = (currentPage === 1);
-    document.getElementById('nextBtn').disabled = (currentPage === totalPages || totalItems === 0);
+    // Base cost (admin/manager only)
+    const isElevated = ['admin','manager'].includes((localStorage.getItem('userRole')||'').toLowerCase());
+    const baseCostHtml = isElevated && item.cost_price
+        ? `<div style="font-size:10px;color:var(--muted);font-weight:600;margin-top:4px;">Base Cost: KES ${Number(item.cost_price).toLocaleString()} / ${bulkUnit}</div>`
+        : '';
 
-    window._itemMap = {};
-    paginatedItems.forEach(item => { window._itemMap[String(item.id)] = item; });
+    // Batch badge
+    const batchesActive = item.active_batches || 0;
+    let batchBadgeHtml = '';
+    if (batchesActive >= 2) {
+        batchBadgeHtml = `<button onclick="showMobileBatchInfo('${item.id}')" class="batch-badge multi">⬛ ${batchesActive} Batches Active</button>`;
+    } else if (batchesActive === 1 && !isLow) {
+        batchBadgeHtml = `<button onclick="showMobileBatchInfo('${item.id}')" class="batch-badge final">⚠ Final Batch</button>`;
+    } else if (batchesActive === 1 && isLow) {
+        batchBadgeHtml = `<button onclick="showMobileBatchInfo('${item.id}')" class="batch-badge depleted">🔴 Layer Depleted</button>`;
+    }
 
-    grid.innerHTML = paginatedItems.map(item => {
-        const isLow = (item.stock_quantity || 0) <= 10;
-        const isOutOfStock = (item.stock_quantity || 0) <= 0;
-        const safeName = window.escHtml ? window.escHtml(item.item_name) : item.item_name;
-        const isSubUnit = item.sub_unit !== null && item.sub_unit_qty !== null && item.sub_unit_price !== null;
-        
-        let subText = '';
-        let pricingHtml = '';
+    // ── PRICE SECTION ────────────────────────────────────────────────────
+    let priceSectionHtml = '';
 
-        if (isSubUnit) {
-            subText = `1 ${item.bulk_unit || item.unit} = ${item.sub_unit_qty} ${item.sub_unit}s`;
-            pricingHtml = `
-                <div class="flex justify-between items-center mt-5 pt-5 border-t border-slate-700/50">
-                    <div>
-                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Sell By ${item.sub_unit} (Retail)</p>
-                        <p class="font-black text-white text-xl">KES ${Number(item.sub_unit_price || item.price).toLocaleString()} <span class="text-xs text-slate-400 font-normal">/ ${item.sub_unit}</span></p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-[9px] text-blue-500 font-bold uppercase tracking-widest mb-1">Sell By ${item.bulk_unit || item.unit} (Wholesale)</p>
-                        <p class="font-black text-white text-xl">KES ${Number(item.price).toLocaleString()} <span class="text-xs text-slate-400 font-normal">/ ${item.bulk_unit ? item.bulk_unit.substring(0,3) : 'Ctn'}</span></p>
-                    </div>
-                </div>
-            `;
-        } else {
-            subText = isAdmin ? `Base Cost: KES ${Number(item.cost_price).toLocaleString()} / ${item.unit}` : `${item.category}`;
-            pricingHtml = `
-                <div class="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-slate-700/50">
-                    <div>
-                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-1">Retail Price</p>
-                        <p class="font-black text-white text-xl">KES ${Number(item.price).toLocaleString()}</p>
-                    </div>
-                    <div>
-                        ${item.fundi_price ? `
-                        <p class="text-[9px] text-emerald-500 font-bold uppercase tracking-widest mb-1">Fundi Price</p>
-                        <p class="font-black text-white text-xl">KES ${Number(item.fundi_price).toLocaleString()}</p>
-                        ` : ''}
-                    </div>
-                    <div>
-                        ${item.wholesale_price ? `
-                        <p class="text-[9px] text-blue-500 font-bold uppercase tracking-widest mb-1">Wholesale ${item.wholesale_min_qty ? `(>${item.wholesale_min_qty})` : ''}</p>
-                        <p class="font-black text-white text-xl">KES ${Number(item.wholesale_price).toLocaleString()}</p>
-                        ` : ''}
+    if (hasSub) {
+        // SUB-UNIT MODE: two big price columns — sell by sub (Kg) and sell by bulk (Carton)
+        const subPrice  = item.sub_unit_price ? `KES ${Number(item.sub_unit_price).toLocaleString()} / ${subUnit}` : '—';
+        const bulkPrice = `KES ${Number(item.price).toLocaleString()} / Ctn`;
+        priceSectionHtml = `
+            <div class="card-divider"></div>
+            <div class="price-cols">
+                <div class="price-col">
+                    <div class="price-label sub">SELL BY ${window.escHtml(subUnit).toUpperCase()} (RETAIL)</div>
+                    <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px;">
+                        <span class="price-value sub">${item.sub_unit_price ? 'KES '+Number(item.sub_unit_price).toLocaleString() : '—'}</span>
+                        <span class="price-suffix">/ ${window.escHtml(subUnit)}</span>
                     </div>
                 </div>
-            `;
-        }
-
-        const borderClass = isOutOfStock ? 'border-red-900/50' : (isLow ? 'border-amber-700/50' : 'border-slate-800');
-        const badgeClass = isOutOfStock ? 'bg-red-900/50 text-red-400 border border-red-800' : 
-                           (isLow ? 'bg-amber-900/50 text-amber-400 border border-amber-800' : 'bg-blue-900/30 text-blue-400 border border-blue-800');
-
-        return `
-        <div class="bg-[#111827] border ${borderClass} rounded-2xl p-6 shadow-lg hover:border-slate-600 transition-all flex flex-col justify-between">
-            <div>
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex-1 pr-4">
-                        <h3 class="text-white font-black text-xl leading-tight tracking-tight">${safeName}</h3>
-                        <p class="text-slate-400 text-xs mt-1 font-bold tracking-wide">${subText}</p>
-                    </div>
-                    <div class="${badgeClass} text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg whitespace-nowrap flex-shrink-0">
-                        In Stock: ${item.stock_quantity} ${item.bulk_unit || item.unit}
+                <div class="price-col">
+                    <div class="price-label wholesale">SELL BY ${window.escHtml(bulkUnit).toUpperCase()} (WHOLESALE)</div>
+                    <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px;">
+                        <span class="price-value wholesale">KES ${Number(item.price).toLocaleString()}</span>
+                        <span class="price-suffix">/ Ctn</span>
                     </div>
                 </div>
-                ${pricingHtml}
+            </div>`;
+    } else if (hasFundi || hasWholesale) {
+        // MULTI-TIER MODE: retail + fundi + wholesale side by side
+        const wsLabel = item.wholesale_min_qty ? `WHOLESALE (>${item.wholesale_min_qty})` : 'WHOLESALE';
+        priceSectionHtml = `
+            <div class="card-divider"></div>
+            <div class="price-cols">
+                <div class="price-col">
+                    <div class="price-label">RETAIL PRICE</div>
+                    <div style="display:flex;align-items:baseline;gap:3px;margin-top:4px;">
+                        <span class="price-value retail">KES ${Number(item.price).toLocaleString()}</span>
+                    </div>
+                </div>
+                ${hasFundi ? `
+                <div class="price-col">
+                    <div class="price-label fundi">FUNDI PRICE</div>
+                    <div style="display:flex;align-items:baseline;gap:3px;margin-top:4px;">
+                        <span class="price-value fundi">KES ${Number(item.fundi_price).toLocaleString()}</span>
+                    </div>
+                </div>` : ''}
+                ${hasWholesale ? `
+                <div class="price-col">
+                    <div class="price-label wholesale">${wsLabel}</div>
+                    <div style="display:flex;align-items:baseline;gap:3px;margin-top:4px;">
+                        <span class="price-value wholesale">KES ${Number(item.wholesale_price).toLocaleString()}</span>
+                    </div>
+                </div>` : ''}
+            </div>`;
+    } else {
+        // SIMPLE: single price
+        priceSectionHtml = `
+            <div class="card-divider"></div>
+            <div class="price-section">
+                <div style="display:flex;align-items:baseline;gap:6px;">
+                    <span class="price-value retail">KES ${Number(item.price).toLocaleString()}</span>
+                    <span class="price-suffix">/ ${unit}</span>
+                </div>
+            </div>`;
+    }
+
+    // ── ACTION BAR ───────────────────────────────────────────────────────
+    // stock_quantity is always in BULK units (Cartons).
+    // When selling by sub-unit (Kg), the cashier enters Kgs.
+    // Server converts: stockDeductionQty = qty_kg / sub_unit_qty  (fractional cartons)
+    // When selling by bulk (Carton), qty IS cartons — deduct directly.
+    const stockInSub = hasSub ? (qty * parseFloat(item.sub_unit_qty || 1)) : 0;
+
+    let actionBar;
+    if (hasSub) {
+        // TWO SEPARATE ROWS with their own inputs — one per sell unit
+        actionBar = `
+        <div style="border-top:1px solid var(--border);background:var(--surface2);border-radius:0 0 20px 20px;overflow:hidden;">
+            <!-- BULK ROW: qty entered = Cartons; deduct Cartons directly -->
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:9px;font-weight:900;color:#60a5fa;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">📦 By ${window.escHtml(bulkUnit)}</div>
+                    <div style="font-size:9px;color:var(--muted);font-weight:600;">${qty} ${window.escHtml(bulkUnit)} in stock</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <div style="position:relative;display:flex;align-items:center;gap:5px;">
+                        <input type="number" id="qty-bulk-${item.id}" placeholder="0" min="1" max="${qty}"
+                            style="width:56px;padding:8px 6px;border-radius:9px;border:1px solid rgba(59,130,246,0.35);background:#0d2137;color:#e6edf3;text-align:center;font-weight:700;font-size:13px;font-family:var(--mono);outline:none;"
+                            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='rgba(59,130,246,0.35)'">
+                        <span style="font-size:9px;font-weight:900;color:#60a5fa;">${window.escHtml(bulkUnit)}</span>
+                    </div>
+                    <button onclick="addToCart('${item.id}','bulk')"
+                        style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;padding:8px 16px;border-radius:9px;border:none;cursor:pointer;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(59,130,246,0.3);white-space:nowrap;">
+                        + Add
+                    </button>
+                </div>
             </div>
-            
-            <div class="mt-6 flex gap-3">
-                <input type="number" id="qty-${item.id}" placeholder="Qty" min="0.001" step="any"
-                    class="w-24 bg-[#0a0f1e] border border-slate-700 text-white rounded-xl px-3 py-3 text-center font-black outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                <button onclick="addToCart('${item.id}')" 
-                    class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-black uppercase text-xs tracking-widest rounded-xl transition-all shadow-lg active:scale-[0.98]">
-                    Add to Cart
-                </button>
+            <!-- SUB-UNIT ROW: qty entered = Kg (sub); server divides by sub_unit_qty for stock deduction -->
+            <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:9px;font-weight:900;color:#c4b5fd;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;">⚖️ By ${window.escHtml(subUnit)} (loose)</div>
+                    <div style="font-size:9px;color:var(--muted);font-weight:600;">${stockInSub.toLocaleString()} ${window.escHtml(subUnit)} available</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:5px;">
+                        <input type="number" id="qty-sub-${item.id}" placeholder="0" min="0.1" step="0.1" max="${stockInSub}"
+                            style="width:56px;padding:8px 6px;border-radius:9px;border:1px solid rgba(167,139,250,0.35);background:#1a0d37;color:#e6edf3;text-align:center;font-weight:700;font-size:13px;font-family:var(--mono);outline:none;"
+                            onfocus="this.style.borderColor='#a78bfa'" onblur="this.style.borderColor='rgba(167,139,250,0.35)'">
+                        <span style="font-size:9px;font-weight:900;color:#c4b5fd;">${window.escHtml(subUnit)}</span>
+                    </div>
+                    <button onclick="addToCart('${item.id}','sub')"
+                        style="background:linear-gradient(135deg,#5b21b6,#a78bfa);color:#fff;padding:8px 16px;border-radius:9px;border:none;cursor:pointer;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(167,139,250,0.3);white-space:nowrap;">
+                        + Add
+                    </button>
+                </div>
             </div>
+            ${isAdmin ? `<div style="padding:4px 14px 10px;"><button onclick="handleDelete('${item.id}')" style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--red);padding:5px 12px;border-radius:8px;font-size:9px;font-weight:900;text-transform:uppercase;cursor:pointer;width:100%;">🗑 Delete</button></div>` : ''}
+        </div>`;
+    } else {
+        // SIMPLE single input for items with no sub-unit
+        actionBar = `
+        <div class="card-actions">
+            <input type="number" id="qty-${item.id}" placeholder="Qty" min="1" class="qty-input">
+            <button class="btn-sell btn-sell-retail" onclick="addToCart('${item.id}','bulk')">+ ADD TO CART</button>
+            ${isAdmin ? `<button class="btn-admin-del" onclick="handleDelete('${item.id}')">🗑 DEL</button>` : ''}
+        </div>`;
+    }
+
+
+    return `
+    <div class="product-card ${isLow ? 'low-stock' : ''}" data-id="${item.id}">
+        <div class="card-header">
+            <div style="flex:1;min-width:0;">
+                <div class="card-name">${safeName}</div>
+                ${metaLine ? `<div class="card-meta">${metaLine}</div>` : `<div class="card-meta">${safeCat}</div>`}
+                ${baseCostHtml}
+                ${batchBadgeHtml ? `<div style="margin-top:6px;">${batchBadgeHtml}</div>` : ''}
+            </div>
+            <span class="stock-badge ${stockBadgeClass}">${stockText}</span>
         </div>
-        `;
-    }).join('');
-    
-    // Low stock banner processing
-    const lowStockAlert = document.getElementById('lowStockAlert');
-    if (lowStockAlert) {
-        const critItems = filteredItems.filter(i => (i.stock_quantity || 0) <= 10);
-        lowStockAlert.classList.toggle('hidden', critItems.length === 0);
-        if (critItems.length) {
-            const titleEl = document.getElementById('lowStockAlertTitle');
-            const itemsEl = document.getElementById('lowStockAlertItems');
-            if (titleEl) titleEl.textContent = `${critItems.length} ITEM${critItems.length > 1 ? 'S' : ''} CRITICALLY LOW`;
-            if (itemsEl) {
-                itemsEl.innerHTML = critItems.slice(0, 10).map(i => {
-                    const qty   = Number(i.stock_quantity);
-                    const isOut = qty <= 0;
-                    const label = isOut ? 'OUT OF STOCK' : `${qty} left`;
-                    const bg    = isOut ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.15)';
-                    return `<span style="display:inline-flex;align-items:center;gap:5px;background:${bg};color:#fff;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:900;font-family:'Space Mono',monospace;text-transform:uppercase;white-space:nowrap;border:1px solid rgba(255,255,255,0.2);">
-                        ${isOut ? '🔴' : '⚠️'} ${window.escHtml ? window.escHtml(i.item_name) : i.item_name} <span style="opacity:0.65;font-size:9px;">· ${label}</span>
-                    </span>`;
-                }).join('') + (critItems.length > 10 ? `<span style="color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;font-family:'Space Mono',monospace;align-self:center;">+${critItems.length - 10} more</span>` : '');
-            }
-        }
-    }
+        ${priceSectionHtml}
+        ${actionBar}
+    </div>`;
 }
 
-function changePage(direction) {
-    currentPage += direction;
+function changePage(dir) {
+    currentPage += dir;
     renderInventory();
-    const mainEl = document.querySelector('main') || window;
-    mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function filterTable() { currentPage = 1; renderInventory(); }
+
+function showMobileBatchInfo(id) {
+    const item = window._itemMap[id];
+    if (!item) return alert("Item data not found.");
+    const batches = item.batch_details || item.stock_batches || [];
+    const isEl = ['admin','manager'].includes(userRole.toLowerCase());
+    if (!batches || batches.length === 0) { alert("No batch data available."); return; }
+    let r = `STOCK BREAKDOWN: ${item.item_name.toUpperCase()}\n${'─'.repeat(32)}\n`;
+    batches.forEach((b,i) => { r += `Layer ${i+1}: ${b.remaining_qty} units${isEl ? ` | Cost: KES ${b.unit_cost.toLocaleString()}` : ''}\n`; });
+    if (isEl) r += `\n(Prices visible to ${userRole.toUpperCase()} only)`;
+    alert(r);
 }
 
-let _searchDebounceTimer;
-document.getElementById('searchInput').addEventListener('input', () => {
-    clearTimeout(_searchDebounceTimer);
-    _searchDebounceTimer = setTimeout(() => {
-        currentPage = 1;
-        renderInventory();
-    }, 150);
-});
-
-function filterTable() {
-    currentPage = 1; 
-    renderInventory();
+async function handleRestock(id, name) {
+    const rawDn = prompt("Enter DN Number for " + name + ":"); if (!rawDn?.trim()) return;
+    const dnRef = rawDn.trim().toUpperCase();
+    const rawAmt = prompt("Quantity received?"); const amount = parseInt(rawAmt);
+    if (isNaN(amount) || amount <= 0) { alert("Invalid quantity."); return; }
+    try {
+        const res = await apiFetch(`${API_URL}/inventory/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ added_quantity:amount, delivery_note_ref:dnRef, role:userRole, userName }) });
+        if (!res.ok) throw new Error(await res.text());
+        generateGRNSlip(name, amount, dnRef); fetchStock();
+    } catch(err) { alert("Error: " + err.message); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PRICING & CART LOGIC
-// ══════════════════════════════════════════════════════════════
-function resolveTierPrice(item, sellUnit) {
+function generateGRNSlip(itemName, qty, dn) {
+    const now = new Date(), dateStr = now.toLocaleDateString()+' '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('receiptDate').innerHTML = `<div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono"><h2 class="font-black text-xl uppercase">GOODS RECEIVED NOTE</h2><p class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">ELITE HARDWARE LTD</p></div><div class="space-y-1 mb-6 text-[11px] font-mono"><div class="flex justify-between"><span>DATE:</span><span class="font-bold">${dateStr}</span></div><div class="flex justify-between"><span>DN REF:</span><span class="font-black text-blue-600">${dn}</span></div></div>`;
+    document.getElementById('receiptContent').innerHTML = `<table class="w-full text-left font-mono text-[11px] mb-6"><thead><tr class="border-b-2 border-slate-900 text-slate-400 text-[9px]"><th>ITEM</th><th class="text-right">QTY</th></tr></thead><tbody><tr><td class="py-4 font-black uppercase">${itemName}</td><td class="py-4 text-right font-black text-lg text-blue-600">${qty}</td></tr></tbody></table>`;
+    document.getElementById('receiptTotal').innerHTML = `<div class="bg-blue-600 p-4 rounded-2xl text-center text-white font-black text-xl">${qty} UNITS ADDED</div>`;
+    document.getElementById('receiptButtons').innerHTML = `<button onclick="silentPrintGRN('${itemName}',${qty},'${dn}')" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">🖨️ PRINT GRN</button><button onclick="closeReceipt()" class="w-full bg-gray-100 py-3 rounded-2xl text-gray-500 font-bold uppercase mt-2">CLOSE</button>`;
+    document.getElementById('receiptModal').classList.remove('hidden');
+    document.getElementById('modalOverlay').classList.remove('hidden');
+}
+
+async function handleDelete(id) {
+    const item = window._itemMap[id];
+    const name = item ? item.item_name : 'this item';
+    if (!confirm(`Permanently delete "${name}"?`)) return;
+    try {
+        const res = await apiFetch(`${API_URL}/inventory/${id}?role=${userRole}&userName=${userName}`, { method:'DELETE' });
+        if (res.ok) fetchStock();
+    } catch(err) { alert("Delete failed"); }
+}
+
+// ── PRICE RESOLUTION ─────────────────────────────────────────────────────
+function resolveTierPrice(item, sellUnit, qty) {
     const tier = document.getElementById('cartPriceTier')?.value || 'retail';
-    if (sellUnit === 'sub' && item.sub_unit_price) return { price: item.sub_unit_price, tier: 'sub' };
-    if (tier === 'fundi' && item.fundi_price) return { price: item.fundi_price, tier };
-    if (tier === 'wholesale' && item.wholesale_price) return { price: item.wholesale_price, tier };
-    return { price: item.price, tier: 'retail' };
+    if (sellUnit === 'sub' && item.sub_unit_price) return { price: parseFloat(item.sub_unit_price), tier: 'sub' };
+    const wsQty = parseInt(item.wholesale_min_qty) || 0;
+    if (wsQty > 0 && qty >= wsQty && item.wholesale_price) return { price: parseFloat(item.wholesale_price), tier: 'wholesale_auto' };
+    if (tier === 'fundi' && item.fundi_price)         return { price: parseFloat(item.fundi_price), tier: 'fundi' };
+    if (tier === 'wholesale' && item.wholesale_price) return { price: parseFloat(item.wholesale_price), tier: 'wholesale' };
+    return { price: parseFloat(item.price), tier: 'retail' };
 }
 
 function applyPriceTierToCart() {
     cart = cart.map(ci => {
         const item = window._itemMap[ci.itemId];
         if (!item) return ci;
-        const { price } = resolveTierPrice(item, ci.sellUnit || 'bulk');
-        const sellUnit = ci.sellUnit;
-        return { ...ci, price };
+        const { price, tier } = resolveTierPrice(item, ci.sellUnit || 'bulk', ci.quantity);
+        return { ...ci, price, appliedTier: tier };
     });
     const tier = document.getElementById('cartPriceTier')?.value || 'retail';
     const hint = document.getElementById('tierHint');
-    if (tier !== 'retail') {
-        hint.classList.remove('hidden');
-        hint.textContent = tier === 'fundi' ? '🔨 Fundi pricing applied to all items' : '📦 Wholesale pricing applied to all items';
-    } else {
-        hint.classList.add('hidden');
+    if (hint) {
+        if (tier !== 'retail') { hint.style.display='block'; hint.textContent = tier === 'fundi' ? '🔨 Fundi pricing applied' : '📦 Wholesale pricing applied'; }
+        else hint.style.display = 'none';
     }
     renderCart();
 }
 
-function addToCart(id) {
-    const item = window._itemMap[id];
+// ── ADD TO CART (no confirm() dialog — sell unit passed directly from button) ─
+function addToCart(id, sellUnit) {
+    const item = window._itemMap[String(id)];
     if (!item) return alert("Item not found. Please refresh.");
-    
-    const name  = item.item_name;
-    const stock = parseFloat(item.stock_quantity) || 0;
-    const qtyInput = document.getElementById(`qty-${id}`);
-    const qty = parseFloat(qtyInput.value);
-    
-    if (!qty || qty <= 0) return alert("Enter valid quantity");
 
-    let sellUnit = 'bulk'; 
-    const hasSubUnits = item.sub_unit !== null && item.sub_unit_qty !== null && item.sub_unit_price !== null;
+    const su = sellUnit || 'bulk';
 
-    if (hasSubUnits) {
-        const useSubUnit = confirm(
-            `🛒 Selling "${name}"\n\n` +
-            `[OK]     Sell by ${item.sub_unit}  (e.g., loose kgs or pieces)\n` +
-            `[Cancel] Sell by ${item.bulk_unit || item.unit} (whole carton/bag)\n\n` +
-            `Click OK to sell by ${item.sub_unit}. Click Cancel for ${item.bulk_unit || item.unit}.`
-        );
-        sellUnit = useSubUnit ? 'sub' : 'bulk';
-    }
+    // ── Read from the correct dedicated input ─────────────────────────────
+    // Items with sub_unit get two separate inputs:  qty-bulk-{id}  and  qty-sub-{id}
+    // Simple items get one input:                   qty-{id}
+    const hasSub = !!(item.sub_unit && item.sub_unit_qty);
+    const inputId = hasSub
+        ? (su === 'sub' ? `qty-sub-${id}` : `qty-bulk-${id}`)
+        : `qty-${id}`;
+    const qtyInput = document.getElementById(inputId);
 
-    const stockDeductCheck = (sellUnit === 'sub' && hasSubUnits)
+    // Support decimal quantities for sub-unit (e.g. 0.5 Kg)
+    const qty = su === 'sub' ? parseFloat(qtyInput?.value) : parseInt(qtyInput?.value);
+    if (!qty || qty <= 0) return alert(`Enter the quantity in ${su === 'sub' ? (item.sub_unit || 'sub-unit') : (item.bulk_unit || item.unit || 'units')} first.`);
+
+    const stock = item.stock_quantity || 0; // always in BULK units
+
+    // ── Stock check ───────────────────────────────────────────────────────
+    // Convert entered qty to bulk equivalents before comparing against stock
+    // e.g. 40 Kg ÷ 20 Kg/Carton = 2 Cartons needed
+    const stockDeductCheck = su === 'sub' && item.sub_unit_qty
         ? qty / parseFloat(item.sub_unit_qty)
         : qty;
 
     if (stockDeductCheck > stock) {
-        return alert(`⚠️ Insufficient stock! You are trying to sell the equivalent of ${stockDeductCheck} ${item.bulk_unit || item.unit}, but only have ${stock} in stock.`);
+        const availSub = stock * parseFloat(item.sub_unit_qty || 1);
+        const msg = su === 'sub'
+            ? `Only ${availSub.toLocaleString()} ${item.sub_unit} available (${stock} ${item.bulk_unit || item.unit}).`
+            : `Only ${stock} ${item.bulk_unit || item.unit} in stock.`;
+        return alert(msg);
     }
 
-    const { price: basePrice } = resolveTierPrice(item, sellUnit);
+    const { price: basePrice, tier: appliedTier } = resolveTierPrice(item, su, qty);
+    const displayUnit = su === 'sub' ? item.sub_unit : (item.bulk_unit || item.unit);
 
-    const existing = cart.find(i => String(i.itemId) === String(id) && i.sellUnit === sellUnit);
+    // ── Add or update cart ────────────────────────────────────────────────
+    const existing = cart.find(i => i.itemId === String(id) && i.sellUnit === su);
     if (existing) {
-        const newStockCheck = (sellUnit === 'sub' && hasSubUnits)
+        const newCheck = su === 'sub' && item.sub_unit_qty
             ? (existing.quantity + qty) / parseFloat(item.sub_unit_qty)
             : existing.quantity + qty;
-            
-        if (newStockCheck > stock) return alert("⚠️ This addition exceeds remaining stock!");
-        existing.quantity += qty;
+        if (newCheck > stock) {
+            const availSub = stock * parseFloat(item.sub_unit_qty || 1);
+            return alert(su === 'sub'
+                ? `Cannot exceed ${availSub.toLocaleString()} ${item.sub_unit} total.`
+                : `Cannot exceed ${stock} ${item.bulk_unit || item.unit} total.`);
+        }
+        existing.quantity = parseFloat((existing.quantity + qty).toFixed(4));
+        const { price: up, tier: ut } = resolveTierPrice(item, su, existing.quantity);
+        existing.price = up; existing.appliedTier = ut;
     } else {
-        const displayUnit = sellUnit === 'sub' ? item.sub_unit : (item.bulk_unit || item.unit);
-        cart.push({ itemId: id, itemName: name, price: basePrice, quantity: qty, sellUnit, displayUnit });
+        cart.push({ itemId: String(id), itemName: item.item_name, price: basePrice, quantity: qty, sellUnit: su, displayUnit, appliedTier });
     }
-    
-    qtyInput.value = ''; 
+
+    if (qtyInput) qtyInput.value = '';
     renderCart();
+    if (appliedTier === 'wholesale_auto') showPrintToast(`📦 Wholesale auto-applied for ${item.item_name}`, false, true);
+}
+
+
+function _tierBadge(tier) {
+    const map = {
+        retail:         { label:'RETAIL',      color:'#60a5fa', bg:'rgba(59,130,246,0.12)' },
+        fundi:          { label:'FUNDI',        color:'#fbbf24', bg:'rgba(245,158,11,0.12)' },
+        wholesale:      { label:'WHOLESALE',    color:'#34d399', bg:'rgba(16,185,129,0.12)' },
+        wholesale_auto: { label:'WHOLESALE ✓',  color:'#34d399', bg:'rgba(16,185,129,0.18)' },
+        sub:            { label:'LOOSE',        color:'#c4b5fd', bg:'rgba(167,139,250,0.12)' },
+    };
+    const t = map[tier] || map.retail;
+    return `<span style="font-size:8px;font-weight:900;padding:2px 7px;border-radius:20px;background:${t.bg};color:${t.color};text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">${t.label}</span>`;
 }
 
 function renderCart() {
@@ -691,10 +1204,21 @@ function renderCart() {
     let total = 0;
     container.innerHTML = cart.map((item, idx) => {
         const sub = item.price * item.quantity; total += sub;
-        return `<div style="display:flex;justify-content:space-between;align-items:center;background:#1e293b;padding:11px 14px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
-            <div style="flex:1;min-width:0;"><span style="font-weight:900;font-size:12px;color:#f1f5f9;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${window.escHtml ? window.escHtml(item.itemName) : item.itemName}</span><span style="color:#00e5a0;font-weight:700;font-size:10px;">x ${item.quantity} ${item.displayUnit || ''}</span></div>
-            <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;"><span style="font-family:'Space Mono',monospace;color:#00e5a0;font-weight:700;font-size:12px;">KES ${sub.toLocaleString()}</span>
-            <button onclick="removeFromCart(${idx})" style="color:#64748b;background:none;border:none;cursor:pointer;font-weight:900;font-size:18px;line-height:1;" onmouseover="this.style.color='#f1f5f9'" onmouseout="this.style.color='#64748b'">✕</button></div>
+        const unitLabel = item.displayUnit || '';
+        const tierBadge = _tierBadge(item.appliedTier || 'retail');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;background:#1c2128;padding:11px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);gap:8px;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+                <span style="font-weight:900;font-size:12px;color:#e6edf3;text-transform:uppercase;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${window.escHtml(item.itemName)}</span>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;">
+                    <span style="color:#7d8590;font-weight:700;font-size:10px;">x ${item.quantity}${unitLabel ? ' '+window.escHtml(unitLabel) : ''}</span>
+                    ${tierBadge}
+                    <span style="color:#4d5566;font-size:9px;font-family:var(--mono);">@ KES ${Number(item.price).toLocaleString()}</span>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                <span style="font-family:var(--mono);color:#10b981;font-weight:700;font-size:12px;">KES ${sub.toLocaleString()}</span>
+                <button onclick="removeFromCart(${idx})" style="color:#4d5566;background:none;border:none;cursor:pointer;font-weight:900;font-size:18px;line-height:1;" onmouseover="this.style.color='#e6edf3'" onmouseout="this.style.color='#4d5566'">✕</button>
+            </div>
         </div>`;
     }).join('');
     document.getElementById('cartTotalLabel').innerText = `KES ${total.toLocaleString()}`;
@@ -703,758 +1227,413 @@ function renderCart() {
 function removeFromCart(idx) { cart.splice(idx, 1); renderCart(); }
 function clearCart() { cart = []; renderCart(); }
 
-// ══════════════════════════════════════════════════════════════
-//  CHECKOUT & M-PESA STK PUSH
-// ══════════════════════════════════════════════════════════════
+// ── CART MPESA TOGGLE ────────────────────────────────────────────────────
 function toggleCartMpesa() {
-    const method      = document.getElementById('cartMethod').value;
+    const method = document.getElementById('cartMethod').value;
     const mpesaFields = document.getElementById('mpesaFields');
-    const stkBtn      = document.getElementById('stkPushBtn');
-    const codeField   = document.getElementById('cartMpesaCode');
-    const stkStatus   = document.getElementById('stkStatus');
-    const inC2BMode   = isC2BCheckoutMode();
-
-    if (!inC2BMode) clearStkState();
-
+    const stkBtn = document.getElementById('stkPushBtn');
+    const codeField = document.getElementById('cartMpesaCode');
+    const stkStatus = document.getElementById('stkStatus');
+    const inC2B = isC2BCheckoutMode();
+    if (!inC2B) clearStkState();
     if (method === 'Safaricom' || method === 'Equity') {
-        mpesaFields.classList.remove('hidden');
-        if (inC2BMode) {
+        mpesaFields.style.display = 'flex';
+        if (inC2B) {
             stkBtn.classList.add('hidden');
-            const phoneField = document.getElementById('cartMpesaId');
-            if (phoneField) phoneField.readOnly = true;
-            codeField.classList.remove('hidden');
-            codeField.readOnly = true;
+            document.getElementById('cartMpesaId').readOnly = true;
+            codeField.classList.remove('hidden'); codeField.readOnly = true;
             stkStatus.classList.remove('hidden');
-            stkStatus.style.background = 'rgba(0,229,160,0.15)';
-            stkStatus.style.color = '#00e5a0';
-            stkStatus.textContent = '✅ C2B payment already received. No prompt needed.';
+            stkStatus.style.background = 'rgba(16,185,129,0.15)'; stkStatus.style.color = '#34d399';
+            stkStatus.textContent = '✅ C2B payment already received.';
         } else {
             stkBtn.classList.remove('hidden');
-            stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
-            stkBtn.className = method === 'Equity' 
-                ? 'w-full p-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm uppercase tracking-wider transition' 
-                : 'w-full p-3 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-black text-sm uppercase tracking-wider transition';
-            
-            const phoneField = document.getElementById('cartMpesaId');
-            if (phoneField) phoneField.readOnly = false;
-            codeField.readOnly = false;
-            codeField.classList.add('hidden'); 
+            stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
+            stkBtn.style.background = method === 'Equity' ? '#d97706' : '#16a34a';
+            document.getElementById('cartMpesaId').readOnly = false;
+            codeField.readOnly = false; codeField.classList.add('hidden');
         }
     } else if (method === 'Credit') {
-        mpesaFields.classList.remove('hidden');
-        stkBtn.classList.add('hidden');
-        codeField.classList.add('hidden');
-        stkStatus.classList.add('hidden');
+        mpesaFields.style.display = 'flex';
+        stkBtn.classList.add('hidden'); codeField.classList.add('hidden'); stkStatus.classList.add('hidden');
         _setKraPinRequired(false);
     } else {
-        mpesaFields.classList.add('hidden');
-        _setKraPinRequired(false);
+        mpesaFields.style.display = 'none'; _setKraPinRequired(false);
     }
 }
 
-let stkPollInterval   = null;
-let currentCheckoutId = null;
-let stkResendTimer    = null;
-let stkCountdownTimer = null;
-let stkPollCount      = 0;
-let stkResolved       = false;
+let stkPollInterval=null,currentCheckoutId=null,stkResendTimer=null,stkCountdownTimer=null,stkPollCount=0,stkResolved=false;
 
 function clearStkState() {
-    clearInterval(stkPollInterval);
-    clearTimeout(stkResendTimer);
-    clearInterval(stkCountdownTimer);
-    stkPollInterval   = null;
-    stkResendTimer    = null;
-    stkCountdownTimer = null;
-    stkPollCount      = 0;
-    currentCheckoutId = null;
-    stkResolved       = false;
-    const s = document.getElementById('stkStatus');
-    s.classList.add('hidden'); s.textContent = '';
-    document.getElementById('cartMpesaCode').value = '';
+    clearInterval(stkPollInterval); clearTimeout(stkResendTimer); clearInterval(stkCountdownTimer);
+    stkPollInterval=null; stkResendTimer=null; stkCountdownTimer=null; stkPollCount=0;
+    currentCheckoutId=null; stkResolved=false;
+    const s = document.getElementById('stkStatus'); s.classList.add('hidden'); s.textContent='';
+    document.getElementById('cartMpesaCode').value='';
     const btn = document.getElementById('stkPushBtn');
-    if (btn) {
-        const m = document.getElementById('cartMethod')?.value || 'Safaricom';
-        btn.disabled = false;
-        btn.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
-        btn.onclick = sendStkPush;
-    }
+    if (btn) { btn.disabled=false; btn.textContent='📲 Send M-Pesa Prompt'; btn.onclick=sendStkPush; }
 }
 
-function handleStkResult(pd, status, btn) {
-    clearInterval(stkPollInterval); stkPollInterval = null;
-    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-    stkResolved = true; 
-
-    const currentMethod = document.getElementById('cartMethod')?.value || 'Safaricom';
-    const methodLabel   = currentMethod === 'Equity' ? 'Equity' : 'M-Pesa';
-
-    if (pd.status === 'confirmed') {
-        document.getElementById('cartMpesaCode').value = pd.mpesaCode || '';
-        status.style.background = 'rgba(0,229,160,0.15)';
-        status.style.color = '#00e5a0';
-        status.textContent = `✅ Payment confirmed! Code: ${pd.mpesaCode}`;
-        btn.textContent = '✅ Paid — Complete Sale';
-        btn.disabled = false;
-        btn.onclick = () => finalizeCartSale();
-
-    } else if (pd.status === 'cancelled') {
-        status.style.background = 'rgba(245,158,11,0.15)';
-        status.style.color = '#fcd34d';
-        status.textContent = `🚫 Customer cancelled the ${methodLabel} prompt. Resend or collect cash.`;
-        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-        stkResendTimer = setTimeout(() => {
-            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-        }, 5000);
-
-    } else if (pd.status === 'timeout') {
-        status.style.background = 'rgba(245,158,11,0.15)';
-        status.style.color = '#fcd34d';
-        status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-        stkResendTimer = setTimeout(() => {
-            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-        }, 5000);
-
-    } else if (pd.status === 'insufficient_funds') {
-        status.style.background = 'rgba(239,68,68,0.15)';
-        status.style.color = '#fca5a5';
-        status.textContent = `💸 Customer has insufficient ${methodLabel} balance. Ask them to top up or pay cash.`;
-        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-        stkResendTimer = setTimeout(() => {
-            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-        }, 5000);
-
-    } else if (pd.status === 'failed') {
-        const reason = pd.resultDesc || 'Payment failed';
-        status.style.background = 'rgba(239,68,68,0.15)';
-        status.style.color = '#fca5a5';
-        status.textContent = '❌ ' + reason + '. Try again or collect cash.';
-        btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-        stkResendTimer = setTimeout(() => {
-            btn.disabled = false; btn.textContent = `📲 Resend ${methodLabel} Prompt`; btn.onclick = sendStkPush;
-        }, 5000);
+function handleStkResult(pd,status,btn) {
+    clearInterval(stkPollInterval); stkPollInterval=null; clearInterval(stkCountdownTimer); stkCountdownTimer=null;
+    stkResolved=true;
+    const ml = document.getElementById('cartMethod')?.value==='Equity' ? 'Equity' : 'M-Pesa';
+    if (pd.status==='confirmed') {
+        document.getElementById('cartMpesaCode').value = pd.mpesaCode||'';
+        status.style.background='rgba(16,185,129,0.15)'; status.style.color='#34d399';
+        status.textContent=`✅ Payment confirmed! Code: ${pd.mpesaCode}`;
+        btn.textContent='✅ Paid — Complete Sale'; btn.disabled=false; btn.onclick=()=>finalizeCartSale();
+    } else {
+        const msgs = { cancelled:`🚫 Customer cancelled.`, timeout:`⏰ Prompt expired.`, insufficient_funds:`💸 Insufficient balance.`, failed:`❌ ${pd.resultDesc||'Payment failed'}.` };
+        status.style.background='rgba(245,158,11,0.15)'; status.style.color='#fbbf24';
+        status.textContent = (msgs[pd.status]||'❌ Failed.') + ' Resend or collect cash.';
+        btn.textContent='⏳ Resend in 5s...'; btn.disabled=true;
+        stkResendTimer=setTimeout(()=>{ btn.disabled=false; btn.textContent=`📲 Resend ${ml} Prompt`; btn.onclick=sendStkPush; },5000);
     }
 }
 
 async function sendStkPush() {
-    const phone    = document.getElementById('cartMpesaId').value.trim();
-    const total    = cart.reduce((s, i) => s + i.price * i.quantity, 0);
-    const customer = document.getElementById('cartCustomer').value.trim();
-    const method   = document.getElementById('cartMethod').value; 
-
-    if (!phone) return alert('⚠️ Enter customer phone number first');
+    const phone=document.getElementById('cartMpesaId').value.trim();
+    const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+    const customer=document.getElementById('cartCustomer').value.trim();
+    const method=document.getElementById('cartMethod').value;
+    if (!phone) return alert('⚠️ Enter phone number first');
     if (!total)  return alert('⚠️ Cart is empty');
-    
-    const safeCustomerName = (customer || 'Walk in').replace(/[^a-zA-Z0-9 ]/g, '').trim();
-    const safeAccountRef   = (customer || 'EliteHW').replace(/[^a-zA-Z0-9]/g, '').substring(0, 12);
-
-    const btn    = document.getElementById('stkPushBtn');
-    const status = document.getElementById('stkStatus');
-    btn.disabled = true;
-    btn.textContent = '⏳ Sending prompt...';
-    status.classList.remove('hidden');
-    status.style.background = 'rgba(59,130,246,0.15)';
-    status.style.color = '#93c5fd';
-    status.textContent = `Sending ${method} Push to ${phone}...`;
-
-    clearInterval(stkPollInterval); stkPollInterval = null; stkPollCount = 0; stkResolved = false;
-
+    const btn=document.getElementById('stkPushBtn'), status=document.getElementById('stkStatus');
+    btn.disabled=true; btn.textContent='⏳ Sending...';
+    status.classList.remove('hidden'); status.style.background='rgba(59,130,246,0.15)'; status.style.color='#93c5fd';
+    status.textContent=`Sending ${method} Push to ${phone}...`;
+    clearInterval(stkPollInterval); stkPollInterval=null; stkPollCount=0; stkResolved=false;
     try {
-        let endpoint = '/mpesa/stk-push'; 
-        if (method === 'Equity') endpoint = '/jenga/equity-stk-push';
-
-        const res  = await apiFetch(`${API_URL}${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                phone, 
-                amount: total, 
-                accountRef: safeAccountRef, 
-                customerName: safeCustomerName,
-                context: {} 
-            })
-        });
+        const endpoint = method==='Equity' ? '/jenga/equity-stk-push' : '/mpesa/stk-push';
+        const res = await apiFetch(`${API_URL}${endpoint}`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone, amount:total, accountRef:(customer||'EliteHW').replace(/[^a-zA-Z0-9]/g,'').substring(0,12), customerName:(customer||'Walk in').replace(/[^a-zA-Z0-9 ]/g,'').trim(), context:{} }) });
         const data = await res.json();
-        
-        if (!data.success) {
-            status.style.background = 'rgba(239,68,68,0.15)';
-            status.style.color = '#fca5a5';
-            status.textContent = '❌ ' + data.message;
-            btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
-            return;
-        }
-
-        currentCheckoutId = data.checkoutRequestId;
-        btn.textContent = '⏳ Waiting...';
-
-        let secondsLeft = 60;
-        const updateCountdown = () => {
-            if (stkPollInterval) status.textContent = `📱 Waiting for customer PIN... (${secondsLeft}s)`;
-            secondsLeft--;
-        };
-        updateCountdown();
-        stkCountdownTimer = setInterval(() => {
-            if (!stkPollInterval) { clearInterval(stkCountdownTimer); return; }
-            updateCountdown();
-        }, 1000);
-
-        stkPollInterval = setInterval(async () => {
+        if (!data.success) { status.style.background='rgba(248,113,113,0.15)'; status.style.color='#fca5a5'; status.textContent='❌ '+data.message; btn.disabled=false; btn.textContent=`📲 Send ${method} Prompt`; return; }
+        currentCheckoutId=data.checkoutRequestId; btn.textContent='⏳ Waiting...';
+        let secondsLeft=60;
+        const updateCD=()=>{ if(stkPollInterval) status.textContent=`📱 Waiting for PIN... (${secondsLeft}s)`; secondsLeft--; };
+        updateCD(); stkCountdownTimer=setInterval(()=>{ if(!stkPollInterval){clearInterval(stkCountdownTimer);return;} updateCD(); },1000);
+        stkPollInterval=setInterval(async()=>{
             try {
-                const statusEndpoint = method === 'Equity' ? `/jenga/status/${currentCheckoutId}` : `/mpesa/status/${currentCheckoutId}`;
-                const pr = await apiFetch(`${API_URL}${statusEndpoint}`);
-                const pd = await pr.json();
-
-                if (!pr.ok || pd.status === 'not_found') {
-                    clearInterval(stkPollInterval); stkPollInterval = null;
-                    clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                    status.style.background = 'rgba(239,68,68,0.15)';
-                    status.style.color = '#fca5a5';
-                    status.textContent = '❌ Could not track payment — enter code manually.';
-                    const c = document.getElementById('cartMpesaCode');
-                    c.classList.remove('hidden'); c.focus();
-                    btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`; btn.onclick = sendStkPush;
-                    return;
-                }
-
-                if (pd.status !== 'pending') {
-                    handleStkResult(pd, status, btn); 
-                    return;
-                }
-
+                const se=method==='Equity'?`/jenga/status/${currentCheckoutId}`:`/mpesa/status/${currentCheckoutId}`;
+                const pr=await apiFetch(`${API_URL}${se}`); const pd=await pr.json();
+                if (!pr.ok||pd.status==='not_found'){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Could not track — enter code manually.'; document.getElementById('cartMpesaCode').classList.remove('hidden'); btn.disabled=false;btn.textContent=`📲 Resend ${method}`;btn.onclick=sendStkPush; return; }
+                if (pd.status!=='pending') { handleStkResult(pd,status,btn); return; }
                 stkPollCount++;
-                if (method === 'Safaricom' && stkPollCount >= 18) {
-                    try {
-                        const qr = await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`);
-                        const qd = await qr.json();
-                        if (qd.success && qd.status !== 'pending') handleStkResult(qd, status, btn);
-                    } catch(e) {}
-                }
-            } catch(e) {}
-        }, 3000);
-
-        setTimeout(() => {
-            if (!stkResolved) { 
-                clearInterval(stkPollInterval); stkPollInterval = null;
-                clearInterval(stkCountdownTimer); stkCountdownTimer = null;
-                status.style.background = 'rgba(245,158,11,0.15)';
-                status.style.color = '#fcd34d';
-                status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-                btn.disabled = false; btn.textContent = `📲 Resend ${method} Prompt`;
-                btn.onclick = sendStkPush;
-            }
-        }, 60000);
-
-    } catch(e) {
-        status.style.background = 'rgba(239,68,68,0.15)';
-        status.style.color = '#fca5a5';
-        status.textContent = '❌ Error: ' + e.message;
-        btn.disabled = false; btn.textContent = `📲 Send ${method} Prompt`;
-    }
+                if (method==='Safaricom'&&stkPollCount>=18){ try{ const qr=await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`); const qd=await qr.json(); if(qd.success&&qd.status!=='pending') handleStkResult(qd,status,btn); }catch(e){} }
+            } catch(e){}
+        },3000);
+        setTimeout(()=>{ if(!stkResolved){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(245,158,11,0.15)';status.style.color='#fbbf24';status.textContent='⏰ Expired — resend or collect cash.'; btn.disabled=false;btn.textContent=`📲 Resend ${method}`;btn.onclick=sendStkPush; } },60000);
+    } catch(e){ status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Error: '+e.message; btn.disabled=false;btn.textContent=`📲 Send ${method}`; }
 }
 
-function _setKraPinRequired(required) {
-    const badge = document.getElementById('kraPinBadge');
-    const hint  = document.getElementById('kraPinHint');
-    const input = document.getElementById('cartKraPin');
-    if (!badge || !input) return;
-    if (required) {
-        badge.textContent            = 'REQUIRED';
-        badge.style.background       = 'rgba(255,77,109,0.18)';
-        badge.style.color            = '#ff4d6d';
-        input.style.ringColor        = '#ff4d6d';
-        if (hint) hint.style.color   = '#ff4d6d';
-    } else {
-        badge.textContent            = 'OPTIONAL';
-        badge.style.background       = 'rgba(245,158,11,0.18)';
-        badge.style.color            = '#f59e0b';
-        if (hint) hint.style.color   = '#64748b';
-    }
-}
-
-async function finalizeCartSale() {
-    if (isFinalizing || !cart.length) return;
-
-    const customer = document.getElementById('cartCustomer').value.trim();
-    const method   = document.getElementById('cartMethod').value;
-    const customerPin = (document.getElementById('cartKraPin')?.value || '').trim().toUpperCase();
-    
-    const c2bMode = !!_activeC2BCheckoutTask;
-    const effectiveMethod = c2bMode ? 'M-Pesa' : method;
-    const phoneInput = document.getElementById('cartMpesaId').value.trim();
-    const codeInput = document.getElementById('cartMpesaCode').value.trim();
-    const phone    = c2bMode ? (phoneInput || (_activeC2BCheckoutTask?.phone || '')) : phoneInput;
-    const code     = c2bMode ? (codeInput || (_activeC2BCheckoutTask?.mpesaCode || '')) : codeInput;
-
-    const serverMethod = effectiveMethod === 'Safaricom' ? 'M-Pesa' : effectiveMethod;
-
-    if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
-    if (effectiveMethod === "M-Pesa" && !phone) return alert("⚠️ Phone Number required for M-Pesa");
-    if (effectiveMethod === "M-Pesa" && !code) return alert("⚠️ M-Pesa payment not confirmed. Send the prompt and wait, or enter code manually.");
-    if (effectiveMethod === "Equity" && !phone) return alert("⚠️ Phone Number required for Equity payment");
-    if (effectiveMethod === "Equity" && !code) return alert("⚠️ Equity payment not confirmed. Send the prompt and wait for the customer to complete payment.");
-    if (effectiveMethod === "Credit" && !phone) return alert("⚠️ Phone Number required for Credit sales");
-    
-    if (customerPin && !/^[A-Z][0-9]{9}[A-Z]$/.test(customerPin)) {
-        return alert("⚠️ Invalid KRA PIN format.\n\nFormat should be: 1 letter + 9 digits + 1 letter (e.g. A012345678B)");
-    }
-
-    // ── OFFLINE PATH ────────────────────────────────────────────────────────
-    if (!navigator.onLine) {
-        isFinalizing = true;
-        document.getElementById('checkoutBtn').innerText = "SAVING OFFLINE...";
-        try {
-            let totalAmount = 0;
-            const receiptItems = [...cart];
-
-            cart.forEach(item => { totalAmount += (item.price * item.quantity); });
-
-            const offlineReceiptNo = 'OFF-' + Date.now();
-
-            await OfflineQueue.add({
-                isBulkCart:      true,
-                items:           cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
-                paymentMethod:   serverMethod,
-                mpesaId:         phone,
-                mpesaCode:       code,
-                customerName:    customer,
-                customerPin:     customerPin || null,
-                amountPaid:      serverMethod === 'Credit' ? 0 : totalAmount,
-                offlineReceipt:  offlineReceiptNo,
-                priceTier:       document.getElementById('cartPriceTier')?.value || 'retail'
-            });
-
-            receiptItems.forEach(soldItem => {
-                const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
-                if (itemInMemory) {
-                    const item = window._itemMap[soldItem.itemId];
-                    const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
-                        ? soldItem.quantity / parseFloat(item.sub_unit_qty)
-                        : soldItem.quantity;
-                    itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
-                }
-            });
-            try { await StockCache.save(allStock); } catch(ce) {}
-            renderInventory();
-
-            showMultiReceipt(customer, effectiveMethod, totalAmount, receiptItems, phone, code, offlineReceiptNo);
-
-            clearCart();
-            document.getElementById('cartCustomer').value = '';
-            document.getElementById('cartMpesaId').value = '';
-            document.getElementById('cartMpesaCode').value = '';
-            if (document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value = '';
-            _setKraPinRequired(false);
-            updatePendingBadge();
-
-        } catch(err) {
-            alert("Failed to save offline: " + err.message);
-        } finally {
-            isFinalizing = false;
-            document.getElementById('checkoutBtn').innerText = "SAVE OFFLINE";
-        }
-        return;
-    }
-
-    // ── ONLINE PATH ────────────────────────────────────────────────────────
-    isFinalizing = true;
-    document.getElementById('checkoutBtn').innerText = "PROCESSING...";
-
-    try {
-        const receiptItems = [...cart];
-        let totalAmount = 0;
-        cart.forEach(item => { totalAmount += item.price * item.quantity; });
-
-        const cartRes = await apiFetch(`${API_URL}/sell/cart`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                items:         cart.map(item => ({ itemId: item.itemId, quantity: item.quantity, sellUnit: item.sellUnit || 'bulk' })),
-                paymentMethod: serverMethod,
-                mpesaId:       phone,
-                mpesaCode:     code,
-                customerName:  customer,
-                customerPin:   customerPin || null,
-                amountPaid:    serverMethod === 'Credit' ? 0 : totalAmount,
-                isC2B:         c2bMode,
-                priceTier:     document.getElementById('cartPriceTier')?.value || 'retail'
-            })
-        });
-        const cartData = await cartRes.json();
-        if (!cartData.success) throw new Error(cartData.message);
-
-        showMultiReceipt(
-            customer, effectiveMethod, totalAmount, receiptItems, phone, code, 
-            cartData.receiptNumber, cartData.invoiceNumber, cartData.dnNumber, 
-            cartData.kraReceiptNo, cartData.kraQrUrl, cartData.Control_unit_number,
-            cartData.kraQrDataUrl
-        );
-
-        clearCart();
-        document.getElementById('cartCustomer').value = '';
-        document.getElementById('cartMpesaId').value = '';
-        document.getElementById('cartMpesaCode').value = '';
-        if (document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value = '';
-        _setKraPinRequired(false);
-
-        receiptItems.forEach(soldItem => {
-            const itemInMemory = allStock.find(i => String(i.id) === String(soldItem.itemId));
-            if (itemInMemory) {
-                const item = window._itemMap[soldItem.itemId];
-                const deductQty = (soldItem.sellUnit === 'sub' && item?.sub_unit_qty)
-                    ? soldItem.quantity / parseFloat(item.sub_unit_qty)
-                    : soldItem.quantity;
-                itemInMemory.stock_quantity = Math.max(0, (itemInMemory.stock_quantity || 0) - deductQty);
-            }
-        });
-        renderInventory();
-        
-        isFinalizing = false;
-        document.getElementById('checkoutBtn').innerText = "COMPLETE TRANSACTION";
-        document.getElementById('cartMethod').disabled = false;
-
-        setTimeout(() => { fetchRecentSales(); }, 500);
-
-        if (c2bMode && _activeC2BCheckoutTask?.c2bId) {
-            (async () => {
-                let resolveAttempts = 0;
-                const maxAttempts = 3;
-                while (resolveAttempts < maxAttempts) {
-                    try {
-                        const goodsNotes = receiptItems.map(i => `${i.quantity}x ${i.itemName}`).join(', ');
-                        const resolveRes = await apiFetch(`${API_URL}/c2b/resolve-goods`, {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
-                                c2bId: _activeC2BCheckoutTask.c2bId,
-                                notes: goodsNotes,
-                                customerName: customer,
-                                receiptNumber: cartData.receiptNumber,
-                                receiptData: receiptItems,
-                                amountApplied: totalAmount
-                            })
-                        });
-                        const resolveData = await resolveRes.json();
-                        if (resolveRes.ok && resolveData.success) {
-                            clearC2BInventoryTask();
-                            _activeC2BCheckoutTask = null;
-                            break; 
-                        } else {
-                            throw new Error(resolveData.message || 'Resolve failed');
-                        }
-                    } catch (c2bErr) {
-                        resolveAttempts++;
-                        if (resolveAttempts >= maxAttempts) break;
-                        await new Promise(resolve => setTimeout(resolve, 1000)); 
-                    }
-                }
-            })(); 
-        }
-
-    } catch (err) {
-        alert("Error: " + err.message);
-        isFinalizing = false;
-        document.getElementById('checkoutBtn').innerText = "COMPLETE TRANSACTION";
-        document.getElementById('cartMethod').disabled = false;
-    } 
-}
-
-// ══════════════════════════════════════════════════════════════
-//  RECENT SALES LOGIC
-// ══════════════════════════════════════════════════════════════
-let _recentAll  = [];
-let _recentPage = 1;
-const _recentPer = 10;
+// ── RECENT SALES ─────────────────────────────────────────────────────────
+let _recentAll=[],_recentPage=1;
+const _recentPer=10;
 
 async function fetchRecentSales() {
-    if (typeof window.apiFetch !== 'function') return;
+    if (typeof window.apiFetch!=='function') return;
     try {
-        const _now    = new Date();
-        const _yyyy   = _now.getFullYear();
-        const _mm     = String(_now.getMonth() + 1).padStart(2, '0');
-        const _dd     = String(_now.getDate()).padStart(2, '0');
-        const localDateStr = `${_yyyy}-${_mm}-${_dd}`;
-
-        const res = await apiFetch(`${API_URL}/reports/sales?role=${userRole}&date=${localDateStr}`);
-        if (!res) return; 
-        const sales = await res.json();
-        const _sellerName = (window.EliteAuth && window.EliteAuth.name) ? window.EliteAuth.name : userName; 
-        _recentAll  = Array.isArray(sales) ? sales.filter(s => s.sold_by === _sellerName) : [];
-        _recentPage = 1;
-        window._recentSaleMap = {}; 
-        _renderRecentSales();
-    } catch (e) { console.error("Recent sales failed:", e.message); }
+        const now=new Date(), yyyy=now.getFullYear(), mm=String(now.getMonth()+1).padStart(2,'0'), dd=String(now.getDate()).padStart(2,'0');
+        const res=await apiFetch(`${API_URL}/reports/sales?role=${userRole}&date=${yyyy}-${mm}-${dd}`);
+        if (!res) return;
+        const sales=await res.json();
+        const sellerName=(window.EliteAuth?.name)||userName;
+        _recentAll=Array.isArray(sales)?sales.filter(s=>s.sold_by===sellerName):[];
+        _recentPage=1; window._recentSaleMap={}; _renderRecentSales();
+    } catch(e){}
 }
 
 function _groupSalesIntoTransactions(rows) {
-    const grouped = [];
-    const seen    = new Map(); 
-
+    const grouped=[],seen=new Map();
     for (const s of rows) {
-        const key = s.receipt_number || s.invoice_number || ('solo_' + s.id);
-
+        const key=s.receipt_number||s.invoice_number||('solo_'+s.id);
         if (seen.has(key)) {
-            const tx = grouped[seen.get(key)];
-            tx._total += Number(s.total_amount) || 0;
-            tx._items.push({
-                itemName: s.item_name     || 'Item',
-                quantity: s.quantity_sold || 1,
-                price:    s.unit_price    || 0
-            });
-            if (!tx['Kra_Receipt_No'])      tx['Kra_Receipt_No']      = s['Kra_Receipt_No']      || null;
-            if (!tx.kra_qr_url)             tx.kra_qr_url             = s.kra_qr_url             || null;
-            if (!tx['Control_unit_number']) tx['Control_unit_number'] = s['Control_unit_number'] || null;
-            
-            if (Array.isArray(s.payments) && s.payments.length > 0) {
-                if (!Array.isArray(tx.payments) || tx.payments.length === 0) {
-                    tx.payments = s.payments;
-                }
-            }
-            if (!tx.mpesa_code && s.mpesa_code) tx.mpesa_code = s.mpesa_code;
-
+            const tx=grouped[seen.get(key)];
+            tx._total+=Number(s.total_amount)||0;
+            tx._items.push({itemName:s.item_name||'Item',quantity:s.quantity_sold||1,price:s.unit_price||0});
+            if (!tx['Kra_Receipt_No']) tx['Kra_Receipt_No']=s['Kra_Receipt_No']||null;
+            if (!tx.kra_qr_url) tx.kra_qr_url=s.kra_qr_url||null;
+            if (!tx['Control_unit_number']) tx['Control_unit_number']=s['Control_unit_number']||null;
+            if (Array.isArray(s.payments)&&s.payments.length>0&&(!Array.isArray(tx.payments)||tx.payments.length===0)) tx.payments=s.payments;
+            if (!tx.mpesa_code&&s.mpesa_code) tx.mpesa_code=s.mpesa_code;
         } else {
-            const tx = Object.assign({}, s, {
-                _total: Number(s.total_amount) || 0,
-                _items: [{
-                    itemName: s.item_name     || 'Item',
-                    quantity: s.quantity_sold || 1,
-                    price:    s.unit_price    || 0
-                }]
-            });
-            seen.set(key, grouped.length);
-            grouped.push(tx);
+            seen.set(key,grouped.length);
+            grouped.push(Object.assign({},s,{_total:Number(s.total_amount)||0,_items:[{itemName:s.item_name||'Item',quantity:s.quantity_sold||1,price:s.unit_price||0}]}));
         }
     }
     return grouped;
 }
 
 function _renderRecentSales() {
-    const body  = document.getElementById('recentSalesBody');
-    const pgDiv = document.getElementById('recentSalesPagination');
+    const body=document.getElementById('recentSalesBody'),pgDiv=document.getElementById('recentSalesPagination');
+    const grouped=_groupSalesIntoTransactions(_recentAll), total=grouped.length;
+    if (!total) { body.innerHTML='<tr><td colspan="7" style="padding:30px;text-align:center;color:var(--muted);font-style:italic;">No sales handled by you today.</td></tr>'; if(pgDiv) pgDiv.innerHTML=''; return; }
+    const pages=Math.ceil(total/_recentPer), start=(_recentPage-1)*_recentPer, slice=grouped.slice(start,start+_recentPer);
+    window._recentSaleMap=window._recentSaleMap||{};
+    slice.forEach((s,idx)=>{ window._recentSaleMap['rs_'+(start+idx)]=s; });
+    body.innerHTML=slice.map((s,idx)=>{
+        const statusColor=s.payment_status==='Paid'?'rgba(16,185,129,0.12);color:#34d399':s.payment_status==='Partial'?'rgba(245,158,11,0.12);color:#fbbf24':'rgba(248,113,113,0.12);color:#f87171';
+        const gi=start+idx;
+        const itemSummary=s._items.length===1?`${window.escHtml(s._items[0].itemName)} <b>x${s._items[0].quantity}</b>`:s._items.map(i=>`${window.escHtml(i.itemName)} <b>x${i.quantity}</b>`).join(', ');
+        const _rm=(s.is_credit_sale||['Credit','Unpaid','Partial'].includes(s.payment_status))?'Credit':(Array.isArray(s.payments)&&s.payments.length>0&&s.payments[0].payment_method)?s.payments[0].payment_method:(s.mpesa_code||s.mpesaCode||s.mpesa_id?'M-Pesa':'Cash');
+        const method=/equity|equitel/i.test(_rm)?'Equity Mobile':(_rm==='Safaricom'||/^safaricom/i.test(_rm))?'M-Pesa':_rm;
+        const mc=method==='M-Pesa'?'rgba(16,185,129,0.12);color:#34d399':method==='Credit'?'rgba(248,113,113,0.12);color:#f87171':method==='Equity Mobile'?'rgba(245,158,11,0.12);color:#fbbf24':'rgba(59,130,246,0.12);color:#60a5fa';
+        return `<tr><td style="padding:10px 16px;font-family:var(--mono);color:var(--muted);font-size:10px;">${new Date(s.sale_date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td class="hidden md:table-cell" style="padding:10px 16px;font-weight:900;text-transform:uppercase;font-size:11px;">${window.escHtml(s.customer_name)||'Walk-in'}</td><td class="hidden md:table-cell" style="padding:10px 16px;font-size:11px;color:var(--muted);">${itemSummary}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${mc};padding:3px 9px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap;">${method}</span></td><td style="padding:10px 16px;text-align:right;font-weight:900;font-family:var(--mono);font-size:12px;">KES ${s._total.toLocaleString()}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${statusColor};padding:3px 9px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;">${s.payment_status}</span></td><td style="padding:10px 16px;text-align:center;"><button onclick="printRecentReceipt(${gi})" style="background:rgba(16,185,129,0.1);color:#34d399;border:1px solid rgba(16,185,129,0.25);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;cursor:pointer;text-transform:uppercase;">🖨️ Receipt</button></td></tr>`;
+    }).join('');
+    if (!pgDiv) return;
+    if (pages<=1) { pgDiv.innerHTML=''; return; }
+    const s2=start+1,e2=Math.min(start+_recentPer,total);
+    pgDiv.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;">Showing ${s2}–${e2} of ${total} · Page ${_recentPage}/${pages}</span><div style="display:flex;gap:8px;"><button onclick="_recentChangePage(-1)" ${_recentPage<=1?'disabled':''} class="page-btn">← Prev</button><button onclick="_recentChangePage(1)" ${_recentPage>=pages?'disabled':''} class="page-btn">Next →</button></div></div>`;
+}
 
-    const grouped = _groupSalesIntoTransactions(_recentAll);
-    const total   = grouped.length;
+function _recentChangePage(dir) { const pages=Math.ceil(_groupSalesIntoTransactions(_recentAll).length/_recentPer); _recentPage=Math.max(1,Math.min(pages,_recentPage+dir)); _renderRecentSales(); }
 
-    if (!total) {
-        body.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">No sales handled by you today.</td></tr>';
-        if (pgDiv) pgDiv.innerHTML = '';
+function _setKraPinRequired(required) {
+    const badge=document.getElementById('kraPinBadge'),hint=document.getElementById('kraPinHint'),input=document.getElementById('cartKraPin');
+    if (!badge||!input) return;
+    if (required) { badge.textContent='REQUIRED';badge.style.background='rgba(248,113,113,0.18)';badge.style.color='#f87171'; if(hint) hint.style.color='#f87171'; }
+    else { badge.textContent='OPTIONAL';badge.style.background='rgba(245,158,11,0.18)';badge.style.color='#f59e0b'; if(hint) hint.style.color='var(--muted2)'; }
+}
+
+// ── FINALIZE CART SALE ───────────────────────────────────────────────────
+async function finalizeCartSale() {
+    if (isFinalizing||!cart.length) return;
+    const customer=document.getElementById('cartCustomer').value.trim();
+    const method=document.getElementById('cartMethod').value;
+    const customerPin=(document.getElementById('cartKraPin')?.value||'').trim().toUpperCase();
+    const c2bMode=!!_activeC2BCheckoutTask;
+    const effectiveMethod=c2bMode?'M-Pesa':method;
+    const phone=document.getElementById('cartMpesaId').value.trim();
+    const code=document.getElementById('cartMpesaCode').value.trim();
+    const serverMethod=effectiveMethod==='Safaricom'?'M-Pesa':effectiveMethod;
+    if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
+    if ((effectiveMethod==="M-Pesa"||effectiveMethod==="Safaricom")&&!phone) return alert("⚠️ Phone number required");
+    if ((effectiveMethod==="M-Pesa"||effectiveMethod==="Safaricom")&&!code) return alert("⚠️ M-Pesa code not confirmed");
+    if (effectiveMethod==="Equity"&&!phone) return alert("⚠️ Phone number required");
+    if (effectiveMethod==="Equity"&&!code) return alert("⚠️ Equity payment not confirmed");
+    if (effectiveMethod==="Credit"&&!phone) return alert("⚠️ Phone required for credit");
+    if (customerPin&&!/^[A-Z][0-9]{9}[A-Z]$/.test(customerPin)) return alert("⚠️ Invalid KRA PIN (e.g. A012345678B)");
+
+    if (!isOnline) {
+        isFinalizing=true; document.getElementById('checkoutBtn').innerText="SAVING OFFLINE...";
+        try {
+            let totalAmount=0; const receiptItems=[...cart];
+            cart.forEach(i=>{ totalAmount+=i.price*i.quantity; });
+            const offlineReceiptNo='OFF-'+Date.now();
+            await OfflineQueue.add({ isBulkCart:true, items:cart.map(i=>({itemId:i.itemId,quantity:i.quantity,sellUnit:i.sellUnit||'bulk'})), paymentMethod:serverMethod, mpesaId:phone, mpesaCode:code, customerName:customer, customerPin:customerPin||null, amountPaid:serverMethod==='Credit'?0:totalAmount, offlineReceipt:offlineReceiptNo, priceTier:document.getElementById('cartPriceTier')?.value||'retail' });
+            receiptItems.forEach(si=>{ const inMem=allStock.find(i=>String(i.id)===String(si.itemId)); if(inMem){ const it=window._itemMap[si.itemId]; const dq=(si.sellUnit==='sub'&&it?.sub_unit_qty)?si.quantity/parseFloat(it.sub_unit_qty):si.quantity; inMem.stock_quantity=Math.max(0,(inMem.stock_quantity||0)-dq); } });
+            try { await StockCache.save(allStock); } catch(ce){}
+            renderInventory();
+            showMultiReceipt(customer,effectiveMethod,totalAmount,receiptItems,phone,code,offlineReceiptNo);
+            clearCart(); document.getElementById('cartCustomer').value=''; document.getElementById('cartMpesaId').value=''; document.getElementById('cartMpesaCode').value='';
+            if(document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value='';
+            _setKraPinRequired(false); updatePendingBadge();
+        } catch(err){ alert("Failed to save offline: "+err.message); }
+        finally { isFinalizing=false; document.getElementById('checkoutBtn').innerText="SAVE OFFLINE"; }
         return;
     }
 
-    const pages = Math.ceil(total / _recentPer);
-    const start = (_recentPage - 1) * _recentPer;
-    const slice = grouped.slice(start, start + _recentPer);
-
-    window._recentSaleMap = window._recentSaleMap || {};
-    slice.forEach((s, idx) => { window._recentSaleMap['rs_' + (start + idx)] = s; });
-
-    body.innerHTML = slice.map((s, idx) => {
-        const statusClass = s.payment_status === 'Paid'
-            ? 'bg-green-100 text-green-700'
-            : s.payment_status === 'Partial'
-            ? 'bg-orange-100 text-orange-700'
-            : 'bg-red-100 text-red-700';
-        const globalIdx  = start + idx;
-        const itemSummary = s._items.length === 1
-            ? `${window.escHtml ? window.escHtml(s._items[0].itemName) : s._items[0].itemName} <span class="font-black text-slate-300">x${s._items[0].quantity}</span>`
-            : s._items.map(i => `${window.escHtml ? window.escHtml(i.itemName) : i.itemName} <span class="font-black text-slate-300">x${i.quantity}</span>`).join(', ');
-
-        const _rawMethod = (s.is_credit_sale || s.payment_status === 'Credit' || s.payment_status === 'Unpaid' || s.payment_status === 'Partial')
-            ? 'Credit'
-            : (Array.isArray(s.payments) && s.payments.length > 0 && s.payments[0].payment_method)
-                ? s.payments[0].payment_method
-                : (s.mpesa_code || s.mpesaCode || s.mpesa_id ? 'M-Pesa' : 'Cash');
-        const method = /equity|equitel/i.test(_rawMethod) ? 'Equity Mobile'
-            : (_rawMethod === 'Safaricom' || /^safaricom/i.test(_rawMethod)) ? 'M-Pesa'
-            : _rawMethod;
-        const methodStyle = method === 'M-Pesa'
-            ? 'background:rgba(0,229,160,0.12);color:#00e5a0;'
-            : method === 'Credit'
-            ? 'background:rgba(255,77,109,0.12);color:#ff4d6d;'
-            : method === 'Equity Mobile'
-            ? 'background:rgba(245,158,11,0.12);color:#f59e0b;'
-            : 'background:rgba(86,156,214,0.12);color:#569cd6;';
-
-        return `<tr class="border-t border-slate-50 hover:bg-slate-50 transition">
-            <td class="p-4 font-mono text-slate-400 text-[10px]">${new Date(s.sale_date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</td>
-            <td class="p-4 font-black text-slate-700 uppercase text-xs hidden md:table-cell">${window.escHtml ? window.escHtml(s.customer_name) : s.customer_name || 'Walk-in'}</td>
-            <td class="p-4 text-slate-500 text-xs hidden md:table-cell">${itemSummary}</td>
-            <td class="p-4 text-center"><span style="${methodStyle}padding:3px 8px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap;">${method}</span></td>
-            <td class="p-4 text-right font-black text-slate-800 text-xs">KES ${s._total.toLocaleString()}</td>
-            <td class="p-4 text-center"><span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase ${statusClass}">${s.payment_status}</span></td>
-            <td class="p-4 text-center">
-                <button onclick="printRecentReceipt(${globalIdx})"
-                    style="background:linear-gradient(135deg,#1e3a5f,#1e293b);color:#00e5a0;border:1px solid rgba(0,229,160,0.3);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;"
-                    onmouseover="this.style.background='linear-gradient(135deg,#00e5a0,#00c98e)';this.style.color='#000';"
-                    onmouseout="this.style.background='linear-gradient(135deg,#1e3a5f,#1e293b)';this.style.color='#00e5a0';"
-                    title="Reprint receipt — does NOT create a new sale">
-                    🖨️ Receipt
-                </button>
-            </td>
-        </tr>`;
-    }).join('');
-
-    if (!pgDiv) return;
-    if (pages <= 1) { pgDiv.innerHTML = ''; return; }
-
-    const startRec = start + 1;
-    const endRec   = Math.min(start + _recentPer, total);
-    pgDiv.innerHTML = `
-        <div class="flex items-center justify-between">
-            <span class="text-[10px] font-black text-slate-400 uppercase">
-                Showing ${startRec}–${endRec} of ${total} transactions · Page ${_recentPage} of ${pages}
-            </span>
-            <div class="flex gap-2">
-                <button onclick="_recentChangePage(-1)" ${_recentPage <= 1 ? 'disabled' : ''}
-                    class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                    Previous
-                </button>
-                <button onclick="_recentChangePage(1)" ${_recentPage >= pages ? 'disabled' : ''}
-                    class="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition">
-                    Next
-                </button>
-            </div>
-        </div>`;
-}
-
-function _recentChangePage(dir) {
-    const pages = Math.ceil(_groupSalesIntoTransactions(_recentAll).length / _recentPer);
-    _recentPage = Math.max(1, Math.min(pages, _recentPage + dir));
-    _renderRecentSales();
-}
-
-// ══════════════════════════════════════════════════════════════
-//  OFFLINE SYNC LOGIC
-// ══════════════════════════════════════════════════════════════
-let isOnline = navigator.onLine;
-
-function updateOfflineBanner() {
-    const banner = document.getElementById('offlineBanner');
-    const btn    = document.getElementById('checkoutBtn');
-    if (!banner) return;
-    if (!isOnline) {
-        banner.classList.remove('hidden');
-        document.body.style.paddingTop = '56px';
-        if (btn) btn.innerText = 'SAVE OFFLINE';
-    } else {
-        banner.classList.add('hidden');
-        document.body.style.paddingTop = '';
-        if (btn) btn.innerText = 'COMPLETE TRANSACTION';
-    }
-    updatePendingBadge();
-}
-
-async function updatePendingBadge() {
+    isFinalizing=true; document.getElementById('checkoutBtn').innerText="PROCESSING...";
     try {
-        const count = await OfflineQueue.count();
-        const badge = document.getElementById('pendingBadge');
-        const num   = document.getElementById('pendingCount');
-        if (!badge || !num) return;
-        if (count > 0) {
-            badge.classList.remove('hidden');
-            num.innerText = count;
-        } else {
-            badge.classList.add('hidden');
+        const receiptItems=[...cart]; let totalAmount=0; cart.forEach(i=>{ totalAmount+=i.price*i.quantity; });
+        const cartRes=await apiFetch(`${API_URL}/sell/cart`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ items:cart.map(i=>({itemId:i.itemId,quantity:i.quantity,sellUnit:i.sellUnit||'bulk'})), paymentMethod:serverMethod, mpesaId:phone, mpesaCode:code, customerName:customer, customerPin:customerPin||null, amountPaid:serverMethod==='Credit'?0:totalAmount, isC2B:c2bMode, priceTier:document.getElementById('cartPriceTier')?.value||'retail' }) });
+        const cartData=await cartRes.json();
+        if (!cartData.success) throw new Error(cartData.message);
+        showMultiReceipt(customer,effectiveMethod,totalAmount,receiptItems,phone,code,cartData.receiptNumber,cartData.invoiceNumber,cartData.dnNumber,cartData.kraReceiptNo,cartData.kraQrUrl,cartData.Control_unit_number,cartData.kraQrDataUrl);
+        clearCart(); document.getElementById('cartCustomer').value=''; document.getElementById('cartMpesaId').value=''; document.getElementById('cartMpesaCode').value='';
+        if(document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value='';
+        _setKraPinRequired(false);
+        receiptItems.forEach(si=>{ const inMem=allStock.find(i=>String(i.id)===String(si.itemId)); if(inMem){ const it=window._itemMap[si.itemId]; const dq=(si.sellUnit==='sub'&&it?.sub_unit_qty)?si.quantity/parseFloat(it.sub_unit_qty):si.quantity; inMem.stock_quantity=Math.max(0,(inMem.stock_quantity||0)-dq); } });
+        renderInventory(); isFinalizing=false; document.getElementById('checkoutBtn').innerText="COMPLETE TRANSACTION"; document.getElementById('cartMethod').disabled=false;
+        setTimeout(()=>{ fetchRecentSales(); },500);
+        if (c2bMode&&_activeC2BCheckoutTask?.c2bId) {
+            (async()=>{
+                let att=0; while(att<3){ try{ const gr=await apiFetch(`${API_URL}/c2b/resolve-goods`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({c2bId:_activeC2BCheckoutTask.c2bId,notes:receiptItems.map(i=>`${i.quantity}x ${i.itemName}`).join(', '),customerName:customer,receiptNumber:cartData.receiptNumber,receiptData:receiptItems,amountApplied:totalAmount})}); const gd=await gr.json(); if(gr.ok&&gd.success){clearC2BInventoryTask();_activeC2BCheckoutTask=null;break;} else throw new Error(gd.message); }catch(e2){att++;if(att>=3) break; await new Promise(r=>setTimeout(r,1000));} }
+            })();
         }
-    } catch(e) {}
+    } catch(err){ alert("Error: "+err.message); isFinalizing=false; document.getElementById('checkoutBtn').innerText="COMPLETE TRANSACTION"; document.getElementById('cartMethod').disabled=false; }
 }
 
-function showSyncToast(msg) {
-    const toast = document.getElementById('syncToast');
-    const msgEl = document.getElementById('syncToastMsg');
-    if (!toast) return;
-    if (msgEl) msgEl.innerText = msg;
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 4000);
+// ── BUSINESS INFO / RECEIPT ──────────────────────────────────────────────
+let BUSINESS_PIN='';
+const VAT_RATE=0.16;
+let _businessInfoReady=false,_businessInfoPromise=null;
+
+function fetchBusinessInfo() {
+    if (_businessInfoPromise) return _businessInfoPromise;
+    _businessInfoPromise=(async()=>{ try{ const res=await window.apiFetch(`${API_BASE}/business-info`); if(!res||!res.ok) throw new Error('non-ok'); const data=await res.json(); if(data.success&&data.kraPin) BUSINESS_PIN=data.kraPin; }catch(err){}finally{ _businessInfoReady=true; } })();
+    return _businessInfoPromise;
 }
 
-async function syncPendingSales() {
-    if (!isOnline) return;
-    let pending;
-    try { pending = await OfflineQueue.getAll(); } catch(e) { return; }
-    if (!pending || pending.length === 0) return;
+async function showMultiReceipt(customer,method,total,items,phone='',code='',receiptNumber=null,invoiceNumber=null,dnNumber=null,kraReceiptNo=null,kraQrUrl=null,controlUnitNumber=null,kraQrDataUrl=null) {
+    if (!_businessInfoReady) await fetchBusinessInfo();
+    const date=new Date().toLocaleString(), hardwareName="ELITE HARDWARE LTD";
+    const _mr=(method||'').trim();
+    if(/equity|equitel/i.test(_mr)) method='Equity Mobile Money';
+    else if (_mr==='Safaricom'||/^safaricom/i.test(_mr)) method='M-Pesa';
+    else if (_mr==='M-Pesa STK (pending reconciliation)') method='M-Pesa';
+    let maskedPhone=phone;
+    if(phone&&phone.length>=10) maskedPhone=phone.substring(0,4)+"xxx"+phone.substring(phone.length-3);
+    let docType="OFFICIAL SALES RECEIPT",mainButtonLabel="PRINT RECEIPT",methodColor="text-blue-600";
+    if(method==='Credit'){docType="OFFICIAL CREDIT INVOICE";mainButtonLabel="PRINT INVOICE";methodColor="text-red-600";}
+    else if(method==='M-Pesa') methodColor="text-emerald-600";
+    else if(method==='Equity Mobile Money') methodColor="text-amber-500";
+    const headerHtml=`<div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono"><h2 class="font-black text-xl uppercase tracking-tighter text-slate-800">${hardwareName}</h2><p id="receiptDocType" class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">${docType}</p><div class="flex justify-center gap-4 mt-1"><p class="text-[8px] font-bold text-slate-400">KRA PIN: ${BUSINESS_PIN||'PENDING'}</p></div></div><div class="space-y-1 mb-6 text-[11px] font-mono">${invoiceNumber?`<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">INVOICE NO:</span><span class="font-black uppercase">${invoiceNumber}</span></div>`:''} ${!invoiceNumber&&receiptNumber?`<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">RECEIPT NO:</span><span class="font-black uppercase">${receiptNumber}</span></div>`:''}<div class="flex justify-between"><span>DATE:</span><span class="font-bold">${date}</span></div><div class="flex justify-between border-t border-b py-2 my-2 bg-slate-50 px-1"><span>CUSTOMER:</span><span class="font-black uppercase text-slate-900">${window.escHtml(customer)}</span></div>${phone?`<div class="flex justify-between"><span>PHONE:</span><span class="font-bold">${window.escHtml(maskedPhone)}</span></div>`:''}<div class="flex justify-between"><span>METHOD:</span><span class="font-bold uppercase ${methodColor}">${method}</span></div>${code?`<div class="flex justify-between"><span>TRANS ID:</span><span class="font-bold uppercase text-emerald-600">${code.toUpperCase()}</span></div>`:''}<div class="flex justify-between border-t pt-2 mt-1"><span>SERVED BY:</span><span class="font-bold uppercase">${window.EliteAuth?.name||'Staff'}</span></div></div>`;
+    const itemsHtml=`<table class="w-full text-left font-mono text-[11px] mb-4" id="receiptTable"><thead><tr class="border-b-2 border-slate-900 text-slate-400 uppercase text-[9px]"><th class="py-2 pr-1">Description</th><th class="py-2 text-center">Qty</th><th class="py-2 text-right price-col">Unit</th><th class="py-2 text-right price-col">Amount</th></tr></thead><tbody class="divide-y divide-gray-100">${items.map(i=>{const ul=i.displayUnit||'';const tl=i.appliedTier==='fundi'?' [F]':i.appliedTier==='wholesale'||i.appliedTier==='wholesale_auto'?' [W]':i.appliedTier==='sub'?` [${ul}]`:'';return `<tr><td class="py-2 pr-1 font-bold uppercase text-slate-800 text-[10px]">${window.escHtml(i.itemName)}${tl}</td><td class="py-2 text-center font-bold">${i.quantity}${ul?' '+ul:''}</td><td class="py-2 text-right price-col">${parseFloat(i.price).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="py-2 text-right font-bold price-col">${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;}).join('')}</tbody></table>`;
+    const ta=parseFloat(total),va=ta*VAT_RATE/(1+VAT_RATE),ev=ta-va;
+    const totalBlock=`<div id="totalDisplayBlock" style="border-top:2px solid #000;margin-top:10px;padding-top:4px;font-family:'Courier New',monospace;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>Subtotal (ex-VAT):</span><span style="font-weight:bold;">KES ${ev.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>VAT (16%):</span><span style="font-weight:bold;">KES ${va.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:6px;margin-top:4px;"><span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total (incl. VAT)</span><span style="font-size:16px;font-weight:900;">KES ${ta.toLocaleString()}</span></div></div><div style="font-size:9px;text-align:center;font-style:italic;color:#000;font-family:'Courier New',monospace;line-height:1.3;margin:12px 0;"><p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p></div><div class="mt-4 pt-4" style="border-top:1px dashed #000;text-align:center;font-family:'Courier New',monospace;color:#000;"><p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">KRA eTIMS RECEIPT</p><div style="display:flex;justify-content:center;margin:10px 0;"><img src="${kraQrDataUrl||('https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(kraQrUrl||('PIN:'+(BUSINESS_PIN||'PENDING')+'|REF:'+(receiptNumber||invoiceNumber||Date.now())+'|AMT:'+ta+'|DATE:'+new Date().toLocaleDateString())))}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA eTIMS QR"/></div><div style="font-size:9px;text-align:left;padding:0 4px;"><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Receipt No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${invoiceNumber||receiptNumber||'N/A'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Kra Receipt:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${kraReceiptNo||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>CU No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${controlUnitNumber||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;"><span>eTIMS Status:</span><span style="font-weight:900;color:${kraReceiptNo?'green':'#E8640A'};">${kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span></div></div><p style="margin-top:10px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p></div>`;
+    window._currentReceiptNumber=receiptNumber; window._currentInvoiceNumber=invoiceNumber; window._currentDnNumber=dnNumber;
+    window._lastReceiptData={ customer,method,total,items,phone,code,receiptNumber,invoiceNumber,dnNumber,kraReceiptNo,kraQrUrl,kraQrDataUrl,controlUnitNumber,servedBy:window.EliteAuth?.name||'Staff',date:new Date().toLocaleString() };
+    document.getElementById('receiptDate').innerHTML=headerHtml;
+    document.getElementById('receiptContent').innerHTML=itemsHtml;
+    document.getElementById('receiptTotal').innerHTML=totalBlock;
+    document.getElementById('receiptButtons').innerHTML=`<button type="button" onclick="printTwoCopies();" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ ${mainButtonLabel} (2 COPIES)</button><button type="button" onclick="printDeliveryNote();" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">PRINT DELIVERY NOTE</button><button type="button" onclick="closeReceipt();" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>`;
+    document.getElementById('receiptModal').classList.remove('hidden');
+    document.getElementById('modalOverlay').classList.remove('hidden');
+}
 
-    let synced = 0, failed = 0;
-    const failedItems = []; 
-    const failedIds = []; 
+async function silentPrintDN(data){ if(!LIVE_PRINT){_browserPrintFallback(data,true,false);return;} try{ showPrintToast('🖨️ Sending DN...',false,true); const res=await fetch('http://localhost:6789/print/dn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,copies:2})}); if(!res.ok) throw new Error('Print error '+res.status); const result=await res.json(); if(result.url){window.open(result.url,'_blank');showPrintToast('✅ Opened virtual DN');}else if(result.success) showPrintToast('✅ DN printed');else throw new Error('failed'); }catch(err){showPrintToast('⚠️ v-printer offline — browser fallback',true);setTimeout(()=>_browserPrintFallback(data,true,false),800);} }
+function printDeliveryNote(){ _browserPrintFallback(window._lastReceiptData,true,false); }
+function printTwoCopies(){ if(LIVE_PRINT&&window._lastReceiptData){silentPrint(window._lastReceiptData);return;} _browserPrintFallback(window._lastReceiptData,false,false); }
 
-    for (const sale of pending) {
-        try {
-            const { offline_id, queued_at, sync_status, isBulkCart, offlineReceipt, ...payload } = sale;
-            const endpoint = isBulkCart ? `${API_URL}/sell/cart` : `${API_URL}/sell`;
+function _browserPrintFallback(data,onlyDN=false,printAll=false){
+    const d=data||window._lastReceiptData||{};
+    const dnNumber=d.dnNumber||window._currentDnNumber||('DN-'+Date.now().toString().slice(-6));
+    const invoiceNumber=d.invoiceNumber||window._currentInvoiceNumber||'';
+    const customer=d.customer||'',phone=d.phone||'',servedBy=d.servedBy||(window.EliteAuth&&window.EliteAuth.name)||'Staff',date=d.date||new Date().toLocaleString();
+    const maskedPhone=phone&&phone.length>=10?phone.slice(0,4)+'xxx'+phone.slice(-3):phone;
+    const items=Array.isArray(d.items)?d.items:[];
+    const header=document.getElementById('receiptDate').innerHTML;
+    const content=document.getElementById('receiptContent').innerHTML;
+    const total=document.getElementById('receiptTotal').innerHTML;
+    const dnRows=items.map(i=>`<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 2px;font-weight:700;text-transform:uppercase;">${(i.itemName||'').substring(0,30)}</td><td style="padding:5px 2px;text-align:center;font-weight:700;">${i.quantity||1}</td></tr>`).join('');
+    const makeInvoiceCopy=(label,cls)=>`<div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;"><span class="copy-badge ${cls}">${label}</span>${header}${content}${total}<p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;">*** ${label} — INVOICE ***</p></div>`;
+    const makeDnCopy=(label,cls)=>`<div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:20px 24px;color:#000;background:#fff;max-width:700px;margin:0 auto;page-break-after:always;"><span class="copy-badge ${cls}">${label}</span><div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;"><h1 style="font-size:15px;font-weight:900;margin:0;letter-spacing:.15em;">ELITE HARDWARE LTD</h1><p style="font-size:10px;font-weight:700;margin:4px 0;letter-spacing:.2em;">OFFICIAL DELIVERY NOTE</p></div><div style="font-size:11px;margin-bottom:10px;line-height:1.9;"><div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:5px;"><span style="font-weight:900;">DN NO:</span><span style="font-weight:900;">${dnNumber}</span></div>${invoiceNumber?`<div style="display:flex;justify-content:space-between;"><span>INVOICE REF:</span><span style="font-weight:700;">${invoiceNumber}</span></div>`:''}<div style="display:flex;justify-content:space-between;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div>${customer?`<div style="display:flex;justify-content:space-between;border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 0;margin:4px 0;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${customer}</span></div>`:''} ${maskedPhone?`<div style="display:flex;justify-content:space-between;"><span>PHONE:</span><span style="font-weight:700;">${maskedPhone}</span></div>`:''}<div style="display:flex;justify-content:space-between;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div></div><table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:14px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px 0;text-transform:uppercase;font-size:9px;">Description</th><th style="text-align:center;padding:4px 0;text-transform:uppercase;font-size:9px;width:40px;">Qty</th></tr></thead><tbody>${dnRows}</tbody></table><div style="border-top:1px solid #000;padding-top:12px;font-size:11px;margin-top:8px;"><p style="margin:14px 0;"><b>LOADED BY:</b> &nbsp;&nbsp;&nbsp;&nbsp;___________________________</p><p style="margin:14px 0;"><b>RECEIVED BY:</b> &nbsp;&nbsp;___________________________</p><p style="margin:14px 0;"><b>DATE:</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;___________________________</p></div><p style="text-align:center;font-size:9px;font-weight:900;margin-top:16px;">*** ${label} — DELIVERY NOTE ***</p></div>`;
+    let html='';
+    if(printAll){html+=makeInvoiceCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeInvoiceCopy('★ SHOP COPY ★','copy-badge-shop');html+=makeDnCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeDnCopy('★ SHOP COPY ★','copy-badge-shop');}
+    else if(onlyDN){html+=makeDnCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeDnCopy('★ SHOP COPY ★','copy-badge-shop');}
+    else{html+=makeInvoiceCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeInvoiceCopy('★ SHOP COPY ★','copy-badge-shop');}
+    const pa=document.createElement('div'); pa.id='tempPrintArea'; if(onlyDN) pa.classList.add('dn-print');
+    const ps=onlyDN?'A4':'80mm auto';
+    pa.innerHTML=html+`<style>@media print{@page{size:${ps};margin:2mm;}.receipt-watermark::before{content:'ELITE HARDWARE';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.07);letter-spacing:0.18em;text-transform:uppercase;white-space:nowrap;pointer-events:none;font-family:'Courier New',monospace;}.receipt-watermark{position:relative;}.receipt-watermark>*{position:relative;z-index:1;}.copy-badge{display:block!important;text-align:center;font-family:'Courier New',monospace;font-size:8px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;border:1px dashed #999;padding:3px 6px;margin-bottom:6px;}.copy-badge-customer{color:#000;border-color:#000;}.copy-badge-shop{color:#555;border-color:#aaa;}}</style>`;
+    document.body.appendChild(pa);
+    const qrImg=pa.querySelector('img[alt="KRA eTIMS QR"]');
+    const doPrint=()=>{ window.print(); setTimeout(()=>pa.remove(),1000); };
+    if(qrImg&&!qrImg.complete){qrImg.onload=doPrint;qrImg.onerror=doPrint;setTimeout(doPrint,5000);}
+    else setTimeout(doPrint,250);
+}
 
-            const res = await apiFetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+async function clientGenerateQrDataUrl(text){
+    return new Promise(resolve=>{
+        try{
+            const c=document.createElement('div'); c.style.cssText='position:fixed;top:-9999px;left:-9999px;'; document.body.appendChild(c);
+            new QRCode(c,{text,width:140,height:140,correctLevel:QRCode.CorrectLevel.M});
+            setTimeout(()=>{ try{ const cv=c.querySelector('canvas'); const du=cv?cv.toDataURL('image/png'):null; document.body.removeChild(c); resolve(du); }catch(_){document.body.removeChild(c);resolve(null);} },50);
+        }catch(e){resolve(null);}
+    });
+}
 
-            if (!res) {
-                failed++;
-                failedItems.push(`• ${sale.customerName || 'Unknown'} — Session expired or blocked`);
-                failedIds.push(offline_id);
-                continue;
-            }
+async function printRecentReceipt(idx){
+    const s=window._recentSaleMap&&window._recentSaleMap['rs_'+idx];
+    if(!s){alert('Receipt data not found. Refresh and try again.');return;}
+    const items=(Array.isArray(s._items)&&s._items.length>0)?s._items:[{itemName:s.item_name||'Item',quantity:s.quantity_sold||1,price:s.unit_price||(s.total_amount/(s.quantity_sold||1))}];
+    if(Array.isArray(s.items)&&s.items.length>0) items.splice(0,items.length,...s.items.map(i=>({itemName:i.item_name||i.itemName||'Item',quantity:i.quantity_sold||i.quantity||1,price:i.unit_price||i.price||0})));
+    const rn=s.receipt_number||s.receiptNumber||null, invN=s.invoice_number||s.invoiceNumber||null, dnN=s.dn_number||s.dnNumber||null;
+    const kra=s['Kra_Receipt_No']||s.kra_receipt_no||s.kraReceiptNo||null, kqr=s.kra_qr_url||s.kraQrUrl||null, cun=s['Control_unit_number']||s.control_unit_number||s.controlUnitNumber||null;
+    const mc=(Array.isArray(s.payments)&&s.payments.length>0&&s.payments[0].mpesa_code)?s.payments[0].mpesa_code:(s.mpesa_code||s.mpesaCode||'');
+    const pm=(s.payment_status==='Credit'||s.payment_status==='Unpaid'||s.is_credit_sale)?'Credit':(Array.isArray(s.payments)&&s.payments.length>0&&s.payments[0].payment_method)?s.payments[0].payment_method:(mc||s.mpesa_id?'M-Pesa':'Cash');
+    const qd=kqr||('PIN:A014661185V|REF:'+(rn||invN||'N/A')+'|AMT:'+(s._total||Number(s.total_amount))+'|DATE:'+new Date().toLocaleDateString());
+    const qdu=await clientGenerateQrDataUrl(qd);
+    showMultiReceipt(s.customer_name||'Walk-in',pm,s._total||Number(s.total_amount),items,s.customer_phone||s.mpesa_id||'',mc,rn,invN,dnN,kra,kqr,cun,qdu);
+}
 
-            const text = await res.text();
-            let data;
-            try { data = JSON.parse(text); } catch (parseErr) {
-                failed++;
-                failedItems.push(`• ${sale.customerName || 'Unknown'} — Server error (${res.status})`);
-                failedIds.push(offline_id);
-                continue;
-            }
+function closeReceipt(){ document.getElementById('receiptModal').classList.add('hidden'); document.getElementById('modalOverlay').classList.add('hidden'); }
 
-            if (data.success) {
-                await OfflineQueue.remove(offline_id);
-                synced++;
-            } else {
-                failed++;
-                failedItems.push(`• ${sale.customerName || 'Unknown'} (${offlineReceipt || offline_id}) — ${data.message || 'Server rejected'}`);
-                failedIds.push(offline_id);
-            }
-        } catch(e) {
-            failed++;
-            failedItems.push(`• ${sale.customerName || 'Unknown'} — ${e.message || 'Failed to reach server'}`);
-            failedIds.push(sale.offline_id);
-        }
+// ── OFFLINE ──────────────────────────────────────────────────────────────
+let isOnline=navigator.onLine;
+
+function updateOfflineBanner(){
+    const banner=document.getElementById('offlineBanner'), btn=document.getElementById('checkoutBtn');
+    if(!banner) return;
+    if(!isOnline){ banner.style.display='flex'; document.body.style.paddingTop='48px'; if(btn) btn.innerText='SAVE OFFLINE'; }
+    else { banner.style.display='none'; document.body.style.paddingTop=''; if(btn) btn.innerText='COMPLETE TRANSACTION'; }
+    updatePendingBadge();
+}
+async function updatePendingBadge(){
+    try{ const count=await OfflineQueue.count(), badge=document.getElementById('pendingBadge'), num=document.getElementById('pendingCount'); if(!badge||!num) return; if(count>0){badge.classList.remove('hidden');num.innerText=count;}else badge.classList.add('hidden'); }catch(e){}
+}
+function showSyncToast(msg){ const t=document.getElementById('syncToast'),m=document.getElementById('syncToastMsg'); if(!t) return; if(m) m.innerText=msg; t.style.display='flex'; setTimeout(()=>t.style.display='none',4000); }
+
+async function syncPendingSales(){
+    if(!isOnline) return;
+    let pending; try{pending=await OfflineQueue.getAll();}catch(e){return;}
+    if(!pending||pending.length===0) return;
+    let synced=0,failed=0; const failedItems=[],failedIds=[];
+    for (const sale of pending){
+        try{
+            const{offline_id,queued_at,sync_status,isBulkCart,offlineReceipt,...payload}=sale;
+            const endpoint=isBulkCart?`${API_URL}/sell/cart`:`${API_URL}/sell`;
+            const res=await apiFetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+            if(!res){failed++;failedItems.push(`• ${sale.customerName||'Unknown'} — Session expired`);failedIds.push(offline_id);continue;}
+            const text=await res.text(); let data; try{data=JSON.parse(text);}catch(pe){failed++;failedItems.push(`• ${sale.customerName||'Unknown'} — Server error (${res.status})`);failedIds.push(offline_id);continue;}
+            if(data.success){await OfflineQueue.remove(offline_id);synced++;}
+            else{failed++;failedItems.push(`• ${sale.customerName||'Unknown'} (${offlineReceipt||offline_id}) — ${data.message||'Server rejected'}`);failedIds.push(offline_id);}
+        }catch(e){failed++;failedItems.push(`• ${sale.customerName||'Unknown'} — ${e.message||'Failed'}`);failedIds.push(sale.offline_id);}
     }
-
-    if (synced > 0) {
-        showSyncToast(`${synced} sale${synced > 1 ? 's' : ''} synced to server.`);
-        fetchStock();
-        fetchRecentSales();
-    }
-
-    if (failed > 0) {
-        const detail = failedItems.join('\n');
-        const confirmClear = confirm(
-            `⚠️ ${failed} offline sale${failed > 1 ? 's' : ''} could NOT be synced and remain queued:\n\n${detail}\n\n` +
-            `Do you want to permanently DELETE these failed sales from your device?\n` +
-            `(Click OK to delete them, or Cancel to keep them and try again later)`
-        );
-        if (confirmClear) {
-            for (const id of failedIds) { await OfflineQueue.remove(id); }
-            alert('Stuck sales have been cleared from the queue.');
-        }
-    }
+    if(synced>0){showSyncToast(`${synced} sale${synced>1?'s':''} synced.`);fetchStock();fetchRecentSales();}
+    if(failed>0){const cc=confirm(`⚠️ ${failed} sale${failed>1?'s':''} failed sync:\n\n${failedItems.join('\n')}\n\nDelete failed sales from queue?`);if(cc){for(const id of failedIds) await OfflineQueue.remove(id);alert('Cleared.');}}
     updatePendingBadge();
 }
 
-window.addEventListener('online',  () => { isOnline = true;  updateOfflineBanner(); syncPendingSales(); });
-window.addEventListener('offline', () => { isOnline = false; updateOfflineBanner(); });
-
-window.addEventListener('beforeunload', e => {
-    const badge       = document.getElementById('pendingCount');
-    const hasPending  = badge && parseInt(badge.innerText || '0', 10) > 0;
-    if (!isOnline || hasPending) {
-        e.preventDefault();
-        e.returnValue = '⚠️ You have unsynced offline sales. Closing this tab now is safe — they are stored locally and will sync when you reopen and reconnect. Continue?';
-    }
-});
+window.addEventListener('online', ()=>{ isOnline=true; updateOfflineBanner(); syncPendingSales(); });
+window.addEventListener('offline',()=>{ isOnline=false; updateOfflineBanner(); });
+window.addEventListener('beforeunload',e=>{ const b=document.getElementById('pendingCount'); const hp=b&&parseInt(b.innerText||'0',10)>0; if(!isOnline||hp){e.preventDefault();e.returnValue='⚠️ Unsynced offline sales exist. Safe to close — they\'ll sync on reconnect.';} });
 
 updateOfflineBanner();
-if (isOnline) syncPendingSales();
+if(isOnline) syncPendingSales();
+
+// ── SALES ORDER FULFILLMENT ───────────────────────────────────────────────
+async function processSalesOrderFulfillment(){
+    const soId=new URLSearchParams(window.location.search).get('fulfill_so');
+    if(!soId) return;
+    try{
+        const res=await apiFetch(`${API_URL}/sales-orders/${soId}`); if(!res||!res.ok) throw new Error('Could not load Sales Order');
+        const so=await res.json();
+        document.getElementById('cartCustomer').value=so.customer_name||'';
+        const pf=document.getElementById('cartMpesaId'); if(pf&&so.customer_phone) pf.value=so.customer_phone;
+        so.sales_order_items.forEach(item=>{
+            const ex=cart.find(i=>String(i.itemId)===String(item.inventory_id));
+            if(ex) ex.quantity+=parseInt(item.qty_ordered);
+            else cart.push({itemId:item.inventory_id,itemName:item.item_name,price:parseFloat(item.unit_price),quantity:parseInt(item.qty_ordered)});
+        });
+        renderCart();
+        apiFetch(`${API_URL}/sales-orders/${soId}/status`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'Fulfilled'})}).catch(()=>{});
+        window.history.replaceState({},document.title,window.location.pathname);
+        showPrintToast(`✅ Quote ${so.so_number} loaded!`);
+    }catch(err){ alert('Failed to load Sales Order: '+err.message); }
+}
+
+waitForAuthThenLoad();
 </script>
+
+<!-- Modals -->
+<div id="printContainer" class="hidden"></div>
+<div id="modalOverlay" class="fixed inset-0 hidden z-[110]" style="background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="closeReceipt()"></div>
+<div id="receiptModal" class="hidden font-mono text-sm" style="box-shadow:0 25px 60px rgba(0,0,0,0.7);">
+    <div class="flex-1 overflow-y-auto p-6 receipt-watermark" style="min-height:0;position:relative;">
+        <div id="receiptDate" class="mb-4"></div>
+        <div id="receiptContent" class="py-2 space-y-1 border-t border-dashed" style="border-color:rgba(255,255,255,0.15);"></div>
+        <div class="border-t border-dashed pt-2 mt-2" style="border-color:rgba(255,255,255,0.15);">
+            <div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;">
+                <span>TOTAL:</span><span id="receiptTotal"></span>
+            </div>
+        </div>
+    </div>
+    <div id="receiptButtons" class="p-4 flex flex-col gap-2 no-print" style="border-top:1px solid rgba(255,255,255,0.08);background:#1c2128;">
+        <button onclick="printTwoCopies()" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;">🖨️ PRINT RECEIPT (2 COPIES)</button>
+        <button onclick="printDeliveryNote()" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">PRINT DELIVERY NOTE</button>
+        <button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
+    </div>
+</div>
 </body>
 </html>
