@@ -916,7 +916,7 @@ function buildProductCard(item, isAdmin) {
                     </div>
                 </div>
                 <div class="price-col">
-                    <div class="price-label wholesale">SELL BY ${window.escHtml(bulkUnit).toUpperCase()} (WHOLESALE)</div>
+                    <div class="price-label">SELL BY ${window.escHtml(bulkUnit).toUpperCase()} (RETAIL)</div>
                     <div style="display:flex;align-items:baseline;gap:4px;margin-top:4px;">
                         <span class="price-value wholesale">KES ${Number(item.price).toLocaleString()}</span>
                         <span class="price-suffix">/ Ctn</span>
@@ -1094,13 +1094,40 @@ async function handleDelete(id) {
 
 // ── PRICE RESOLUTION ─────────────────────────────────────────────────────
 function resolveTierPrice(item, sellUnit, qty) {
-    const tier = document.getElementById('cartPriceTier')?.value || 'retail';
-    if (sellUnit === 'sub' && item.sub_unit_price) return { price: parseFloat(item.sub_unit_price), tier: 'sub' };
-    const wsQty = parseInt(item.wholesale_min_qty) || 0;
-    if (wsQty > 0 && qty >= wsQty && item.wholesale_price) return { price: parseFloat(item.wholesale_price), tier: 'wholesale_auto' };
-    if (tier === 'fundi' && item.fundi_price)         return { price: parseFloat(item.fundi_price), tier: 'fundi' };
-    if (tier === 'wholesale' && item.wholesale_price) return { price: parseFloat(item.wholesale_price), tier: 'wholesale' };
-    return { price: parseFloat(item.price), tier: 'retail' };
+    const tier         = document.getElementById('cartPriceTier')?.value || 'retail';
+    const cartonRetail = parseFloat(item.price) || 0;
+
+    // Derive the discount % from stored carton tier prices.
+    // Same % is then applied to loose/sub-unit prices automatically.
+    // e.g. carton retail=800, fundi=700 → fundiPct=12.5%
+    //      loose retail=40/Bag → fundi loose = 40×(1-12.5%) = 35/Bag
+    const fundiPct    = (cartonRetail > 0 && item.fundi_price)
+        ? (1 - parseFloat(item.fundi_price)     / cartonRetail) : null;
+    const wholesalePct= (cartonRetail > 0 && item.wholesale_price)
+        ? (1 - parseFloat(item.wholesale_price) / cartonRetail) : null;
+
+    // Wholesale auto-upgrade only kicks in when tier is explicitly "retail"
+    const wsQty        = parseInt(item.wholesale_min_qty) || 0;
+    const wsAutoApplies= tier === 'retail' && wsQty > 0 && qty >= wsQty && item.wholesale_price;
+
+    if (sellUnit === 'sub' && item.sub_unit_price) {
+        // Loose sale — start at retail sub-unit price, then apply tier discount
+        const looseRetail = parseFloat(item.sub_unit_price);
+        if (tier === 'fundi' && fundiPct !== null)
+            return { price: parseFloat((looseRetail * (1 - fundiPct)).toFixed(2)), tier: 'fundi' };
+        if ((tier === 'wholesale' || wsAutoApplies) && wholesalePct !== null)
+            return { price: parseFloat((looseRetail * (1 - wholesalePct)).toFixed(2)), tier: tier === 'wholesale' ? 'wholesale' : 'wholesale_auto' };
+        return { price: looseRetail, tier: 'sub' };
+    }
+
+    // Bulk / carton sale
+    if (tier === 'fundi' && item.fundi_price)
+        return { price: parseFloat(item.fundi_price), tier: 'fundi' };
+    if (tier === 'wholesale' && item.wholesale_price)
+        return { price: parseFloat(item.wholesale_price), tier: 'wholesale' };
+    if (wsAutoApplies)
+        return { price: parseFloat(item.wholesale_price), tier: 'wholesale_auto' };
+    return { price: cartonRetail, tier: 'retail' };
 }
 
 function applyPriceTierToCart() {
