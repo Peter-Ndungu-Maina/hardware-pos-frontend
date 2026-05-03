@@ -900,16 +900,24 @@ async function openReceiveModal(id) {
           : isNew
             ? '<span style="font-size:9px;font-weight:700;color:#569cd6;background:rgba(86,156,214,0.1);padding:2px 8px;border-radius:20px;">🆕 New — will create &amp; register</span>'
             : '<span style="font-size:9px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:20px;">⚠ Will Register on Receipt</span>';
-        var newItemFields = isNew
+      var newItemFields = isNew
           ? '<div style="margin-top:8px;padding:10px 12px;background:rgba(86,156,214,0.06);border:1px solid rgba(86,156,214,0.2);border-radius:8px;">'+
               '<div style="font-size:9px;font-weight:700;color:#569cd6;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">New Item Details — required to create in inventory</div>'+
-              '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">'+
-                '<div><label class="lbl">Selling Price *</label>'+
+              '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">'+
+                '<div><label class="lbl">Bulk Selling Price *</label>'+
                 '<input type="number" id="sell-'+i.id+'" min="0" step="any" placeholder="e.g. 1500" class="finput" style="font-size:12px;" /></div>'+
                 '<div><label class="lbl">Category</label>'+
                 '<input type="text" id="cat-'+i.id+'" placeholder="e.g. Electrical" class="finput" style="font-size:12px;" list="catListRecv" /></div>'+
-                '<div><label class="lbl">Unit</label>'+
-                '<input type="text" id="unit-'+i.id+'" placeholder="pcs" value="'+(i.unit||'')+'" class="finput" style="font-size:12px;" /></div>'+
+                '<div><label class="lbl">Bulk Unit</label>'+
+                '<input type="text" id="unit-'+i.id+'" placeholder="Carton" value="'+(i.unit||'')+'" class="finput" style="font-size:12px;" /></div>'+
+              '</div>'+
+              '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-top:8px;border-top:1px dashed rgba(86,156,214,0.2);">'+
+                '<div><label class="lbl">Sub-Unit (Opt)</label>'+
+                '<input type="text" id="sub_unit-'+i.id+'" placeholder="e.g. Kg" class="finput" style="font-size:12px;" /></div>'+
+                '<div><label class="lbl">Qty per Bulk</label>'+
+                '<input type="number" id="sub_qty-'+i.id+'" placeholder="e.g. 20" min="0" step="any" class="finput" style="font-size:12px;" /></div>'+
+                '<div><label class="lbl">Sub-Unit Price</label>'+
+                '<input type="number" id="sub_price-'+i.id+'" placeholder="e.g. 150" min="0" step="any" class="finput" style="font-size:12px;" /></div>'+
               '</div>'+
             '</div>'
           : '';
@@ -959,10 +967,15 @@ async function confirmReceive() {
       po_item_id:        i.id,
       qty_received:      parseFloat(document.getElementById('recv-'+i.id)?.value)||0,
       new_selling_price: isNew ? null : (parseFloat(document.getElementById('price-'+i.id)?.value)||null),
+      
       // new item fields — only sent when inventory_id is null
       selling_price:     isNew ? (parseFloat(document.getElementById('sell-'+i.id)?.value)||null) : null,
       category:          isNew ? (document.getElementById('cat-'+i.id)?.value?.trim()||'General') : null,
       unit:              isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||'PCS') : null,
+      bulk_unit:         isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||null) : null,
+      sub_unit:          isNew ? (document.getElementById('sub_unit-'+i.id)?.value?.trim()||null) : null,
+      sub_unit_qty:      isNew ? (parseFloat(document.getElementById('sub_qty-'+i.id)?.value)||null) : null,
+      sub_unit_price:    isNew ? (parseFloat(document.getElementById('sub_price-'+i.id)?.value)||null) : null
     };
   }).filter(function(i){ return i.qty_received > 0; });
 
