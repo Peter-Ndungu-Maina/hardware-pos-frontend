@@ -124,7 +124,7 @@
         <!-- Item rows header -->
         <div style="display:grid;grid-template-columns:2fr 80px 100px 100px 110px 36px;gap:6px;margin-bottom:6px;padding:0 4px;">
           <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Item</span>
-          <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Unit</span>
+          <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Bulk Unit</span>
           <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Qty</span>
           <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Unit Cost</span>
           <span style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;">Line Total</span>
@@ -538,18 +538,29 @@ function onSupplierChange() { /* future: auto-fill payment terms */ }
 function addItemRow() {
     var id = ++itemRowCount;
     var inv = allInventory.map(function(i) {
-        return '<option value="' + i.id + '" data-unit="' + (i.unit || '') + '" data-cost="' + (i.cost_price || 0) + '">' + esc(i.item_name) + '</option>';
+        return '<option value="' + i.id + '"' +
+            ' data-unit="'         + esc(i.unit         || '') + '"' +
+            ' data-cost="'         + (i.cost_price       || 0)  + '"' +
+            ' data-bulk_unit="'    + esc(i.bulk_unit     || '') + '"' +
+            ' data-sub_unit="'     + esc(i.sub_unit      || '') + '"' +
+            ' data-sub_unit_qty="' + (i.sub_unit_qty     || '') + '"' +
+            ' data-sub_price="'    + (i.sub_unit_price   || '') + '"' +
+            ' data-fundi="'        + (i.fundi_price      || '') + '"' +
+            ' data-wholesale="'    + (i.wholesale_price  || '') + '"' +
+            ' data-ws_min="'       + (i.wholesale_min_qty|| '') + '"' +
+            '>' + esc(i.item_name) + '</option>';
     }).join('');
 
     var row = document.createElement('div');
     row.className = 'item-row';
     row.id = 'row-' + id;
-    
-    // Default datasets for new rows
     row.dataset.category = 'General';
-    row.dataset.kraCode = '31160000';
+    row.dataset.kraCode   = '31160000';
 
     row.innerHTML =
+        // ── top grid: item selector + core fields ──────────────────────────
+        '<div style="grid-column:1/-1;display:grid;grid-template-columns:2fr 80px 100px 100px 110px 36px;gap:6px;align-items:start;">' +
+
         '<div style="position:relative;">' +
             '<select onchange="onInventorySelect(' + id + ',this)" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);font-size:12px;background:var(--surface2);color:var(--text);">' +
                 '<option value="">Custom item…</option>' + inv +
@@ -557,13 +568,114 @@ function addItemRow() {
             '<input id="iName-' + id + '" type="text" placeholder="Item name *" class="finput" style="margin-top:4px;font-size:12px;" oninput="updateRowMapping(' + id + ')" />' +
             '<div id="iMapping-' + id + '" style="font-size:9px;color:var(--blue);margin-top:2px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">KRA: General (31160000)</div>' +
         '</div>' +
-        '<input id="iUnit-' + id + '" type="text" placeholder="pcs" class="finput" style="font-size:12px;" />' +
+        '<input id="iUnit-' + id + '" type="text" placeholder="Carton" class="finput" style="font-size:12px;" />' +
         '<input id="iQty-' + id + '"  type="number" min="0.01" step="any" placeholder="0" class="finput" style="font-size:12px;" oninput="calcRow(' + id + ')" />' +
         '<input id="iCost-' + id + '" type="number" min="0" step="any" placeholder="0.00" class="finput" style="font-size:12px;" oninput="calcRow(' + id + ')" />' +
-        '<div id="iTotal-' + id + '" style="font-family:var(--mono);font-size:12px;color:var(--muted);padding:0 4px;">0.00</div>' +
-        '<button onclick="removeRow(' + id + ')" style="background:var(--red-dim);color:var(--red);border:none;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">×</button>';
+        '<div id="iTotal-' + id + '" style="font-family:var(--mono);font-size:12px;color:var(--muted);padding:0 4px;padding-top:10px;">0.00</div>' +
+        '<button onclick="removeRow(' + id + ')" style="background:var(--red-dim);color:var(--red);border:none;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;margin-top:6px;">×</button>' +
+        '</div>' +
+
+        // ── expandable sub-unit + pricing panel ────────────────────────────
+        '<div style="grid-column:1/-1;margin-top:4px;">' +
+            '<button type="button" onclick="toggleRowExtra(' + id + ')" ' +
+                'style="background:none;border:none;font-size:10px;color:var(--muted);cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding:0;display:flex;align-items:center;gap:4px;">' +
+                '<span id="rowChev-' + id + '">▸</span> Sub-unit &amp; Pricing (optional)' +
+            '</button>' +
+            '<div id="rowExtra-' + id + '" style="display:none;margin-top:8px;padding:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;">' +
+
+                // sub-unit row
+                '<div style="font-size:9px;color:var(--blue);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📦 Sub-unit / Loose Selling</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">' +
+                    '<div><label class="lbl">Loose Unit <span style="color:var(--muted);font-weight:400;">(opt)</span></label>' +
+                    '<input id="iSubUnit-' + id + '" type="text" placeholder="e.g. Piece, Kg" class="finput" style="font-size:12px;" oninput="calcLoosePricePreview(' + id + ')" /></div>' +
+                    '<div><label class="lbl">Qty per Bulk</label>' +
+                    '<input id="iSubQty-' + id + '" type="number" min="0.01" step="any" placeholder="e.g. 1000" class="finput" style="font-size:12px;" oninput="calcLoosePricePreview(' + id + ')" /></div>' +
+                    '<div><label class="lbl">Loose Retail Price</label>' +
+                    '<input id="iSubPrice-' + id + '" type="number" min="0" step="any" placeholder="auto" class="finput" style="font-size:12px;" oninput="calcLoosePricePreview(' + id + ')" />' +
+                    '<div id="iLooseHint-' + id + '" style="font-size:9px;color:var(--muted);margin-top:2px;"></div></div>' +
+                '</div>' +
+
+                // selling prices row
+                '<div style="font-size:9px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🏷️ Selling Prices</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:8px;">' +
+                    '<div><label class="lbl">Retail / Bulk *</label>' +
+                    '<input id="iSellPrice-' + id + '" type="number" min="0" step="any" placeholder="e.g. 2600" class="finput" style="font-size:12px;" oninput="calcLoosePricePreview(' + id + ')" /></div>' +
+                    '<div><label class="lbl">Fundi Price <span style="color:var(--muted);font-weight:400;">(opt)</span></label>' +
+                    '<input id="iFundi-' + id + '" type="number" min="0" step="any" placeholder="e.g. 2400" class="finput" style="font-size:12px;" /></div>' +
+                    '<div><label class="lbl">Wholesale Price <span style="color:var(--muted);font-weight:400;">(opt)</span></label>' +
+                    '<input id="iWholesale-' + id + '" type="number" min="0" step="any" placeholder="e.g. 2200" class="finput" style="font-size:12px;" /></div>' +
+                    '<div><label class="lbl">Min Qty (Wholesale)</label>' +
+                    '<input id="iWsMin-' + id + '" type="number" min="2" step="1" placeholder="e.g. 5" class="finput" style="font-size:12px;" /></div>' +
+                '</div>' +
+
+                // loose price preview
+                '<div id="iLoosePreview-' + id + '" style="display:none;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.15);border-radius:8px;padding:8px 12px;">' +
+                    '<div style="font-size:9px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Auto-computed loose prices</div>' +
+                    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;" id="iLoosePriceGrid-' + id + '"></div>' +
+                '</div>' +
+
+            '</div>' + // /rowExtra
+        '</div>';    // /expandable panel wrapper
+
+    row.style.display        = 'grid';
+    row.style.gridTemplateColumns = '1fr';
+    row.style.gap            = '0';
+    row.style.background     = 'var(--surface2)';
+    row.style.borderRadius   = '10px';
+    row.style.padding        = '10px';
+    row.style.marginBottom   = '6px';
 
     document.getElementById('itemRows').appendChild(row);
+}
+
+function toggleRowExtra(id) {
+    var panel  = document.getElementById('rowExtra-' + id);
+    var chev   = document.getElementById('rowChev-' + id);
+    var hidden = panel.style.display === 'none';
+    panel.style.display = hidden ? 'block' : 'none';
+    chev.textContent    = hidden ? '▾' : '▸';
+}
+
+function calcLoosePricePreview(id) {
+    var subQty    = parseFloat(document.getElementById('iSubQty-'    + id)?.value) || 0;
+    var retail    = parseFloat(document.getElementById('iSellPrice-'  + id)?.value) || 0;
+    var fundi     = parseFloat(document.getElementById('iFundi-'      + id)?.value) || 0;
+    var wholesale = parseFloat(document.getElementById('iWholesale-'  + id)?.value) || 0;
+    var subUnit   = document.getElementById('iSubUnit-' + id)?.value?.trim() || 'unit';
+    var hint      = document.getElementById('iLooseHint-' + id);
+    var preview   = document.getElementById('iLoosePreview-' + id);
+    var grid      = document.getElementById('iLoosePriceGrid-' + id);
+
+    // Auto-fill sub-unit price from retail / subQty
+    var subPriceInput = document.getElementById('iSubPrice-' + id);
+    if (retail > 0 && subQty > 0 && !subPriceInput.value) {
+        if (hint) hint.textContent = '= KES ' + (retail / subQty).toFixed(2) + ' / ' + subUnit;
+    } else {
+        if (hint) hint.textContent = '';
+    }
+
+    if (subQty > 0 && retail > 0) {
+        var looseRetail    = subPriceInput.value ? parseFloat(subPriceInput.value) : retail / subQty;
+        var fundiPct       = fundi     > 0 && retail > 0 ? (1 - fundi     / retail) : null;
+        var wholesalePct   = wholesale > 0 && retail > 0 ? (1 - wholesale / retail) : null;
+        var looseFundi     = fundiPct    !== null ? looseRetail * (1 - fundiPct)    : null;
+        var looseWholesale = wholesalePct !== null ? looseRetail * (1 - wholesalePct) : null;
+
+        grid.innerHTML =
+            cell('Retail / ' + subUnit,    'KES ' + looseRetail.toFixed(2),    'var(--text)') +
+            cell('Fundi / ' + subUnit,     looseFundi    != null ? 'KES ' + looseFundi.toFixed(2)    : '—', 'var(--amber)') +
+            cell('Wholesale / ' + subUnit, looseWholesale != null ? 'KES ' + looseWholesale.toFixed(2) : '—', 'var(--blue)');
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function cell(label, val, color) {
+    return '<div style="text-align:center;">' +
+        '<div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;">' + label + '</div>' +
+        '<div style="font-size:12px;font-weight:700;color:' + color + ';">' + val + '</div>' +
+    '</div>';
 }
 function resolveKRA(itemName) {
   const name = (itemName || '').toLowerCase();
@@ -605,15 +717,38 @@ function updateRowMapping(id) {
 }
 
 function onInventorySelect(id, sel) {
-  var opt = sel.options[sel.selectedIndex];
-  if (!opt.value) return;
-  
-  document.getElementById('iName-' + id).value = opt.text;
-  document.getElementById('iUnit-' + id).value = opt.dataset.unit || '';
-  document.getElementById('iCost-' + id).value = opt.dataset.cost || '';
-  
-  // Trigger the mapping update
-  updateRowMapping(id);
+    var opt = sel.options[sel.selectedIndex];
+    if (!opt.value) { return; }
+
+    document.getElementById('iName-'  + id).value = opt.text;
+    document.getElementById('iUnit-'  + id).value = opt.dataset.unit      || '';
+    document.getElementById('iCost-'  + id).value = opt.dataset.cost      || '';
+
+    // Sub-unit fields
+    var subUnit  = opt.dataset.sub_unit    || '';
+    var subQty   = opt.dataset.sub_unit_qty|| '';
+    var subPrice = opt.dataset.sub_price   || '';
+    if (subUnit || subQty || subPrice) {
+        // Auto-open the extra panel so user sees the pre-filled data
+        var panel = document.getElementById('rowExtra-' + id);
+        var chev  = document.getElementById('rowChev-'  + id);
+        if (panel && panel.style.display === 'none') {
+            panel.style.display = 'block';
+            if (chev) chev.textContent = '▾';
+        }
+        if (document.getElementById('iSubUnit-'  + id)) document.getElementById('iSubUnit-'  + id).value = subUnit;
+        if (document.getElementById('iSubQty-'   + id)) document.getElementById('iSubQty-'   + id).value = subQty;
+        if (document.getElementById('iSubPrice-' + id)) document.getElementById('iSubPrice-' + id).value = subPrice;
+    }
+
+    // Selling prices
+    if (document.getElementById('iSellPrice-' + id)) document.getElementById('iSellPrice-' + id).value = opt.dataset.sell    || '';
+    if (document.getElementById('iFundi-'     + id)) document.getElementById('iFundi-'     + id).value = opt.dataset.fundi   || '';
+    if (document.getElementById('iWholesale-' + id)) document.getElementById('iWholesale-' + id).value = opt.dataset.wholesale|| '';
+    if (document.getElementById('iWsMin-'     + id)) document.getElementById('iWsMin-'     + id).value = opt.dataset.ws_min  || '';
+
+    calcLoosePricePreview(id);
+    updateRowMapping(id);
 }
 
 
@@ -643,22 +778,37 @@ function getItems() {
     var items = [];
     var rows = document.querySelectorAll('[id^="row-"]');
     rows.forEach(function(row) {
-        var rid = row.id.split('-')[1];
-        var sel = row.querySelector('select');
+        var rid  = row.id.replace('row-', '');
+        var sel  = row.querySelector('select');
         var name = document.getElementById('iName-' + rid)?.value?.trim();
-        
-        if (name) {
-            items.push({
-                inventory_id: sel?.value ? parseInt(sel.value) : null,
-                item_name: name,
-                unit: document.getElementById('iUnit-' + rid).value,
-                qty_ordered: parseFloat(document.getElementById('iQty-' + rid).value) || 0,
-                unit_cost: parseFloat(document.getElementById('iCost-' + rid).value) || 0,
-                // Add these two lines:
-                category: row.dataset.category,
-                kra_code: row.dataset.kraCode
-            });
-        }
+        if (!name) return;
+
+        var subQty    = parseFloat(document.getElementById('iSubQty-'   + rid)?.value) || null;
+        var retail    = parseFloat(document.getElementById('iSellPrice-' + rid)?.value) || null;
+        var subPrice  = document.getElementById('iSubPrice-' + rid)?.value;
+        // Auto-derive sub-unit price from retail/subQty if not explicitly set
+        var derivedSubPrice = subPrice
+            ? parseFloat(subPrice)
+            : (retail && subQty ? parseFloat((retail / subQty).toFixed(4)) : null);
+
+        items.push({
+            inventory_id:      sel?.value ? parseInt(sel.value) : null,
+            item_name:         name,
+            unit:              document.getElementById('iUnit-' + rid)?.value?.trim() || 'PCS',
+            qty_ordered:       parseFloat(document.getElementById('iQty-'  + rid)?.value) || 0,
+            unit_cost:         parseFloat(document.getElementById('iCost-' + rid)?.value) || 0,
+            category:          row.dataset.category  || 'General',
+            kra_code:          row.dataset.kraCode   || '31160000',
+            // Sub-unit
+            sub_unit:          document.getElementById('iSubUnit-'   + rid)?.value?.trim() || null,
+            sub_unit_qty:      subQty,
+            sub_unit_price:    derivedSubPrice,
+            // Selling prices (will be used on receive to seed Inventory record)
+            selling_price:     retail,
+            fundi_price:       parseFloat(document.getElementById('iFundi-'    + rid)?.value) || null,
+            wholesale_price:   parseFloat(document.getElementById('iWholesale-'+ rid)?.value) || null,
+            wholesale_min_qty: parseFloat(document.getElementById('iWsMin-'    + rid)?.value) || null,
+        });
     });
     return items;
 }
@@ -921,6 +1071,17 @@ async function openReceiveModal(id) {
               '</div>'+
             '</div>'
           : '';
+        // Show sub-unit summary for existing items that have sub-unit config
+        var subSummary = '';
+        if (!isNew && i.sub_unit && i.sub_unit_qty) {
+            subSummary = '<div style="margin-top:8px;padding:8px 10px;background:rgba(86,156,214,0.06);border:1px solid rgba(86,156,214,0.15);border-radius:8px;font-size:11px;color:var(--muted);">'+
+                '📦 <b style="color:var(--blue);">Sub-unit:</b> 1 '+esc(i.unit||'Carton')+' = '+i.sub_unit_qty+' '+esc(i.sub_unit)+
+                (i.sub_unit_price ? ' · KES '+i.sub_unit_price+' / '+esc(i.sub_unit) : '')+
+                (i.fundi_price    ? ' &nbsp;|&nbsp; 🔨 Fundi: KES '+i.fundi_price  : '')+
+                (i.wholesale_price? ' &nbsp;|&nbsp; 📦 Wholesale: KES '+i.wholesale_price : '')+
+            '</div>';
+        }
+
         return '<div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:8px;">'+
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'+
             '<div style="display:flex;align-items:center;gap:8px;">'+
@@ -939,6 +1100,7 @@ async function openReceiveModal(id) {
               '<input type="number" id="price-'+i.id+'" min="0" step="any" placeholder="'+(isNew ? String(i.unit_cost||'') : 'Leave blank to keep current')+'" '+(isNew ? 'value="'+(i.unit_cost||'')+'" readonly style="font-size:13px;opacity:0.6;"' : 'class="finput" style="font-size:13px;"')+' class="finput" />'+
             '</div>'+
           '</div>'+
+          subSummary+
           newItemFields+
           '<input type="hidden" id="pid-'+i.id+'" value="'+i.id+'" />'+
           '<input type="hidden" id="isinew-'+i.id+'" value="'+(isNew?'1':'0')+'" />'+
@@ -963,19 +1125,26 @@ async function confirmReceive() {
 
   var items = pending.map(function(i){
     var isNew = document.getElementById('isinew-'+i.id)?.value === '1';
+
+    // PO line items now carry sub-unit + pricing from when the PO was created
+    // We pass these through on receive so the server can seed/update the inventory record
     return {
       po_item_id:        i.id,
       qty_received:      parseFloat(document.getElementById('recv-'+i.id)?.value)||0,
       new_selling_price: isNew ? null : (parseFloat(document.getElementById('price-'+i.id)?.value)||null),
-      
-      // new item fields — only sent when inventory_id is null
-      selling_price:     isNew ? (parseFloat(document.getElementById('sell-'+i.id)?.value)||null) : null,
-      category:          isNew ? (document.getElementById('cat-'+i.id)?.value?.trim()||'General') : null,
-      unit:              isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||'PCS') : null,
-      bulk_unit:         isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||null) : null,
-      sub_unit:          isNew ? (document.getElementById('sub_unit-'+i.id)?.value?.trim()||null) : null,
-      sub_unit_qty:      isNew ? (parseFloat(document.getElementById('sub_qty-'+i.id)?.value)||null) : null,
-      sub_unit_price:    isNew ? (parseFloat(document.getElementById('sub_price-'+i.id)?.value)||null) : null
+
+      // New item fields (used to create Inventory record when inventory_id is null)
+      selling_price:     isNew ? (parseFloat(document.getElementById('sell-'+i.id)?.value)||null)         : null,
+      category:          isNew ? (document.getElementById('cat-'+i.id)?.value?.trim()||'General')         : null,
+      unit:              isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||'PCS')             : null,
+      bulk_unit:         isNew ? (document.getElementById('unit-'+i.id)?.value?.trim()||null)              : null,
+      sub_unit:          isNew ? (document.getElementById('sub_unit-'+i.id)?.value?.trim()||null)          : null,
+      sub_unit_qty:      isNew ? (parseFloat(document.getElementById('sub_qty-'+i.id)?.value)||null)       : null,
+      sub_unit_price:    isNew ? (parseFloat(document.getElementById('sub_price-'+i.id)?.value)||null)     : null,
+      // Pricing tiers — sourced from the PO line item (set at PO creation time)
+      fundi_price:       i.fundi_price       ? parseFloat(i.fundi_price)       : null,
+      wholesale_price:   i.wholesale_price   ? parseFloat(i.wholesale_price)   : null,
+      wholesale_min_qty: i.wholesale_min_qty ? parseInt(i.wholesale_min_qty)   : null,
     };
   }).filter(function(i){ return i.qty_received > 0; });
 
