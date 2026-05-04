@@ -1097,30 +1097,39 @@ function resolveTierPrice(item, sellUnit, qty) {
     const tier         = document.getElementById('cartPriceTier')?.value || 'retail';
     const cartonRetail = parseFloat(item.price) || 0;
 
-    // Derive the discount % from stored carton tier prices.
-    // Same % is then applied to loose/sub-unit prices automatically.
-    // e.g. carton retail=800, fundi=700 → fundiPct=12.5%
-    //      loose retail=40/Bag → fundi loose = 40×(1-12.5%) = 35/Bag
+    // Derive discount % from carton-level tier prices.
+    // This same % is applied to loose/sub-unit prices when no explicit piece-tier price exists.
+    // e.g. carton retail=800, fundi=700 → fundiPct=12.5% → piece retail=4 → fundi piece=3.50
     const fundiPct    = (cartonRetail > 0 && item.fundi_price)
         ? (1 - parseFloat(item.fundi_price)     / cartonRetail) : null;
     const wholesalePct= (cartonRetail > 0 && item.wholesale_price)
         ? (1 - parseFloat(item.wholesale_price) / cartonRetail) : null;
 
-    // Wholesale auto-upgrade only kicks in when tier is explicitly "retail"
-    const wsQty        = parseInt(item.wholesale_min_qty) || 0;
-    const wsAutoApplies= tier === 'retail' && wsQty > 0 && qty >= wsQty && item.wholesale_price;
+    // Wholesale auto-upgrade rules:
+    // 1. Only applies to BULK (carton) sales — never to piece/sub-unit sales
+    // 2. Only when tier dropdown is on "retail" (explicit fundi/wholesale selection takes priority)
+    // 3. wsQty must be >= 2 (selling 1 carton can never be "volume wholesale")
+    const wsQty = parseInt(item.wholesale_min_qty) || 0;
+    const wsAutoApplies = sellUnit !== 'sub'
+        && tier === 'retail'
+        && wsQty >= 2
+        && qty >= wsQty
+        && item.wholesale_price;
 
+    // ── Sub-unit / piece sales ────────────────────────────────────────────────
+    // Explicit tier selection (fundi/wholesale) applies discount % to piece price.
+    // wsAutoApplies intentionally excluded — piece sales never auto-trigger wholesale.
     if (sellUnit === 'sub' && item.sub_unit_price) {
-        // Loose sale — start at retail sub-unit price, then apply tier discount
         const looseRetail = parseFloat(item.sub_unit_price);
         if (tier === 'fundi' && fundiPct !== null)
             return { price: parseFloat((looseRetail * (1 - fundiPct)).toFixed(2)), tier: 'fundi' };
-        if ((tier === 'wholesale' || wsAutoApplies) && wholesalePct !== null)
-            return { price: parseFloat((looseRetail * (1 - wholesalePct)).toFixed(2)), tier: tier === 'wholesale' ? 'wholesale' : 'wholesale_auto' };
-        return { price: looseRetail, tier: 'sub' };
+        if (tier === 'wholesale' && wholesalePct !== null)
+            return { price: parseFloat((looseRetail * (1 - wholesalePct)).toFixed(2)), tier: 'wholesale' };
+        // No tier pricing configured or tier=retail → always retail piece price
+        return { price: looseRetail, tier: 'retail' };
     }
 
-    // Bulk / carton sale
+    // ── Bulk / carton sales ───────────────────────────────────────────────────
     if (tier === 'fundi' && item.fundi_price)
         return { price: parseFloat(item.fundi_price), tier: 'fundi' };
     if (tier === 'wholesale' && item.wholesale_price)
