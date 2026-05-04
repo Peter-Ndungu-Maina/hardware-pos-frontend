@@ -9,340 +9,765 @@
     <script src="/src/pages/sidebar.js" data-active="sales_orders.html"></script>
     <style>
         :root {
-            --bg: #090a0fd0; --surface: #14171f; --surface2: #1e222d;
-            --border: rgba(255,255,255,0.08); --text: #f8fafc; --muted: #94a3b8;
-            --green: #10b981; --blue: #3b82f6; --amber: #f59e0b; --red: #ef4444;
+            --bg:#090a0fd0; --surface:#14171f; --surface2:#1e222d; --surface3:#252b38;
+            --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.13);
+            --text:#f8fafc; --muted:#94a3b8; --muted2:#4d5566;
+            --green:#10b981; --blue:#3b82f6; --amber:#f59e0b; --red:#ef4444; --purple:#a78bfa;
+            --mono:'Space Mono',monospace; --sans:'DM Sans',sans-serif;
         }
         body.light {
-            --bg: #eceff1e8; --surface: #fff; --surface2: #f8fafc;
-            --border: rgba(15,23,42,0.15); --text: #0f172a; --muted: #475569;
+            --bg:#eceff1e8; --surface:#fff; --surface2:#f1f5f9; --surface3:#e2e8f0;
+            --border:rgba(15,23,42,0.12); --border2:rgba(15,23,42,0.18);
+            --text:#0f172a; --muted:#475569; --muted2:#94a3b8;
         }
-        body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
-        .finput { width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); outline:none; }
-        .finput:focus { border-color:var(--green); }
-        
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
-        .badge-Quote { background: rgba(148,163,184,0.15); color: #94a3b8; }
-        .badge-Confirmed { background: rgba(59,130,246,0.15); color: var(--blue); }
-        .badge-Fulfilled { background: rgba(16,185,129,0.15); color: var(--green); }
-        .badge-Cancelled { background: rgba(239,68,68,0.15); color: var(--red); }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:var(--sans)!important;background:var(--bg)!important;color:var(--text)!important;}
+        ::-webkit-scrollbar{width:4px;height:4px;}
+        ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px;}
 
-        @media print {
-            body * { visibility: hidden; }
-            #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; left: 0; top: 0; width: 100%; background: white; color: #000; padding: 20px; }
+        .finput{width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border2);
+            background:var(--surface2);color:var(--text);outline:none;font-family:var(--sans);font-size:13px;
+            transition:border-color 0.2s;}
+        .finput:focus{border-color:var(--green);}
+        select.finput option{background:var(--surface2);color:var(--text);}
+
+        /* STATUS BADGES */
+        .badge{padding:3px 10px;border-radius:20px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+        .badge-Quote     {background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.2);}
+        .badge-Confirmed {background:rgba(59,130,246,0.15); color:var(--blue);  border:1px solid rgba(59,130,246,0.25);}
+        .badge-Fulfilled {background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.25);}
+        .badge-Cancelled {background:rgba(239,68,68,0.15);  color:var(--red);   border:1px solid rgba(239,68,68,0.25);}
+
+        /* TIER BADGES */
+        .tier-retail    {background:rgba(59,130,246,0.12);color:#60a5fa;}
+        .tier-fundi     {background:rgba(245,158,11,0.12);color:#fbbf24;}
+        .tier-wholesale {background:rgba(16,185,129,0.12);color:#34d399;}
+
+        /* ITEM ROW */
+        .item-row{background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;}
+        .item-row + .item-row{margin-top:8px;}
+
+        /* SELL UNIT TOGGLE */
+        .unit-toggle{display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border2);}
+        .unit-btn{flex:1;padding:7px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.5px;
+            border:none;cursor:pointer;transition:background 0.15s;font-family:var(--sans);}
+        .unit-btn.active-bulk{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;}
+        .unit-btn.active-sub {background:linear-gradient(135deg,#5b21b6,#a78bfa);color:#fff;}
+        .unit-btn:not(.active-bulk):not(.active-sub){background:var(--surface2);color:var(--muted);}
+
+        /* ACTION BUTTONS */
+        .btn{padding:7px 14px;border-radius:8px;font-size:10px;font-weight:900;text-transform:uppercase;
+            letter-spacing:0.5px;border:none;cursor:pointer;font-family:var(--sans);transition:opacity 0.15s;white-space:nowrap;}
+        .btn:hover{opacity:0.85;}
+        .btn-ghost{background:var(--surface2);color:var(--muted);border:1px solid var(--border2);}
+        .btn-green{background:var(--green);color:#000;}
+        .btn-blue{background:var(--blue);color:#fff;}
+        .btn-red{background:rgba(239,68,68,0.12);color:var(--red);border:1px solid rgba(239,68,68,0.25);}
+        .btn-amber{background:rgba(245,158,11,0.12);color:var(--amber);border:1px solid rgba(245,158,11,0.25);}
+
+        /* MODAL */
+        .modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+            display:none;align-items:center;justify-content:center;padding:16px;}
+        .modal-overlay.open{display:flex;}
+        .modal-box{background:var(--surface);border:1px solid var(--border2);border-radius:20px;
+            width:100%;max-width:820px;max-height:95vh;display:flex;flex-direction:column;
+            box-shadow:0 25px 60px rgba(0,0,0,0.7);}
+        .modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+        .modal-body{padding:20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px;}
+        .modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+
+        /* GRID HELPERS */
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+        @media(max-width:600px){.g2,.g3{grid-template-columns:1fr;}}
+
+        label.flabel{display:block;font-size:9px;font-weight:900;text-transform:uppercase;
+            letter-spacing:1px;color:var(--muted);margin-bottom:5px;}
+
+        /* TABLE */
+        table{width:100%;border-collapse:collapse;}
+        th{padding:10px 16px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+        td{padding:12px 16px;font-size:12px;border-top:1px solid var(--border);}
+        tr:hover td{background:rgba(255,255,255,0.02);}
+
+        /* GRAND TOTAL */
+        .grand-total-bar{display:flex;justify-content:space-between;align-items:center;
+            padding:12px 16px;background:var(--surface3);border-radius:10px;margin-top:8px;}
+
+        /* PRINT */
+        @media print{
+            body *{visibility:hidden;}
+            #printArea,#printArea *{visibility:visible;}
+            #printArea{position:absolute;left:0;top:0;width:100%;background:#fff;color:#000;padding:24px;font-family:Arial,sans-serif;}
         }
+
+        /* VIEW MODAL table */
+        .view-item-row td{padding:8px 4px;border-bottom:1px solid #eee;font-size:12px;}
     </style>
 </head>
 <body class="flex min-h-screen">
-    <div id="sidebarMount"></div>
+<div id="sidebarMount"></div>
 
-    <main class="flex-1 p-3 sm:p-6 overflow-y-auto" style="padding-top: 70px;">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-3 mb-6">
-            <div>
-                <h1 class="text-2xl font-black tracking-tight" style="font-family:'Space Mono',monospace;">📝 Sales Orders / Quotes</h1>
-                <p class="text-xs mt-1" style="color:var(--muted);">Issue Proforma Invoices and reserve stock for future delivery.</p>
-            </div>
-            <button onclick="openCreateModal()" class="px-5 py-2.5 rounded-xl font-black text-xs tracking-wider uppercase bg-emerald-500 text-black hover:bg-emerald-400 transition-colors shadow-lg">
-                + Create Quote
-            </button>
+<main class="flex-1 overflow-y-auto" style="padding:80px 24px 40px;">
+
+    <!-- Page Header -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:24px;flex-wrap:wrap;">
+        <div>
+            <h1 style="font-size:20px;font-weight:900;font-family:var(--mono);">📝 Sales Orders / Quotes</h1>
+            <p style="font-size:11px;color:var(--muted);margin-top:4px;">Issue proforma invoices · Lock pricing tiers · Reserve stock for future delivery</p>
         </div>
-
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
-            <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm" style="min-width:580px;">
-                <thead style="background:rgba(255,255,255,0.03); border-bottom:1px solid var(--border); font-size:10px; text-transform:uppercase; color:var(--muted); letter-spacing:1px;">
-                    <tr>
-                        <th class="p-4">SO Number</th>
-                        <th class="p-4">Date</th>
-                        <th class="p-4">Customer</th>
-                        <th class="p-4 text-right">Total (KES)</th>
-                        <th class="p-4 text-center">Status</th>
-                        <th class="p-4 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="soTableBody" class="divide-y divide-white/5">
-                    <tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">Loading quotes...</td></tr>
-                </tbody>
-            </table>
-            </div>
-        </div>
-    </main>
-
-    <div id="createModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; width:100%; max-width:800px; max-height:95vh; display:flex; flex-direction:column;">
-            <div class="p-5 flex justify-between items-center" style="border-bottom:1px solid var(--border);">
-                <h2 class="font-black text-emerald-500 uppercase tracking-widest text-sm">New Quotation</h2>
-                <button onclick="closeCreateModal()" class="text-2xl leading-none" style="color:var(--muted);">&times;</button>
-            </div>
-            
-            <div class="p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Customer Name *</label>
-                    <input type="text" id="cName" class="finput" placeholder="Enter customer name"></div>
-                    <div><label class="block text-[10px] font-bold uppercase mb-1" style="color:var(--muted);">Phone Number</label>
-                    <input type="text" id="cPhone" class="finput" placeholder="Optional"></div>
-                </div>
-
-                <div class="border border-white/10 rounded-xl p-4" style="background:var(--surface2);">
-                    <div class="flex justify-between items-center mb-3">
-                        <label class="text-[10px] font-bold uppercase" style="color:var(--muted);">Order Items *</label>
-                        <button onclick="addItemRow()" class="text-emerald-500 font-black text-[10px] uppercase bg-emerald-500/10 px-3 py-1 rounded-lg">+ Add Item</button>
-                    </div>
-                    <div id="itemRows" class="flex flex-col gap-2"></div>
-                    <div class="mt-4 pt-3 text-right" style="border-top:1px solid var(--border);">
-                        <span class="text-xs font-bold" style="color:var(--muted);">GRAND TOTAL:</span>
-                        <span class="text-xl font-black text-emerald-500 ml-2 font-mono">KES <span id="grandTotal">0.00</span></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-5 flex justify-end gap-3" style="border-top:1px solid var(--border);">
-                <button onclick="closeCreateModal()" class="px-5 py-2.5 rounded-xl font-bold text-xs" style="background:var(--surface2); color:var(--text);">Cancel</button>
-                <button onclick="saveQuote()" id="saveBtn" class="px-6 py-2.5 rounded-xl font-black text-xs uppercase bg-emerald-500 text-black">Save Quote</button>
-            </div>
-        </div>
+        <button onclick="openCreateModal()" class="btn btn-green" style="padding:10px 20px;font-size:11px;">+ New Quote</button>
     </div>
 
-    <div id="printArea" style="display:none;"></div>
+    <!-- Filter bar -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button onclick="filterStatus('')"     id="fAll"       class="btn btn-ghost" style="font-size:9px;">All</button>
+        <button onclick="filterStatus('Quote')"       id="fQuote"     class="btn" style="font-size:9px;background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.2);">Quote</button>
+        <button onclick="filterStatus('Confirmed')"   id="fConfirmed" class="btn" style="font-size:9px;background:rgba(59,130,246,0.15);color:var(--blue);border:1px solid rgba(59,130,246,0.25);">Confirmed</button>
+        <button onclick="filterStatus('Fulfilled')"   id="fFulfilled" class="btn" style="font-size:9px;background:rgba(16,185,129,0.15);color:var(--green);border:1px solid rgba(16,185,129,0.25);">Fulfilled</button>
+        <button onclick="filterStatus('Cancelled')"   id="fCancelled" class="btn" style="font-size:9px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.25);">Cancelled</button>
+    </div>
 
-    <script>
-        const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
-        let allInventory = [];
-        let rowCount = 0;
+    <!-- Orders Table -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;overflow:hidden;">
+        <div style="overflow-x:auto;">
+        <table style="min-width:640px;">
+            <thead style="background:rgba(255,255,255,0.03);">
+                <tr>
+                    <th style="text-align:left;">SO #</th>
+                    <th style="text-align:left;">Date</th>
+                    <th style="text-align:left;">Customer</th>
+                    <th style="text-align:left;">Items</th>
+                    <th style="text-align:right;">Total</th>
+                    <th style="text-align:center;">Status</th>
+                    <th style="text-align:center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="soTableBody">
+                <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Loading...</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+</main>
 
-        document.addEventListener('eliteAuthReady', () => {
-            loadInventory();
-            loadSalesOrders();
-        });
+<!-- ═══════════════════ CREATE / EDIT MODAL ═══════════════════ -->
+<div id="createModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h2 style="font-weight:900;font-size:13px;color:var(--green);text-transform:uppercase;letter-spacing:2px;">New Quotation</h2>
+            <button onclick="closeCreateModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--muted);">×</button>
+        </div>
+        <div class="modal-body">
 
-        function fmt(n) { return Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2}); }
-
-        async function loadInventory() {
-            try {
-                // Use apiFetch, no need to manually pass headers
-                const res = await window.apiFetch(API + '/inventory');
-                if (!res) return; // Catch 401 redirect
-                if (!res.ok) throw new Error('Failed to fetch inventory');
-                
-                const data = await res.json();
-                allInventory = Array.isArray(data) ? data : (data.items || []);
-            } catch (e) {
-                console.error("Inventory load error:", e);
-                allInventory = []; 
-            }
-        }
-
-        async function loadSalesOrders() {
-            const tb = document.getElementById('soTableBody');
-            try {
-                const res = await window.apiFetch(API + '/sales-orders');
-                if (!res) return; // Catch 401 redirect
-                if (!res.ok) throw new Error('Failed to fetch sales orders');
-                
-                const data = await res.json();
-                
-                if (!Array.isArray(data) || !data.length) { 
-                    tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center" style="color:var(--muted);">No sales orders found.</td></tr>`; 
-                    return; 
-                }
-
-                tb.innerHTML = data.map(so => `
-                    <tr class="hover:bg-white/5 transition-colors">
-                        <td class="p-4 font-mono font-bold" style="color:var(--blue);">${so.so_number}</td>
-                        <td class="p-4 text-xs" style="color:var(--muted);">${new Date(so.order_date).toLocaleDateString()}</td>
-                        <td class="p-4 font-bold uppercase">${so.customer_name}<br><span class="text-[10px] font-normal" style="color:var(--muted);">${so.customer_phone || ''}</span></td>
-                        <td class="p-4 text-right font-mono font-black">KES ${fmt(so.total_amount)}</td>
-                        <td class="p-4 text-center"><span class="badge badge-${so.status}">${so.status}</span></td>
-                        <td class="p-4 text-center">
-                            <button onclick='printProforma(${JSON.stringify(so).replace(/'/g, "&#39;")})' class="bg-blue-500/20 text-blue-400 px-3 py-1 rounded text-[10px] font-black uppercase">🖨️ Print Quote</button>
-                            ${so.status === 'Quote' ? `<button onclick="updateStatus(${so.id}, 'Confirmed')" class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">Confirm</button>` : ''}
-                            ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded text-[10px] font-black uppercase ml-1">🛒 Fulfill</button>` : ''}
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                console.error("Sales orders load error:", e);
-                tb.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-red-500">Error loading sales orders. Please refresh.</td></tr>`;
-            }
-        }
-        // CREATE MODAL LOGIC
-        function openCreateModal() {
-            document.getElementById('cName').value = '';
-            document.getElementById('cPhone').value = '';
-            document.getElementById('itemRows').innerHTML = '';
-            rowCount = 0;
-            // Reload inventory if it failed on page load
-            const ready = () => { addItemRow(); };
-            if (!allInventory.length) { loadInventory().then(ready); } else { ready(); }
-            document.getElementById('createModal').classList.remove('hidden');
-            document.getElementById('createModal').classList.add('flex');
-        }
-        function closeCreateModal() { document.getElementById('createModal').classList.add('hidden'); document.getElementById('createModal').classList.remove('flex'); }
-
-        function addItemRow() {
-            rowCount++;
-            const id = rowCount;
-            // If inventory hasn't loaded yet, show a warning option
-            const opts = allInventory.length
-                ? allInventory.map(i => `<option value="${i.id}" data-price="${i.price}" data-name="${i.item_name.replace(/"/g,'&quot;')}">${i.item_name} (Stock: ${i.stock_quantity})</option>`).join('')
-                : '<option value="" disabled>⚠️ Loading inventory...</option>';
-            const row = document.createElement('div');
-            row.id = `row-${id}`;
-            row.className = "flex flex-col gap-1 p-2 rounded-lg" ;
-            row.style.cssText = "background:rgba(255,255,255,0.03); border:1px solid var(--border);";
-            row.innerHTML = `
-                <div class="flex gap-2 items-center">
-                    <select id="sel-${id}" onchange="setPrice(${id})" class="finput flex-1" style="font-size:13px; min-width:0;">
-                        <option value="">Select Item...</option>${opts}
-                    </select>
-                    <button onclick="document.getElementById('row-${id}').remove(); calcTotal();" class="bg-red-500/20 text-red-400 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center font-black text-lg leading-none">&times;</button>
+            <!-- Customer info -->
+            <div class="g2">
+                <div>
+                    <label class="flabel">Customer Name *</label>
+                    <input type="text" id="cName" class="finput" placeholder="e.g. John Mwangi">
                 </div>
-                <div id="item-name-${id}" class="text-xs font-bold px-1" style="color:var(--green); min-height:16px;"></div>
-                <div class="flex gap-2">
-                    <div class="flex-1">
-                        <label class="text-[10px] uppercase font-bold px-1" style="color:var(--muted);">Qty</label>
-                        <input type="number" id="qty-${id}" placeholder="1" min="1" value="1" oninput="calcTotal()" class="finput text-center" style="font-size:13px;">
-                    </div>
-                    <div class="flex-1">
-                        <label class="text-[10px] uppercase font-bold px-1" style="color:var(--muted);">Unit Price (KES)</label>
-                        <input type="number" id="price-${id}" placeholder="0.00" oninput="calcTotal()" class="finput text-right" style="font-size:13px;">
-                    </div>
+                <div>
+                    <label class="flabel">Phone Number</label>
+                    <input type="text" id="cPhone" class="finput" placeholder="07xxxxxxxx (optional)">
                 </div>
-            `;
-            document.getElementById('itemRows').appendChild(row);
-        }
+            </div>
 
-        function setPrice(id) {
-            const sel = document.getElementById(`sel-${id}`);
-            const opt = sel.options[sel.selectedIndex];
-            const nameEl = document.getElementById(`item-name-${id}`);
-            if (opt && opt.value) {
-                document.getElementById(`price-${id}`).value = opt.dataset.price || '';
-                if (nameEl) nameEl.textContent = opt.dataset.name || opt.text.split(' (')[0];
-            } else {
-                if (nameEl) nameEl.textContent = '';
-            }
-            calcTotal();
-        }
+            <!-- Validity + Notes -->
+            <div class="g2">
+                <div>
+                    <label class="flabel">Valid Until</label>
+                    <input type="date" id="cValidUntil" class="finput">
+                </div>
+                <div>
+                    <label class="flabel">Notes (optional)</label>
+                    <input type="text" id="cNotes" class="finput" placeholder="Delivery terms, special conditions…">
+                </div>
+            </div>
 
-        function calcTotal() {
-            let sum = 0;
-            document.querySelectorAll('[id^="row-"]').forEach(r => {
-                const id = r.id.split('-')[1];
-                const q = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
-                const p = parseFloat(document.getElementById(`price-${id}`).value) || 0;
-                sum += (q * p);
-            });
-            document.getElementById('grandTotal').innerText = fmt(sum);
-        }
+            <!-- Global price tier -->
+            <div>
+                <label class="flabel">Default Price Tier</label>
+                <select id="globalTier" onchange="applyGlobalTier()" class="finput">
+                    <option value="retail">🏷️ Retail Price (Walk-in)</option>
+                    <option value="fundi">🔨 Fundi Price (Contractor)</option>
+                    <option value="wholesale">📦 Wholesale Price (Bulk Buyer)</option>
+                </select>
+                <p style="font-size:9px;color:var(--muted);margin-top:4px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Applies to all new rows. Per-item overrides are available below.</p>
+            </div>
 
-       async function saveQuote() {
-            const name = document.getElementById('cName').value.trim();
-            if (!name) return alert("Customer Name is required.");
+            <!-- Line items -->
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <label class="flabel" style="margin:0;">Order Items *</label>
+                    <button onclick="addItemRow()" class="btn btn-green" style="font-size:9px;padding:5px 12px;">+ Add Item</button>
+                </div>
+                <div id="itemRows"></div>
+                <div class="grand-total-bar" style="margin-top:12px;">
+                    <span style="font-size:10px;font-weight:900;text-transform:uppercase;color:var(--muted);">Grand Total</span>
+                    <span style="font-family:var(--mono);font-size:20px;font-weight:900;color:var(--green);">KES <span id="grandTotal">0.00</span></span>
+                </div>
+            </div>
 
-            const items = [];
-            document.querySelectorAll('[id^="row-"]').forEach(r => {
-                const id = r.id.split('-')[1];
-                const sel = document.getElementById(`sel-${id}`);
-                const qty = parseFloat(document.getElementById(`qty-${id}`).value) || 0;
-                const price = parseFloat(document.getElementById(`price-${id}`).value) || 0;
-                if (sel.value && qty > 0) {
-                    const selectedOpt = sel.options[sel.selectedIndex]; const itemName = selectedOpt.dataset.name || selectedOpt.text.split(' (')[0] || 'Unknown Item'; items.push({ inventory_id: parseInt(sel.value), item_name: itemName, qty_ordered: qty, unit_price: price });
-                }
-            });
+        </div>
+        <div class="modal-foot">
+            <button onclick="closeCreateModal()" class="btn btn-ghost">Cancel</button>
+            <button onclick="saveQuote()" id="saveBtn" class="btn btn-green" style="padding:10px 24px;">Save Quote</button>
+        </div>
+    </div>
+</div>
 
-            if (!items.length) return alert("Add at least one valid item.");
+<!-- ═══════════════════ VIEW MODAL ═══════════════════ -->
+<div id="viewModal" class="modal-overlay">
+    <div class="modal-box" style="max-width:700px;">
+        <div class="modal-head">
+            <div>
+                <h2 id="viewTitle" style="font-weight:900;font-size:14px;font-family:var(--mono);color:var(--blue);"></h2>
+                <p id="viewSubtitle" style="font-size:10px;color:var(--muted);margin-top:2px;"></p>
+            </div>
+            <button onclick="closeViewModal()" style="background:none;border:none;cursor:pointer;font-size:22px;color:var(--muted);">×</button>
+        </div>
+        <div class="modal-body" id="viewBody"></div>
+        <div class="modal-foot" id="viewFoot"></div>
+    </div>
+</div>
 
-            document.getElementById('saveBtn').innerText = "Saving...";
-            try {
-                // Use apiFetch, no headers required
-                const res = await window.apiFetch(API + '/sales-orders', {
-                    method: 'POST', 
-                    body: JSON.stringify({ customerName: name, customerPhone: document.getElementById('cPhone').value.trim(), items })
-                });
-                if (res && res.ok) { closeCreateModal(); loadSalesOrders(); }
-            } catch (e) { alert("Error saving quote."); }
-            finally { document.getElementById('saveBtn').innerText = "Save Quote"; }
-        }
+<!-- PRINT AREA -->
+<div id="printArea" style="display:none;"></div>
 
-        async function updateStatus(id, status) {
-            // Use apiFetch, no headers required
-            const res = await window.apiFetch(API + `/sales-orders/${id}/status`, { 
-                method: 'PUT', 
-                body: JSON.stringify({ status }) 
-            });
-            if (res && res.ok) loadSalesOrders();
-        }
+<script>
+const API = window.API_BASE || 'https://hardware-pos-backend.onrender.com/api';
+let allInventory = [];
+let allOrders    = [];
+let rowCount     = 0;
+let activeFilter = '';
 
-        // FULFILLMENT -> Transfers the SO items to the POS Cart.
-        function fulfillOrder(id) {
-        alert("To fulfill, items will be loaded into your POS Cart.");
-        // Remove .html to match the clean URL routing in server.js
-        window.location.href = `/inventory?fulfill_so=${id}`;
+// ── FORMAT HELPERS ────────────────────────────────────────────────────────────
+const fmt = n => Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2});
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+document.addEventListener('eliteAuthReady', () => {
+    loadInventory();
+    loadSalesOrders();
+    // Default valid-until to 7 days from now
+    const d = new Date(); d.setDate(d.getDate()+7);
+    document.getElementById('cValidUntil').value = d.toISOString().split('T')[0];
+});
+
+// ── INVENTORY LOAD ────────────────────────────────────────────────────────────
+async function loadInventory() {
+    try {
+        const res = await window.apiFetch(API + '/inventory');
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        allInventory = Array.isArray(data) ? data : (data.items || []);
+    } catch(e) { allInventory = []; }
+}
+
+// ── SALES ORDERS LOAD ─────────────────────────────────────────────────────────
+async function loadSalesOrders() {
+    const tb = document.getElementById('soTableBody');
+    try {
+        const res = await window.apiFetch(API + '/sales-orders');
+        if (!res || !res.ok) throw new Error('Failed');
+        allOrders = await res.json();
+        renderTable();
+    } catch(e) {
+        tb.innerHTML = `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--red);">Error loading orders. Please refresh.</td></tr>`;
+    }
+}
+
+function filterStatus(status) {
+    activeFilter = status;
+    renderTable();
+}
+
+function renderTable() {
+    const tb = document.getElementById('soTableBody');
+    const data = activeFilter ? allOrders.filter(o => o.status === activeFilter) : allOrders;
+
+    if (!data.length) {
+        tb.innerHTML = `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">No ${activeFilter||''} orders found.</td></tr>`;
+        return;
     }
 
-        // PRINT PROFORMA INVOICE
-        function printProforma(so) {
-            const pa = document.getElementById('printArea');
-            pa.style.display = 'block';
-            
-            const rows = so.sales_order_items.map(i => `
-                <tr style="border-bottom:1px solid #ddd;">
-                    <td style="padding:10px 4px;">${i.item_name}</td>
-                    <td style="padding:10px 4px;text-align:center;">${i.qty_ordered}</td>
-                    <td style="padding:10px 4px;text-align:right;">${fmt(i.unit_price)}</td>
-                    <td style="padding:10px 4px;text-align:right;font-weight:bold;">${fmt(i.line_total)}</td>
-                </tr>
-            `).join('');
+    tb.innerHTML = data.map(so => {
+        const itemCount = (so.sales_order_items||[]).length;
+        const itemSummary = itemCount === 1
+            ? esc((so.sales_order_items[0].item_name||'').substring(0,28))
+            : `${itemCount} items`;
+        const isExpired = so.valid_until && new Date(so.valid_until) < new Date() && so.status === 'Quote';
 
-            pa.innerHTML = `
-                <div style="max-width:800px; margin:0 auto; font-family:Arial, sans-serif;">
-                    <div style="text-align:center; border-bottom:2px solid #000; padding-bottom:16px; margin-bottom:24px;">
-                        <h1 style="font-size:24px; font-weight:900; margin:0; letter-spacing:2px;">ELITE HARDWARE LTD</h1>
-                        <h2 style="font-size:16px; color:#555; margin:4px 0; letter-spacing:4px;">PROFORMA INVOICE</h2>
-                        <p style="font-size:12px; color:#777;">PIN: A014661185V</p>
-                    </div>
-                    
-                    <div style="display:flex; justify-content:space-between; margin-bottom:32px; font-size:14px;">
-                        <div>
-                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Customer</p>
-                            <p style="margin:0; font-weight:bold; font-size:16px; text-transform:uppercase;">${so.customer_name}</p>
-                            <p style="margin:4px 0 0; color:#555;">${so.customer_phone || ''}</p>
-                        </div>
-                        <div style="text-align:right;">
-                            <p style="margin:0 0 4px; color:#666; font-size:11px; text-transform:uppercase;">Quote Reference</p>
-                            <p style="margin:0; font-weight:bold; font-size:16px;">${so.so_number}</p>
-                            <p style="margin:4px 0 0; color:#555;">Date: ${new Date(so.order_date).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-
-                    <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:32px;">
-                        <thead>
-                            <tr style="background:#000; color:#fff;">
-                                <th style="padding:10px 4px; text-align:left;">Description</th>
-                                <th style="padding:10px 4px; text-align:center;">Qty</th>
-                                <th style="padding:10px 4px; text-align:right;">Unit Price (KES)</th>
-                                <th style="padding:10px 4px; text-align:right;">Total (KES)</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-
-                    <div style="text-align:right; margin-bottom:40px;">
-                        <p style="font-size:12px; color:#666; margin:0 0 4px; text-transform:uppercase; letter-spacing:1px;">Grand Total</p>
-                        <p style="font-size:24px; font-weight:900; margin:0;">KES ${fmt(so.total_amount)}</p>
-                    </div>
-
-                    <div style="border-top:1px solid #000; padding-top:16px; font-size:11px; color:#555; text-align:center;">
-                        <p>This is a quotation, not a tax invoice. Stock is subject to availability at the time of payment.</p>
-                        <p>Valid for 7 Days. Thank you for choosing Elite Hardware!</p>
-                    </div>
+        return `<tr>
+            <td style="font-family:var(--mono);font-weight:900;color:var(--blue);font-size:11px;">${esc(so.so_number)}</td>
+            <td style="color:var(--muted);font-size:11px;">
+                ${new Date(so.order_date).toLocaleDateString()}
+                ${isExpired ? `<br><span style="color:var(--red);font-size:9px;font-weight:900;">⚠ EXPIRED</span>` : ''}
+                ${so.valid_until && !isExpired ? `<br><span style="color:var(--muted);font-size:9px;">valid til ${new Date(so.valid_until).toLocaleDateString()}</span>` : ''}
+            </td>
+            <td>
+                <div style="font-weight:900;text-transform:uppercase;font-size:12px;">${esc(so.customer_name)}</div>
+                ${so.customer_phone ? `<div style="font-size:10px;color:var(--muted);">${esc(so.customer_phone)}</div>` : ''}
+            </td>
+            <td style="font-size:11px;color:var(--muted);">${itemSummary}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:900;">KES ${fmt(so.total_amount)}</td>
+            <td style="text-align:center;"><span class="badge badge-${so.status}">${so.status}</span></td>
+            <td style="text-align:center;">
+                <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;">
+                    <button onclick='viewOrder(${so.id})' class="btn btn-ghost" style="font-size:9px;padding:5px 10px;">👁 View</button>
+                    <button onclick='printProforma(${so.id})' class="btn btn-blue" style="font-size:9px;padding:5px 10px;">🖨️ Print</button>
+                    ${so.status === 'Quote' ? `<button onclick="confirmStatus(${so.id},'Confirmed')" class="btn btn-green" style="font-size:9px;padding:5px 10px;">✓ Confirm</button>` : ''}
+                    ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="btn btn-amber" style="font-size:9px;padding:5px 10px;">🛒 Fulfill</button>` : ''}
+                    ${(so.status === 'Quote' || so.status === 'Confirmed') ? `<button onclick="confirmStatus(${so.id},'Cancelled')" class="btn btn-red" style="font-size:9px;padding:5px 10px;">✕ Cancel</button>` : ''}
                 </div>
-            `;
-            window.print();
-            setTimeout(() => { pa.style.display = 'none'; }, 1000);
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ── CREATE MODAL ──────────────────────────────────────────────────────────────
+function openCreateModal() {
+    document.getElementById('cName').value = '';
+    document.getElementById('cPhone').value = '';
+    document.getElementById('cNotes').value = '';
+    document.getElementById('itemRows').innerHTML = '';
+    document.getElementById('globalTier').value = 'retail';
+    rowCount = 0;
+    // Default valid-until 7 days out
+    const d = new Date(); d.setDate(d.getDate()+7);
+    document.getElementById('cValidUntil').value = d.toISOString().split('T')[0];
+
+    if (!allInventory.length) loadInventory().then(() => addItemRow());
+    else addItemRow();
+
+    document.getElementById('createModal').classList.add('open');
+}
+function closeCreateModal() { document.getElementById('createModal').classList.remove('open'); }
+
+// ── GLOBAL TIER APPLY ─────────────────────────────────────────────────────────
+function applyGlobalTier() {
+    const tier = document.getElementById('globalTier').value;
+    document.querySelectorAll('[id^="tier-"]').forEach(sel => {
+        sel.value = tier;
+        // trigger price update for that row
+        const id = sel.id.split('-')[1];
+        updateRowPrice(id);
+    });
+}
+
+// ── ADD ITEM ROW ──────────────────────────────────────────────────────────────
+function addItemRow() {
+    rowCount++;
+    const id = rowCount;
+    const globalTier = document.getElementById('globalTier')?.value || 'retail';
+
+    const opts = allInventory.length
+        ? allInventory.map(i => {
+            const hasSub = !!(i.sub_unit && i.sub_unit_qty);
+            const label = hasSub
+                ? `${i.item_name} — ${i.stock_quantity} ${i.bulk_unit||i.unit||'Ctn'} (${(i.stock_quantity*(parseFloat(i.sub_unit_qty)||1)).toFixed(0)} ${i.sub_unit})`
+                : `${i.item_name} — Stock: ${i.stock_quantity} ${i.unit||''}`;
+            return `<option value="${i.id}"
+                data-price="${i.price||0}"
+                data-fundi="${i.fundi_price||''}"
+                data-wholesale="${i.wholesale_price||''}"
+                data-sub-price="${i.sub_unit_price||''}"
+                data-sub-unit="${i.sub_unit||''}"
+                data-sub-qty="${i.sub_unit_qty||''}"
+                data-bulk-unit="${i.bulk_unit||i.unit||'unit'}"
+                data-name="${esc(i.item_name)}"
+                >${esc(label)}</option>`;
+          }).join('')
+        : '<option value="" disabled>⚠️ Loading inventory...</option>';
+
+    const row = document.createElement('div');
+    row.id = `row-${id}`;
+    row.className = 'item-row';
+    row.innerHTML = `
+        <!-- Item selector -->
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <select id="sel-${id}" onchange="onItemSelect(${id})" class="finput" style="flex:1;">
+                <option value="">Select item…</option>${opts}
+            </select>
+            <button onclick="document.getElementById('row-${id}').remove();calcTotal();"
+                style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);color:var(--red);
+                    width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:18px;font-weight:900;
+                    display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button>
+        </div>
+
+        <!-- Sell unit toggle (hidden until item with sub_unit is selected) -->
+        <div id="unit-toggle-${id}" style="display:none;margin-bottom:8px;">
+            <label class="flabel">Sell By</label>
+            <div class="unit-toggle">
+                <button id="btn-bulk-${id}" class="unit-btn active-bulk" onclick="setSellUnit(${id},'bulk')">📦 <span id="bulk-label-${id}">Carton</span></button>
+                <button id="btn-sub-${id}"  class="unit-btn" onclick="setSellUnit(${id},'sub')">⚖️ <span id="sub-label-${id}">Kg</span> (loose)</button>
+            </div>
+        </div>
+
+        <!-- Price tier + qty + unit price -->
+        <div class="g3" style="margin-bottom:8px;">
+            <div>
+                <label class="flabel">Price Tier</label>
+                <select id="tier-${id}" onchange="updateRowPrice(${id})" class="finput">
+                    <option value="retail"    ${globalTier==='retail'   ?'selected':''}>🏷️ Retail</option>
+                    <option value="fundi"     ${globalTier==='fundi'    ?'selected':''}>🔨 Fundi</option>
+                    <option value="wholesale" ${globalTier==='wholesale'?'selected':''}>📦 Wholesale</option>
+                </select>
+            </div>
+            <div>
+                <label class="flabel">Qty (<span id="unit-label-${id}">unit</span>)</label>
+                <input type="number" id="qty-${id}" placeholder="1" min="0.1" step="0.1" value="1"
+                    oninput="calcTotal()" class="finput" style="text-align:center;font-family:var(--mono);">
+            </div>
+            <div>
+                <label class="flabel">Unit Price (KES)</label>
+                <input type="number" id="price-${id}" placeholder="0.00" oninput="calcTotal()"
+                    class="finput" style="text-align:right;font-family:var(--mono);">
+            </div>
+        </div>
+
+        <!-- Row subtotal + tier indicator -->
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span id="tier-badge-${id}" style="font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;"></span>
+            <span style="font-size:11px;font-weight:900;font-family:var(--mono);color:var(--green);">
+                KES <span id="sub-${id}">0.00</span>
+            </span>
+        </div>
+        <!-- hidden state fields -->
+        <input type="hidden" id="sell-unit-${id}" value="bulk">
+    `;
+    document.getElementById('itemRows').appendChild(row);
+    calcTotal();
+}
+
+// ── ITEM SELECTED ─────────────────────────────────────────────────────────────
+function onItemSelect(id) {
+    const sel = document.getElementById(`sel-${id}`);
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt || !opt.value) return;
+
+    const hasSub    = !!(opt.dataset.subUnit && opt.dataset.subQty);
+    const bulkUnit  = opt.dataset.bulkUnit || 'unit';
+    const subUnit   = opt.dataset.subUnit  || 'unit';
+
+    // Show/hide sell unit toggle
+    const toggleDiv = document.getElementById(`unit-toggle-${id}`);
+    toggleDiv.style.display = hasSub ? 'block' : 'none';
+    if (hasSub) {
+        document.getElementById(`bulk-label-${id}`).textContent = bulkUnit;
+        document.getElementById(`sub-label-${id}`).textContent  = subUnit;
+        // Default to bulk on new selection
+        setSellUnit(id, 'bulk');
+    } else {
+        document.getElementById(`sell-unit-${id}`).value = 'bulk';
+    }
+
+    // Update unit label in qty field
+    const sellUnit = document.getElementById(`sell-unit-${id}`).value;
+    document.getElementById(`unit-label-${id}`).textContent = (sellUnit==='sub' ? subUnit : bulkUnit);
+
+    updateRowPrice(id);
+}
+
+// ── SELL UNIT TOGGLE ──────────────────────────────────────────────────────────
+function setSellUnit(id, unit) {
+    document.getElementById(`sell-unit-${id}`).value = unit;
+
+    const bBulk = document.getElementById(`btn-bulk-${id}`);
+    const bSub  = document.getElementById(`btn-sub-${id}`);
+    bBulk.className = 'unit-btn ' + (unit==='bulk' ? 'active-bulk' : '');
+    bSub.className  = 'unit-btn ' + (unit==='sub'  ? 'active-sub'  : '');
+
+    const sel = document.getElementById(`sel-${id}`);
+    const opt = sel.options[sel.selectedIndex];
+    const bulkUnit = opt?.dataset?.bulkUnit || 'unit';
+    const subUnit  = opt?.dataset?.subUnit  || 'unit';
+    document.getElementById(`unit-label-${id}`).textContent = unit==='sub' ? subUnit : bulkUnit;
+
+    updateRowPrice(id);
+}
+
+// ── UPDATE ROW PRICE BASED ON TIER + SELL UNIT ───────────────────────────────
+function updateRowPrice(id) {
+    const sel      = document.getElementById(`sel-${id}`);
+    const opt      = sel?.options[sel.selectedIndex];
+    if (!opt || !opt.value) return;
+
+    const tier     = document.getElementById(`tier-${id}`)?.value || 'retail';
+    const sellUnit = document.getElementById(`sell-unit-${id}`)?.value || 'bulk';
+
+    let price = 0;
+    let tierLabel = '', tierClass = '';
+
+    if (sellUnit === 'sub' && opt.dataset.subPrice) {
+        price = parseFloat(opt.dataset.subPrice);
+        tierLabel = `LOOSE (per ${opt.dataset.subUnit||'unit'})`;
+        tierClass = 'tier-wholesale';
+    } else if (tier === 'fundi' && opt.dataset.fundi) {
+        price = parseFloat(opt.dataset.fundi);
+        tierLabel = '🔨 Fundi Price';
+        tierClass = 'tier-fundi';
+    } else if (tier === 'wholesale' && opt.dataset.wholesale) {
+        price = parseFloat(opt.dataset.wholesale);
+        tierLabel = '📦 Wholesale Price';
+        tierClass = 'tier-wholesale';
+    } else {
+        price = parseFloat(opt.dataset.price) || 0;
+        tierLabel = '🏷️ Retail';
+        tierClass = 'tier-retail';
+    }
+
+    document.getElementById(`price-${id}`).value = price || '';
+    const badge = document.getElementById(`tier-badge-${id}`);
+    badge.textContent = tierLabel;
+    badge.className = '';
+    badge.style.cssText = `font-size:9px;font-weight:900;padding:2px 8px;border-radius:20px;${
+        tierClass==='tier-fundi'     ? 'background:rgba(245,158,11,0.12);color:#fbbf24;' :
+        tierClass==='tier-wholesale' ? 'background:rgba(16,185,129,0.12);color:#34d399;' :
+                                       'background:rgba(59,130,246,0.12);color:#60a5fa;'
+    }`;
+
+    calcTotal();
+}
+
+// ── CALC TOTAL ────────────────────────────────────────────────────────────────
+function calcTotal() {
+    let sum = 0;
+    document.querySelectorAll('[id^="row-"]').forEach(r => {
+        const id = r.id.split('-')[1];
+        const q = parseFloat(document.getElementById(`qty-${id}`)?.value)   || 0;
+        const p = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+        const sub = q * p;
+        sum += sub;
+        const el = document.getElementById(`sub-${id}`);
+        if (el) el.textContent = fmt(sub);
+    });
+    document.getElementById('grandTotal').textContent = fmt(sum);
+}
+
+// ── SAVE QUOTE ────────────────────────────────────────────────────────────────
+async function saveQuote() {
+    const name = document.getElementById('cName').value.trim();
+    if (!name) return alert('Customer name is required.');
+
+    const items = [];
+    let hasError = false;
+    document.querySelectorAll('[id^="row-"]').forEach(r => {
+        const id = r.id.split('-')[1];
+        const sel      = document.getElementById(`sel-${id}`);
+        const qty      = parseFloat(document.getElementById(`qty-${id}`)?.value)   || 0;
+        const price    = parseFloat(document.getElementById(`price-${id}`)?.value) || 0;
+        const tier     = document.getElementById(`tier-${id}`)?.value || 'retail';
+        const sellUnit = document.getElementById(`sell-unit-${id}`)?.value || 'bulk';
+
+        if (!sel?.value) return;
+        if (qty <= 0) { hasError = true; return; }
+
+        const opt = sel.options[sel.selectedIndex];
+        const itemName    = opt.dataset.name || opt.text.split(' —')[0];
+        const displayUnit = sellUnit === 'sub'
+            ? (opt.dataset.subUnit || 'unit')
+            : (opt.dataset.bulkUnit || 'unit');
+
+        items.push({
+            inventory_id: parseInt(sel.value),
+            item_name:    itemName,
+            qty_ordered:  qty,
+            unit_price:   price,
+            sell_unit:    sellUnit,
+            price_tier:   tier,
+            display_unit: displayUnit,
+        });
+    });
+
+    if (hasError) return alert('One or more items have invalid quantity.');
+    if (!items.length) return alert('Add at least one item.');
+
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = 'Saving…'; btn.disabled = true;
+    try {
+        const res = await window.apiFetch(API + '/sales-orders', {
+            method: 'POST',
+            body: JSON.stringify({
+                customerName:  name,
+                customerPhone: document.getElementById('cPhone').value.trim(),
+                validUntil:    document.getElementById('cValidUntil').value || null,
+                notes:         document.getElementById('cNotes').value.trim() || null,
+                items
+            })
+        });
+        if (res && res.ok) { closeCreateModal(); loadSalesOrders(); }
+        else {
+            const err = res ? await res.json() : {};
+            alert('Error: ' + (err.message || 'Could not save quote.'));
         }
-    </script>
+    } catch(e) { alert('Network error: ' + e.message); }
+    finally { btn.textContent = 'Save Quote'; btn.disabled = false; }
+}
+
+// ── STATUS UPDATE ─────────────────────────────────────────────────────────────
+async function confirmStatus(id, status) {
+    const action = status === 'Cancelled' ? 'cancel this order' : `mark as ${status}`;
+    if (!confirm(`Are you sure you want to ${action}?`)) return;
+    const res = await window.apiFetch(API + `/sales-orders/${id}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
+    });
+    if (res && res.ok) { loadSalesOrders(); closeViewModal(); }
+    else {
+        const err = res ? await res.json() : {};
+        alert('Error: ' + (err.message || 'Could not update status.'));
+    }
+}
+
+// ── FULFILL → POS CART ────────────────────────────────────────────────────────
+function fulfillOrder(id) {
+    if (!confirm('Items will be loaded into your POS Cart on the Inventory page. Continue?')) return;
+    window.location.href = `/inventory?fulfill_so=${id}`;
+}
+
+// ── VIEW MODAL ────────────────────────────────────────────────────────────────
+function viewOrder(id) {
+    const so = allOrders.find(o => o.id === id);
+    if (!so) return;
+
+    document.getElementById('viewTitle').textContent = so.so_number;
+    document.getElementById('viewSubtitle').textContent =
+        `${so.customer_name}${so.customer_phone ? ' · '+so.customer_phone : ''} · ${new Date(so.order_date).toLocaleDateString()}`;
+
+    const items = so.sales_order_items || [];
+    const rows = items.map(i => {
+        const tierLabel = i.price_tier === 'fundi' ? '🔨 Fundi' : i.price_tier === 'wholesale' ? '📦 WS' : '';
+        const unitLabel = i.display_unit || (i.sell_unit === 'sub' ? 'unit' : '');
+        return `<tr class="view-item-row">
+            <td style="font-weight:700;text-transform:uppercase;">${esc(i.item_name)}</td>
+            <td style="text-align:center;">${i.qty_ordered}${unitLabel ? ' '+esc(unitLabel) : ''}</td>
+            <td style="text-align:center;font-size:9px;">${tierLabel || '🏷️ Retail'}</td>
+            <td style="text-align:right;font-family:var(--mono);">KES ${fmt(i.unit_price)}</td>
+            <td style="text-align:right;font-family:var(--mono);font-weight:900;">KES ${fmt(i.line_total)}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('viewBody').innerHTML = `
+        <div class="g2">
+            <div>
+                <label class="flabel">Status</label>
+                <span class="badge badge-${so.status}" style="font-size:11px;padding:5px 12px;">${so.status}</span>
+            </div>
+            <div>
+                <label class="flabel">Total</label>
+                <div style="font-family:var(--mono);font-size:18px;font-weight:900;color:var(--green);">KES ${fmt(so.total_amount)}</div>
+            </div>
+        </div>
+        ${so.valid_until ? `<div><label class="flabel">Valid Until</label><div style="font-weight:700;">${new Date(so.valid_until).toLocaleDateString()}</div></div>` : ''}
+        ${so.notes ? `<div><label class="flabel">Notes</label><div style="font-size:12px;color:var(--muted);">${esc(so.notes)}</div></div>` : ''}
+        <div>
+            <label class="flabel">Items</label>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                <table style="min-width:400px;">
+                    <thead style="background:rgba(255,255,255,0.03);">
+                        <tr>
+                            <th style="text-align:left;padding:8px 12px;font-size:9px;text-transform:uppercase;color:var(--muted);">Item</th>
+                            <th style="text-align:center;padding:8px 4px;font-size:9px;text-transform:uppercase;color:var(--muted);">Qty</th>
+                            <th style="text-align:center;padding:8px 4px;font-size:9px;text-transform:uppercase;color:var(--muted);">Tier</th>
+                            <th style="text-align:right;padding:8px 4px;font-size:9px;text-transform:uppercase;color:var(--muted);">Unit Price</th>
+                            <th style="text-align:right;padding:8px 12px;font-size:9px;text-transform:uppercase;color:var(--muted);">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:12px;">${rows}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    const foot = document.getElementById('viewFoot');
+    foot.innerHTML = `
+        <button onclick="closeViewModal()" class="btn btn-ghost">Close</button>
+        <button onclick="printProforma(${so.id})" class="btn btn-blue">🖨️ Print Quote</button>
+        ${so.status === 'Quote'     ? `<button onclick="confirmStatus(${so.id},'Confirmed')" class="btn btn-green">✓ Confirm</button>` : ''}
+        ${(so.status==='Quote'||so.status==='Confirmed') ? `<button onclick="fulfillOrder(${so.id})" class="btn btn-amber">🛒 Fulfill in POS</button>` : ''}
+        ${(so.status==='Quote'||so.status==='Confirmed') ? `<button onclick="confirmStatus(${so.id},'Cancelled')" class="btn btn-red">✕ Cancel</button>` : ''}
+    `;
+
+    document.getElementById('viewModal').classList.add('open');
+}
+function closeViewModal() { document.getElementById('viewModal').classList.remove('open'); }
+
+// ── PRINT PROFORMA ────────────────────────────────────────────────────────────
+function printProforma(soId) {
+    const so = allOrders.find(o => o.id === soId);
+    if (!so) return;
+
+    const items = so.sales_order_items || [];
+    const rows = items.map(i => {
+        const tierLabel = i.price_tier === 'fundi' ? ' [Fundi]' : i.price_tier === 'wholesale' ? ' [Wholesale]' : '';
+        const unitLabel = i.display_unit || '';
+        return `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:10px 4px;font-weight:700;text-transform:uppercase;">${esc(i.item_name)}${tierLabel}</td>
+            <td style="padding:10px 4px;text-align:center;">${i.qty_ordered}${unitLabel ? ' '+unitLabel : ''}</td>
+            <td style="padding:10px 4px;text-align:right;">KES ${fmt(i.unit_price)}</td>
+            <td style="padding:10px 4px;text-align:right;font-weight:900;">KES ${fmt(i.line_total)}</td>
+        </tr>`;
+    }).join('');
+
+    const isExpired = so.valid_until && new Date(so.valid_until) < new Date();
+    const validLine = so.valid_until
+        ? `<p style="margin:4px 0 0;">Valid Until: <strong>${new Date(so.valid_until).toLocaleDateString()}</strong>${isExpired ? ' <span style="color:red;">[EXPIRED]</span>' : ''}</p>`
+        : '<p style="margin:4px 0 0;">Valid for 7 Days from date of issue</p>';
+
+    const pa = document.getElementById('printArea');
+    pa.style.display = 'block';
+    pa.innerHTML = `
+        <div style="max-width:800px;margin:0 auto;font-family:Arial,sans-serif;">
+            <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px;">
+                <h1 style="font-size:22px;font-weight:900;margin:0;letter-spacing:2px;">ELITE HARDWARE LTD</h1>
+                <h2 style="font-size:14px;color:#555;margin:4px 0;letter-spacing:4px;">PROFORMA INVOICE</h2>
+                <p style="font-size:11px;color:#777;margin:2px 0;">KRA PIN: A014661185V</p>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;margin-bottom:28px;font-size:13px;">
+                <div>
+                    <p style="margin:0 0 3px;color:#666;font-size:10px;text-transform:uppercase;">Bill To</p>
+                    <p style="margin:0;font-weight:900;font-size:16px;text-transform:uppercase;">${esc(so.customer_name)}</p>
+                    ${so.customer_phone ? `<p style="margin:3px 0 0;color:#555;">${esc(so.customer_phone)}</p>` : ''}
+                </div>
+                <div style="text-align:right;">
+                    <p style="margin:0 0 3px;color:#666;font-size:10px;text-transform:uppercase;">Proforma Ref</p>
+                    <p style="margin:0;font-weight:900;font-size:16px;font-family:monospace;">${esc(so.so_number)}</p>
+                    <p style="margin:3px 0 0;color:#555;">Date: ${new Date(so.order_date).toLocaleDateString()}</p>
+                    ${validLine}
+                    <p style="margin:3px 0 0;"><span style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:900;background:${so.status==='Fulfilled'?'#dcfce7;color:#166534':so.status==='Cancelled'?'#fee2e2;color:#991b1b':so.status==='Confirmed'?'#dbeafe;color:#1e40af':'#f1f5f9;color:#475569'};">${so.status}</span></p>
+                </div>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+                <thead>
+                    <tr style="background:#000;color:#fff;">
+                        <th style="padding:10px 4px;text-align:left;">Description</th>
+                        <th style="padding:10px 4px;text-align:center;">Qty</th>
+                        <th style="padding:10px 4px;text-align:right;">Unit Price (KES)</th>
+                        <th style="padding:10px 4px;text-align:right;">Amount (KES)</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+
+            <div style="text-align:right;margin-bottom:32px;border-top:2px solid #000;padding-top:12px;">
+                <p style="font-size:11px;color:#666;margin:0 0 4px;text-transform:uppercase;letter-spacing:1px;">Grand Total</p>
+                <p style="font-size:26px;font-weight:900;margin:0;font-family:monospace;">KES ${fmt(so.total_amount)}</p>
+            </div>
+
+            ${so.notes ? `<div style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;"><strong>Notes:</strong> ${esc(so.notes)}</div>` : ''}
+
+            <div style="border-top:1px solid #000;padding-top:14px;font-size:10px;color:#555;text-align:center;line-height:1.6;">
+                <p>This is a quotation/proforma invoice — not a tax receipt. Payment must be received before goods are released.</p>
+                <p>Stock is subject to availability at the time of payment. Prices locked as quoted.</p>
+                <p style="font-weight:900;margin-top:8px;">Thank you for choosing Elite Hardware!</p>
+            </div>
+        </div>
+    `;
+    window.print();
+    setTimeout(() => { pa.style.display = 'none'; }, 1200);
+}
+</script>
 </body>
 </html>
