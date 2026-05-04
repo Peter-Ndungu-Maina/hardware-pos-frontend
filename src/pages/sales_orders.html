@@ -240,12 +240,24 @@ let allInventory = [];
 let allOrders    = [];
 let rowCount     = 0;
 let activeFilter = '';
+let BUSINESS_PIN = '';  // fetched from /api/business-info — never hardcoded
+
+async function fetchBusinessPin() {
+    try {
+        const res = await window.apiFetch(API + '/business-info');
+        if (res && res.ok) {
+            const d = await res.json();
+            if (d.kraPin) BUSINESS_PIN = d.kraPin;
+        }
+    } catch(e) {}
+}
 
 // ── FORMAT HELPERS ────────────────────────────────────────────────────────────
 const fmt = n => Number(n||0).toLocaleString('en-KE', {minimumFractionDigits:2, maximumFractionDigits:2});
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 document.addEventListener('eliteAuthReady', () => {
+    fetchBusinessPin();
     loadInventory();
     loadSalesOrders();
     // Default valid-until to 7 days from now
@@ -626,8 +638,18 @@ function fulfillOrder(id) {
 }
 
 // ── VIEW MODAL ────────────────────────────────────────────────────────────────
-function viewOrder(id) {
-    const so = allOrders.find(o => o.id === id);
+async function viewOrder(id) {
+    let so = allOrders.find(o => o.id === id);
+    // Fetch fresh to ensure items are populated
+    try {
+        const res = await window.apiFetch(API + `/sales-orders/${id}`);
+        if (res && res.ok) {
+            so = await res.json();
+            // Update local cache
+            const idx = allOrders.findIndex(o => o.id === id);
+            if (idx > -1) allOrders[idx] = so;
+        }
+    } catch(e) {}
     if (!so) return;
 
     document.getElementById('viewTitle').textContent = so.so_number;
@@ -693,11 +715,21 @@ function viewOrder(id) {
 function closeViewModal() { document.getElementById('viewModal').classList.remove('open'); }
 
 // ── PRINT PROFORMA ────────────────────────────────────────────────────────────
-function printProforma(soId) {
-    const so = allOrders.find(o => o.id === soId);
-    if (!so) return;
+async function printProforma(soId) {
+    // Always fetch fresh data so items are guaranteed to be populated
+    let so = allOrders.find(o => o.id === soId);
+    try {
+        const res = await window.apiFetch(API + `/sales-orders/${soId}`);
+        if (res && res.ok) so = await res.json();
+    } catch(e) {}
+    if (!so) return alert('Could not load order details.');
 
     const items = so.sales_order_items || [];
+    if (!items.length) {
+        // Also update local cache so subsequent prints work without re-fetching
+        const idx = allOrders.findIndex(o => o.id === soId);
+        if (idx > -1) allOrders[idx] = so;
+    }
     const rows = items.map(i => {
         const tierLabel = i.price_tier === 'fundi' ? ' [Fundi]' : i.price_tier === 'wholesale' ? ' [Wholesale]' : '';
         const unitLabel = i.display_unit || '';
@@ -721,7 +753,7 @@ function printProforma(soId) {
             <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:16px;margin-bottom:24px;">
                 <h1 style="font-size:22px;font-weight:900;margin:0;letter-spacing:2px;">ELITE HARDWARE LTD</h1>
                 <h2 style="font-size:14px;color:#555;margin:4px 0;letter-spacing:4px;">PROFORMA INVOICE</h2>
-                <p style="font-size:11px;color:#777;margin:2px 0;">KRA PIN: A014661185V</p>
+                ${BUSINESS_PIN ? `<p style="font-size:11px;color:#777;margin:2px 0;">KRA PIN: ${BUSINESS_PIN}</p>` : ''}
             </div>
 
             <div style="display:flex;justify-content:space-between;margin-bottom:28px;font-size:13px;">
