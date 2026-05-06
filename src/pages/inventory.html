@@ -672,6 +672,10 @@ document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
     const phone = e.target.value.trim();
     const nameInput = document.getElementById('cartCustomer');
     nameInput.classList.remove('ring-emerald-500','ring-blue-400');
+    // Remove any stale credit warning
+    const existingWarn = document.getElementById('creditLimitWarning');
+    if (existingWarn) existingWarn.remove();
+
     if (phone.length >= 10) {
         try {
             const res = await apiFetch(`${API_URL}/customers/${phone}`);
@@ -679,8 +683,39 @@ document.getElementById('cartMpesaId').addEventListener('input', async (e) => {
                 const customer = await res.json();
                 if (nameInput.value.trim() === '') { nameInput.value = customer.name; nameInput.classList.add('ring-2','ring-emerald-500'); }
                 else { nameInput.classList.add('ring-2','ring-blue-400'); }
+
+                // Show credit limit banner if Credit method is selected
+                const method = document.getElementById('cartMethod')?.value;
+                if (method === 'Credit' && customer.credit_limit !== null && customer.credit_limit !== undefined) {
+                    const debt  = parseFloat(customer.total_debt  || 0);
+                    const limit = parseFloat(customer.credit_limit);
+                    const remaining = Math.max(0, limit - debt);
+                    const blocked   = debt >= limit;
+                    const phoneEl   = document.getElementById('cartMpesaId');
+                    const warn = document.createElement('div');
+                    warn.id = 'creditLimitWarning';
+                    warn.style.cssText = `margin-top:6px;padding:8px 12px;border-radius:10px;font-size:11px;font-weight:700;display:flex;justify-content:space-between;align-items:center;
+                        background:${blocked ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)'};
+                        border:1px solid ${blocked ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'};
+                        color:${blocked ? '#dc2626' : '#d97706'};`;
+                    warn.innerHTML = blocked
+                        ? `<span>🚫 CREDIT BLOCKED — Owes KES ${debt.toLocaleString()} / Limit KES ${limit.toLocaleString()}</span><span style="font-size:10px;">Must clear debt first</span>`
+                        : `<span>⚠ Credit used: KES ${debt.toLocaleString()} / ${limit.toLocaleString()}</span><span>Remaining: KES ${remaining.toLocaleString()}</span>`;
+                    phoneEl.parentNode.insertBefore(warn, phoneEl.nextSibling);
+                }
             }
         } catch(err) {}
+    }
+});
+
+// Also re-check credit limit when payment method changes
+document.getElementById('cartMethod')?.addEventListener('change', () => {
+    const existingWarn = document.getElementById('creditLimitWarning');
+    if (existingWarn) existingWarn.remove();
+    // Trigger phone re-lookup by simulating input event
+    const phoneInput = document.getElementById('cartMpesaId');
+    if (phoneInput && phoneInput.value.trim().length >= 10) {
+        phoneInput.dispatchEvent(new Event('input'));
     }
 });
 
@@ -1474,7 +1509,15 @@ async function finalizeCartSale() {
         const receiptItems=[...cart]; let totalAmount=0; cart.forEach(i=>{ totalAmount+=i.price*i.quantity; });
         const cartRes=await apiFetch(`${API_URL}/sell/cart`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ items:cart.map(i=>({itemId:i.itemId,quantity:i.quantity,sellUnit:i.sellUnit||'bulk'})), paymentMethod:serverMethod, mpesaId:phone, mpesaCode:code, customerName:customer, customerPin:customerPin||null, amountPaid:serverMethod==='Credit'?0:totalAmount, isC2B:c2bMode, priceTier:document.getElementById('cartPriceTier')?.value||'retail' }) });
         const cartData=await cartRes.json();
-        if (!cartData.success) throw new Error(cartData.message);
+        if (!cartData.success) {
+            if (cartData.creditBlocked) {
+                // Show a prominent credit limit alert instead of a generic error
+                alert(`🚫 CREDIT SALE BLOCKED\n\n${cartData.message}\n\nAsk the customer to pay their outstanding balance before proceeding with a new credit sale.`);
+                isFinalizing=false; document.getElementById('checkoutBtn').innerText="COMPLETE TRANSACTION"; document.getElementById('cartMethod').disabled=false;
+                return;
+            }
+            throw new Error(cartData.message);
+        }
         showMultiReceipt(customer,effectiveMethod,totalAmount,receiptItems,phone,code,cartData.receiptNumber,cartData.invoiceNumber,cartData.dnNumber,cartData.kraReceiptNo,cartData.kraQrUrl,cartData.Control_unit_number,cartData.kraQrDataUrl);
         clearCart(); document.getElementById('cartCustomer').value=''; document.getElementById('cartMpesaId').value=''; document.getElementById('cartMpesaCode').value='';
         if(document.getElementById('cartKraPin')) document.getElementById('cartKraPin').value='';
@@ -1503,6 +1546,13 @@ function fetchBusinessInfo() {
 
 async function showMultiReceipt(customer,method,total,items,phone='',code='',receiptNumber=null,invoiceNumber=null,dnNumber=null,kraReceiptNo=null,kraQrUrl=null,controlUnitNumber=null,kraQrDataUrl=null) {
     if (!_businessInfoReady) await fetchBusinessInfo();
+    // Guarantee a local base64 QR — never calls api.qrserver.com at render time.
+    // Server sends kraQrDataUrl for new sales. For reprints, clientGenerateQrDataUrl
+    // uses the local QRCode.js library. Either way the <img src> is always a data: URL.
+    if (!kraQrDataUrl) {
+        const _qrStr = kraQrUrl || ('PIN:'+(BUSINESS_PIN||'PENDING')+'|REF:'+(receiptNumber||invoiceNumber||Date.now())+'|AMT:'+parseFloat(total).toFixed(2)+'|DATE:'+new Date().toLocaleDateString());
+        kraQrDataUrl = await clientGenerateQrDataUrl(_qrStr);
+    }
     const date=new Date().toLocaleString(), hardwareName="ELITE HARDWARE LTD";
     const _mr=(method||'').trim();
     if(/equity|equitel/i.test(_mr)) method='Equity Mobile Money';
@@ -1514,10 +1564,10 @@ async function showMultiReceipt(customer,method,total,items,phone='',code='',rec
     if(method==='Credit'){docType="OFFICIAL CREDIT INVOICE";mainButtonLabel="PRINT INVOICE";methodColor="text-red-600";}
     else if(method==='M-Pesa') methodColor="text-emerald-600";
     else if(method==='Equity Mobile Money') methodColor="text-amber-500";
-    const headerHtml=`<div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono"><h2 class="font-black text-xl uppercase tracking-tighter text-slate-800">${hardwareName}</h2><p id="receiptDocType" class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">${docType}</p><div class="flex justify-center gap-4 mt-1"><p class="text-[8px] font-bold text-slate-400">KRA PIN: ${BUSINESS_PIN||'PENDING'}</p></div></div><div class="space-y-1 mb-6 text-[11px] font-mono">${invoiceNumber?`<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">INVOICE NO:</span><span class="font-black uppercase">${invoiceNumber}</span></div>`:''} ${!invoiceNumber&&receiptNumber?`<div class="flex justify-between border-b pb-2 mb-1"><span class="font-black">RECEIPT NO:</span><span class="font-black uppercase">${receiptNumber}</span></div>`:''}<div class="flex justify-between"><span>DATE:</span><span class="font-bold">${date}</span></div><div class="flex justify-between border-t border-b py-2 my-2 bg-slate-50 px-1"><span>CUSTOMER:</span><span class="font-black uppercase text-slate-900">${window.escHtml(customer)}</span></div>${phone?`<div class="flex justify-between"><span>PHONE:</span><span class="font-bold">${window.escHtml(maskedPhone)}</span></div>`:''}<div class="flex justify-between"><span>METHOD:</span><span class="font-bold uppercase ${methodColor}">${method}</span></div>${code?`<div class="flex justify-between"><span>TRANS ID:</span><span class="font-bold uppercase text-emerald-600">${code.toUpperCase()}</span></div>`:''}<div class="flex justify-between border-t pt-2 mt-1"><span>SERVED BY:</span><span class="font-bold uppercase">${window.EliteAuth?.name||'Staff'}</span></div></div>`;
-    const itemsHtml=`<table class="w-full text-left font-mono text-[11px] mb-4" id="receiptTable"><thead><tr class="border-b-2 border-slate-900 text-slate-400 uppercase text-[9px]"><th class="py-2 pr-1">Description</th><th class="py-2 text-center">Qty</th><th class="py-2 text-right price-col">Unit</th><th class="py-2 text-right price-col">Amount</th></tr></thead><tbody class="divide-y divide-gray-100">${items.map(i=>{const ul=i.displayUnit||'';const tl=i.appliedTier==='fundi'?' [F]':i.appliedTier==='wholesale'||i.appliedTier==='wholesale_auto'?' [W]':i.appliedTier==='sub'?` [${ul}]`:'';return `<tr><td class="py-2 pr-1 font-bold uppercase text-slate-800 text-[10px]">${window.escHtml(i.itemName)}${tl}</td><td class="py-2 text-center font-bold">${i.quantity}${ul?' '+ul:''}</td><td class="py-2 text-right price-col">${parseFloat(i.price).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="py-2 text-right font-bold price-col">${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;}).join('')}</tbody></table>`;
+    const headerHtml=`<div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;font-family:'Courier New',monospace;"><div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">${hardwareName}</div><div id="receiptDocType" style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">${docType}</div><div style="font-size:8px;color:#666;">KRA PIN: ${BUSINESS_PIN||'PENDING'}</div></div><div style="font-family:'Courier New',monospace;font-size:11px;margin-bottom:8px;">${invoiceNumber?`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #ddd;margin-bottom:4px;"><span style="font-weight:900;">INVOICE NO:</span><span style="font-weight:900;text-transform:uppercase;">${invoiceNumber}</span></div>`:''} ${!invoiceNumber&&receiptNumber?`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #ddd;margin-bottom:4px;"><span style="font-weight:900;">RECEIPT NO:</span><span style="font-weight:900;text-transform:uppercase;">${receiptNumber}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div><div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${window.escHtml(customer)}</span></div>${phone?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>PHONE:</span><span style="font-weight:700;">${window.escHtml(maskedPhone)}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>METHOD:</span><span style="font-weight:900;text-transform:uppercase;">${method}</span></div>${code?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>TRANS ID:</span><span style="font-weight:900;text-transform:uppercase;color:#16a34a;">${code.toUpperCase()}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;border-top:1px solid #ddd;margin-top:4px;padding-top:4px;"><span>SERVED BY:</span><span style="font-weight:900;text-transform:uppercase;">${window.EliteAuth?.name||'Staff'}</span></div></div>`;
+    const itemsHtml=`<table style="width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:10px;margin-bottom:4px;" id="receiptTable"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Description</th><th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:36px;">Qty</th><th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:52px;">Unit</th><th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:58px;">Amount</th></tr></thead><tbody>${items.map(i=>{const ul=i.displayUnit||'';const tl=i.appliedTier==='fundi'?' [F]':i.appliedTier==='wholesale'||i.appliedTier==='wholesale_auto'?' [W]':i.appliedTier==='sub'?` [${ul}]`:'';return `<tr style="border-bottom:1px solid #eee;"><td style="padding:4px 2px;font-weight:900;text-transform:uppercase;font-size:10px;">${window.escHtml(i.itemName)}${tl}</td><td style="padding:4px 2px;text-align:center;font-weight:700;">${i.quantity}${ul?' '+ul:''}</td><td style="padding:4px 2px;text-align:right;">${parseFloat(i.price).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td style="padding:4px 2px;text-align:right;font-weight:900;">${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;}).join('')}</tbody></table>`;
     const ta=parseFloat(total),va=ta*VAT_RATE/(1+VAT_RATE),ev=ta-va;
-    const totalBlock=`<div id="totalDisplayBlock" style="border-top:2px solid #000;margin-top:10px;padding-top:4px;font-family:'Courier New',monospace;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>Subtotal (ex-VAT):</span><span style="font-weight:bold;">KES ${ev.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>VAT (16%):</span><span style="font-weight:bold;">KES ${va.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:6px;margin-top:4px;"><span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total (incl. VAT)</span><span style="font-size:16px;font-weight:900;">KES ${ta.toLocaleString()}</span></div></div><div style="font-size:9px;text-align:center;font-style:italic;color:#000;font-family:'Courier New',monospace;line-height:1.3;margin:12px 0;"><p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p></div><div class="mt-4 pt-4" style="border-top:1px dashed #000;text-align:center;font-family:'Courier New',monospace;color:#000;"><p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">KRA eTIMS RECEIPT</p><div style="display:flex;justify-content:center;margin:10px 0;"><img src="${kraQrDataUrl||('https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(kraQrUrl||('PIN:'+(BUSINESS_PIN||'PENDING')+'|REF:'+(receiptNumber||invoiceNumber||Date.now())+'|AMT:'+ta+'|DATE:'+new Date().toLocaleDateString())))}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA eTIMS QR"/></div><div style="font-size:9px;text-align:left;padding:0 4px;"><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Receipt No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${invoiceNumber||receiptNumber||'N/A'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Kra Receipt:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${kraReceiptNo||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>CU No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${controlUnitNumber||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;"><span>eTIMS Status:</span><span style="font-weight:900;color:${kraReceiptNo?'green':'#E8640A'};">${kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span></div></div><p style="margin-top:10px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p></div>`;
+    const totalBlock=`<div id="totalDisplayBlock" style="border-top:2px solid #000;margin-top:10px;padding-top:4px;font-family:'Courier New',monospace;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>Subtotal (ex-VAT):</span><span style="font-weight:bold;">KES ${ev.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>VAT (16%):</span><span style="font-weight:bold;">KES ${va.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:6px;margin-top:4px;"><span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total (incl. VAT)</span><span style="font-size:16px;font-weight:900;">KES ${ta.toLocaleString()}</span></div></div><div style="font-size:9px;text-align:center;font-style:italic;color:#000;font-family:'Courier New',monospace;line-height:1.3;margin:12px 0;"><p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p></div><div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;color:#000;"><p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">KRA eTIMS RECEIPT</p><div style="display:flex;justify-content:center;margin:10px 0;"><img src="${kraQrDataUrl||''}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA eTIMS QR"/></div><div style="font-size:9px;text-align:left;padding:0 4px;"><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Receipt No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${invoiceNumber||receiptNumber||'N/A'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Kra Receipt:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${kraReceiptNo||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>CU No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${controlUnitNumber||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;"><span>eTIMS Status:</span><span style="font-weight:900;color:${kraReceiptNo?'green':'#E8640A'};">${kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span></div></div><p style="margin-top:10px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p></div>`;
     window._currentReceiptNumber=receiptNumber; window._currentInvoiceNumber=invoiceNumber; window._currentDnNumber=dnNumber;
     window._lastReceiptData={ customer,method,total,items,phone,code,receiptNumber,invoiceNumber,dnNumber,kraReceiptNo,kraQrUrl,kraQrDataUrl,controlUnitNumber,servedBy:window.EliteAuth?.name||'Staff',date:new Date().toLocaleString() };
     document.getElementById('receiptDate').innerHTML=headerHtml;
@@ -1555,8 +1605,10 @@ function _browserPrintFallback(data,onlyDN=false,printAll=false){
     document.body.appendChild(pa);
     const qrImg=pa.querySelector('img[alt="KRA eTIMS QR"]');
     const doPrint=()=>{ window.print(); setTimeout(()=>pa.remove(),1000); };
-    if(qrImg&&!qrImg.complete){qrImg.onload=doPrint;qrImg.onerror=doPrint;setTimeout(doPrint,5000);}
-    else setTimeout(doPrint,250);
+    // data: URLs are already in memory — skip the network load wait entirely.
+    const isQrDataUrl=qrImg&&qrImg.src&&qrImg.src.startsWith('data:');
+    if(qrImg&&!isQrDataUrl&&!qrImg.complete){qrImg.onload=doPrint;qrImg.onerror=doPrint;setTimeout(doPrint,5000);}
+    else setTimeout(doPrint,150);
 }
 
 async function clientGenerateQrDataUrl(text){

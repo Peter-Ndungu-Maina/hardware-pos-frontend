@@ -41,6 +41,16 @@
                             Cement, Plumbing, Electrical, Fasteners, Paint, Steel & Metal, Timber & Wood, Tools, Doors & Windows, Sanitary Ware, General
                         </p>
                     </div>
+                    <div class="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                        <p class="text-xs text-emerald-400 font-bold mb-1">✦ Sub-Unit Support — for items sold in smaller units (e.g. Carton → Pieces):</p>
+                        <p class="text-[10px] text-slate-400 leading-relaxed font-mono">
+                            <strong class="text-emerald-300">Bulk Unit</strong> = outer package (e.g. Carton) &nbsp;·&nbsp;
+                            <strong class="text-emerald-300">Sub Unit</strong> = inner unit (e.g. PCS, KG) &nbsp;·&nbsp;
+                            <strong class="text-emerald-300">Sub Unit Qty</strong> = how many sub-units per bulk (e.g. 100) &nbsp;·&nbsp;
+                            <strong class="text-emerald-300">Sub Unit Price</strong> = price per sub-unit (e.g. 15)<br>
+                            Leave these blank for items with no sub-units.
+                        </p>
+                    </div>
                     <div id="dropZone" onclick="document.getElementById('bulkFileInput').click()"
                     style="border:2px dashed var(--border);border-radius:16px;padding:40px;text-align:center;cursor:pointer;transition:all 0.2s;"
                     onmouseover="this.style.borderColor='var(--green)';this.style.background='rgba(0,229,160,0.05)'"
@@ -143,54 +153,8 @@
                                 <input type="number" id="costPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
                             </div>
                             <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Retail Price (KES)</label>
+                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Selling Price (KES)</label>
                                 <input type="number" id="sellingPrice" required class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl font-bold outline-none">
-                            </div>
-                        </div>
-
-                        <!-- Multi-tier pricing -->
-                        <div class="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 p-4 space-y-3">
-                            <p class="text-[10px] font-black uppercase text-blue-600 tracking-widest">Optional: Price Tiers</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Fundi Price (KES)</label>
-                                    <input type="number" id="fundiPrice" placeholder="e.g. 700" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Wholesale Price (KES)</label>
-                                    <input type="number" id="wholesalePrice" placeholder="e.g. 650" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
-                                </div>
-                            </div>
-                            <div class="space-y-1">
-                                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Min Qty for Wholesale Auto-trigger</label>
-                                <input type="number" id="wholesaleMinQty" placeholder="e.g. 50 (bags, kgs, pcs...)" class="w-full p-3 bg-white border-2 border-transparent focus:border-blue-500 rounded-xl font-bold outline-none text-sm">
-                            </div>
-                        </div>
-
-                        <!-- Bulk/Sub unit conversion -->
-                        <div class="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50 p-4 space-y-3">
-                            <p class="text-[10px] font-black uppercase text-emerald-700 tracking-widest">Optional: Bulk ↔ Unit Conversion</p>
-                            <p class="text-[10px] text-slate-500">Use if you BUY by the carton/bag but SELL by the kg/piece. Leave blank if not applicable.</p>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Bulk Unit</label>
-                                    <input type="text" id="bulkUnit" placeholder="Carton" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sub Unit</label>
-                                    <input type="text" id="subUnit" placeholder="Kg" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Sub Units per Bulk</label>
-                                    <input type="number" id="subUnitQty" placeholder="e.g. 20 (Kgs per Carton)" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
-                                </div>
-                                <div class="space-y-1">
-                                    <label class="text-[10px] font-black uppercase text-emerald-700 tracking-widest">Sub Unit Price (KES)</label>
-                                    <input type="number" id="subUnitPrice" placeholder="e.g. 150 per Kg" class="w-full p-3 bg-white border-2 border-transparent focus:border-emerald-500 rounded-xl font-bold outline-none text-sm">
-                                    <p class="text-[9px] text-slate-400 font-bold">Price per single Kg/Pc when selling loose</p>
-                                </div>
                             </div>
                         </div>
 
@@ -358,8 +322,8 @@
 // ══════════════════════════════════════════════════════
 //  BULK IMPORT
 // ══════════════════════════════════════════════════════
-const BULK_COLS = ['itemName','category','unit','costPrice','sellingPrice','stockQty','deliveryNote', 'barcode'];
-const BULK_HEADERS = ['Item Name','Category','Unit','Buying Price','Selling Price','Qty','Delivery Note', 'Barcode'];
+const BULK_COLS = ['itemName','category','unit','costPrice','sellingPrice','stockQty','deliveryNote','barcode','bulkUnit','subUnit','subUnitQty','subUnitPrice'];
+const BULK_HEADERS = ['Item Name','Category','Unit','Buying Price','Selling Price','Qty','Delivery Note','Barcode','Bulk Unit','Sub Unit','Sub Unit Qty','Sub Unit Price'];
 let bulkData = [];
 
 // Drag and drop
@@ -424,7 +388,11 @@ const csvHeaderMap = {
     'selling price':'sellingPrice','sell price':'sellingPrice','sellingprice':'sellingPrice','price':'sellingPrice',
     'qty':'stockQty','quantity':'stockQty','stock':'stockQty','stockqty':'stockQty','initial qty':'stockQty',
     'delivery note':'deliveryNote','dn':'deliveryNote','deliverynote':'deliveryNote',
-    'barcode':'barcode','sku':'barcode' // <-- ADD THIS LINE
+    'barcode':'barcode','sku':'barcode',
+    'bulk unit':'bulkUnit','bulkunit':'bulkUnit',
+    'sub unit':'subUnit','subunit':'subUnit',
+    'sub unit qty':'subUnitQty','subunitqty':'subUnitQty','qty per unit':'subUnitQty','qtyperuit':'subUnitQty',
+    'sub unit price':'subUnitPrice','subunitprice':'subUnitPrice','piece price':'subUnitPrice'
 };
 
 // And update headerMap just below it:
@@ -471,8 +439,18 @@ const headerMap = {
                     'delivery note':  'deliveryNote',
                     'dn':             'deliveryNote',
                     'deliverynote':   'deliveryNote',
-                    'barcode':        'barcode', // <-- ADD THIS LINE
-                    'sku':            'barcode'  // <-- ADD THIS LINE   
+                    'barcode':        'barcode',
+                    'sku':            'barcode',
+                    'bulk unit':      'bulkUnit',
+                    'bulkunit':       'bulkUnit',
+                    'sub unit':       'subUnit',
+                    'subunit':        'subUnit',
+                    'sub unit qty':   'subUnitQty',
+                    'subunitqty':     'subUnitQty',
+                    'qty per unit':   'subUnitQty',
+                    'sub unit price': 'subUnitPrice',
+                    'subunitprice':   'subUnitPrice',
+                    'piece price':    'subUnitPrice'
                 };
 
                 rows = raw.map(r => {
@@ -523,9 +501,10 @@ function renderBulkPreview() {
     document.getElementById('bulkPreviewLabel').textContent = `Preview — ${bulkData.length} product(s) found`;
 
     // Add "KRA CODE" to the visual headers
-    document.getElementById('bulkPreviewHead').innerHTML = `<tr>${BULK_HEADERS.map(h =>
-        `<th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap;">${h}</th>`
-    ).join('')}
+    document.getElementById('bulkPreviewHead').innerHTML = `<tr>${BULK_HEADERS.map((h, i) => {
+        const isSubUnit = ['Bulk Unit','Sub Unit','Sub Unit Qty','Sub Unit Price'].includes(h);
+        return `<th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:${isSubUnit ? 'var(--green,#00e5a0)' : 'var(--muted)'};white-space:nowrap;">${h}${isSubUnit ? ' ✦' : ''}</th>`;
+    }).join('')}
     <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--blue);white-space:nowrap;">KRA CODE</th>
     <th style="padding:8px 12px;font-size:9px;font-weight:900;text-transform:uppercase;color:var(--muted);">Status</th></tr>`;
 
@@ -637,10 +616,10 @@ async function submitBulkImport() {
 function downloadTemplate() {
     const csv = [
         BULK_HEADERS.join(','),
-        'Cement 50KG,Cement,BAG,800,1200,50,DN-2026-001,6161234567890',
-        'Dulux Paint 4L,Paint,TIN,1500,2200,20,DN-2026-002,6160987654321',
-        'PVC Pipe 1/2",Plumbing,PCS,120,200,100,DN-2026-003,',
-        'Roofing Nails 1KG,Fasteners,KG,150,250,50,DN-2026-004,'
+        'Cement 50KG,Cement,BAG,800,1200,50,DN-2026-001,6161234567890,,,',
+        'Dulux Paint 4L,Paint,TIN,1500,2200,20,DN-2026-002,6160987654321,,,',
+        'PVC Pipe 1/2",Plumbing,PCS,120,200,100,DN-2026-003,,,,',
+        'Roofing Nails 1KG,Fasteners,CTN,3000,5000,12,DN-2026-004,,Carton,KG,20,250'
     ].join('\n');
     const a   = document.createElement('a');
     a.href    = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
@@ -764,23 +743,16 @@ document.getElementById('productForm').addEventListener('submit', async (e) => {
     // 2. Prepare product object
     const barcodeVal = document.getElementById('barcode').value.trim();
     const product = {
-        itemName:        document.getElementById('itemName').value,
-        category:        document.getElementById('categoryInput').value, 
-        unit:            document.getElementById('unit').value,
-        costPrice:       parseFloat(document.getElementById('costPrice').value),
-        sellingPrice:    parseFloat(document.getElementById('sellingPrice').value),
-        stockQty:        parseInt(document.getElementById('stockQty').value),
-        deliveryNote:    dn,
-        barcode:         barcodeVal || null,
-        fundiPrice:      parseFloat(document.getElementById('fundiPrice').value) || null,
-        wholesalePrice:  parseFloat(document.getElementById('wholesalePrice').value) || null,
-        wholesaleMinQty: parseInt(document.getElementById('wholesaleMinQty').value) || null,
-        bulkUnit:        document.getElementById('bulkUnit').value.trim() || null,
-        subUnit:         document.getElementById('subUnit').value.trim() || null,
-        subUnitQty:      parseFloat(document.getElementById('subUnitQty').value) || null,
-        subUnitPrice:    parseFloat(document.getElementById('subUnitPrice').value) || null,
-        role:            window.EliteAuth?.role || 'admin',
-        userName:        window.EliteAuth?.name || 'Admin'
+        itemName: document.getElementById('itemName').value,
+        category: document.getElementById('categoryInput').value, 
+        unit: document.getElementById('unit').value,
+        costPrice: parseFloat(document.getElementById('costPrice').value),
+        sellingPrice: parseFloat(document.getElementById('sellingPrice').value),
+        stockQty: parseInt(document.getElementById('stockQty').value),
+        deliveryNote: dn,
+        barcode: barcodeVal || null,
+        role: window.EliteAuth?.role || 'admin',
+        userName: window.EliteAuth?.name || 'Admin'
     };
 
     try {

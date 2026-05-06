@@ -70,6 +70,7 @@
                                 <th class="p-4">Customer Name</th>
                                 <th class="p-4">Phone Identity</th>
                                 <th class="p-4 text-red-600">Consolidated Balance</th>
+                                <th class="p-4 text-amber-600">Credit Limit</th>
                                 <th class="p-4 text-right no-print">Actions</th>
                             </tr>
                         </thead>
@@ -197,18 +198,35 @@ document.addEventListener('eliteAuthReady', function() {
         });
     function _ds_renderRows(rows) {
     const body = document.getElementById('statusTableBody');
-    if (!rows.length) { body.innerHTML = '<tr><td colspan="4" class="p-10 text-center text-slate-400 italic">No records on this page.</td></tr>'; return; }
+    const role = window.EliteAuth?.role || '';
+    const canManageLimit = ['admin','manager'].includes(role.toLowerCase());
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="5" class="p-10 text-center text-slate-400 italic">No records on this page.</td></tr>'; return; }
     body.innerHTML = rows.map(person => {
         const balance = parseFloat(person.total_debt) || 0;
+        const limit   = person.credit_limit !== null && person.credit_limit !== undefined ? parseFloat(person.credit_limit) : null;
+        const blocked = limit !== null && balance >= limit;
+        const limitBadge = limit === null
+            ? `<span class="text-slate-400 text-xs font-bold italic">No limit</span>`
+            : `<span class="text-xs font-black px-2 py-1 rounded-lg ${blocked ? 'bg-red-100 text-red-700' : 'bg-amber-50 text-amber-700'}">
+                ${blocked ? '🚫 ' : ''}KES ${limit.toLocaleString()}
+               </span>`;
+        const setLimitBtn = canManageLimit
+            ? `<button onclick="openCreditLimitModal('${esc(person.phone)}','${esc(person.name)}',${limit === null ? 'null' : limit})"
+                class="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase hover:bg-amber-200 transition ml-1">
+                ⚙ Limit
+               </button>`
+            : '';
         return `<tr class="hover:bg-slate-50 transition border-b border-slate-100">
             <td class="p-4 font-black text-slate-800 uppercase text-xs">${esc(person.name)}</td>
             <td class="p-4 text-slate-500 font-bold">${esc(person.phone)}</td>
             <td class="p-4 text-red-600 font-black">KES ${balance.toLocaleString()}</td>
-            <td class="p-4 text-right no-print">
-<button onclick="window.location.href='/debts_repayment?phone=${encodeURIComponent(person.phone || "")}&name=${encodeURIComponent(person.name || "")}'"
+            <td class="p-4">${limitBadge}</td>
+            <td class="p-4 text-right no-print flex justify-end gap-1 flex-wrap">
+                <button onclick="window.location.href='/debts_repayment?phone=${encodeURIComponent(person.phone || '')}&name=${encodeURIComponent(person.name || '')}'"
                     class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-emerald-600 transition shadow-sm">
                     View History
                 </button>
+                ${setLimitBtn}
             </td>
         </tr>`;
     }).join('');
@@ -239,6 +257,69 @@ function pg_ds(dir) {
     _pg_ds_draw();
 }
 
+// ── Credit Limit Modal ─────────────────────────────────────────────────────
+function openCreditLimitModal(phone, name, currentLimit) {
+    const existing = document.getElementById('creditLimitModal');
+    if (existing) existing.remove();
+    const limitDisplay = (currentLimit === null || currentLimit === 'null') ? '' : currentLimit;
+    const modal = document.createElement('div');
+    modal.id = 'creditLimitModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:20px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <div>
+                    <h3 style="font-size:16px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.5px;">Set Credit Limit</h3>
+                    <p style="font-size:11px;color:#64748b;font-weight:700;margin-top:2px;">${name} · ${phone}</p>
+                </div>
+                <button onclick="document.getElementById('creditLimitModal').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:900;color:#64748b;font-size:16px;">✕</button>
+            </div>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:11px;color:#92400e;font-weight:700;">
+                ⚠ Credit sales will be blocked once this customer's debt reaches this amount. Leave blank to remove the limit (unlimited credit).
+            </div>
+            <label style="display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px;">Credit Limit (KES)</label>
+            <input id="clLimitInput" type="number" min="0" placeholder="e.g. 5000 — blank = no limit"
+                value="${limitDisplay}"
+                style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:12px;font-size:14px;font-weight:700;outline:none;box-sizing:border-box;"
+                onfocus="this.style.borderColor='#f59e0b'" onblur="this.style.borderColor='#e2e8f0'">
+            <div id="clError" style="display:none;color:#dc2626;font-size:11px;font-weight:700;margin-top:6px;"></div>
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <button onclick="saveCreditLimit('${phone}')"
+                    style="flex:1;background:#0f172a;color:white;border:none;padding:12px;border-radius:12px;font-weight:900;font-size:12px;text-transform:uppercase;cursor:pointer;letter-spacing:1px;">
+                    ✓ Save
+                </button>
+                <button onclick="saveCreditLimit('${phone}', true)"
+                    style="background:#fee2e2;color:#dc2626;border:none;padding:12px 16px;border-radius:12px;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer;">
+                    🗑 Remove Limit
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    setTimeout(() => document.getElementById('clLimitInput')?.focus(), 50);
+}
+
+async function saveCreditLimit(phone, remove) {
+    const errEl = document.getElementById('clError');
+    errEl.style.display = 'none';
+    const raw   = document.getElementById('clLimitInput')?.value?.trim();
+    const value = remove ? null : (raw === '' ? null : parseFloat(raw));
+    if (!remove && raw !== '' && (isNaN(value) || value < 0)) {
+        errEl.textContent = 'Enter a valid positive number or leave blank to remove the limit.';
+        errEl.style.display = 'block'; return;
+    }
+    try {
+        const res  = await apiFetch(`${API_URL}/customers/${encodeURIComponent(phone)}/credit-limit`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credit_limit: value })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) { errEl.textContent = data.message || 'Failed.'; errEl.style.display = 'block'; return; }
+        document.getElementById('creditLimitModal').remove();
+        fetchDebtStatus();
+    } catch(e) {
+        errEl.textContent = 'Server error. Please try again.'; errEl.style.display = 'block';
+    }
+}
 </script>
 </body>
 </html>

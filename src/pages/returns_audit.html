@@ -918,6 +918,7 @@ function showVoucher(data) {
         servedBy:            data.servedBy            || window.EliteAuth?.name || localStorage.getItem('userName') || 'Staff',
         kraReturnRef:        data.kraReturnRef        || '',
         kraReturnQrUrl:      data.kraReturnQrUrl      || '',
+        kraReturnQrDataUrl:  data.kraReturnQrDataUrl  || '',
         etimsSubmitted:      data.etimsSubmitted      || false,
         date:                data.date                || new Date().toLocaleString(),
     };
@@ -928,33 +929,37 @@ function showVoucher(data) {
     const now        = window._lastCreditNoteData.date;
     const noteLabel  = data.returnReason === 'damaged' || data.returnReason === 'Damaged Goods' ? 'CREDIT NOTE' : 'EXCHANGE NOTE';
 
-    // KRA eTIMS block — matches inventory receipt style
-    const kraBlock = data.kraReturnQrUrl ? `
-        <div style="border-top:2px dashed #000;margin:8px 0;padding-top:10px;text-align:center;font-family:'Courier New',monospace;">
-            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">KRA eTIMS ${noteLabel}</div>
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}"
-                 style="width:120px;height:120px;image-rendering:pixelated;margin:0 auto;display:block;" alt="KRA QR" />
-            <div style="font-size:9px;margin-top:6px;text-align:left;padding:0 4px;">
-                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
-                    <span>KRA PIN:</span>
-                    <span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
-                </div>
-                ${data.kraReturnRef ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
-                    <span>KRA REF:</span>
-                    <span style="font-weight:900;">${data.kraReturnRef}</span>
-                </div>` : ''}
+    // KRA eTIMS block — uses server-generated base64 QR (works fully offline, no api.qrserver.com)
+    const _qrSrc = window._lastCreditNoteData.kraReturnQrDataUrl
+        || (data.kraReturnQrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}` : null);
+
+    const kraBlock = _qrSrc ? `
+        <div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;">
+            <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">KRA eTIMS ${noteLabel}</p>
+            <div style="display:flex;justify-content:center;margin:6px 0;">
+                <img src="${_qrSrc}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA QR" />
             </div>
-            <div style="border-top:1px solid #000;margin-top:8px;padding-top:5px;font-size:8px;font-weight:700;text-transform:uppercase;">
-                SCAN TO VERIFY ON KRA eTIMS
-            </div>
-        </div>` : `
-        <div style="border-top:2px dashed #000;margin:8px 0;padding-top:8px;text-align:center;">
-            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">KRA eTIMS ${noteLabel}</div>
             <div style="font-size:9px;text-align:left;padding:0 4px;">
-                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eee;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
                     <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
                 </div>
+                ${data.kraReturnRef ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA REF:</span><span style="font-weight:900;word-break:break-all;text-align:right;">${data.kraReturnRef}</span>
+                </div>` : ''}
                 <div style="display:flex;justify-content:space-between;padding:3px 0;">
+                    <span>eTIMS Status:</span>
+                    <span style="font-weight:900;color:${data.kraReturnRef?'green':'#E8640A'};">${data.kraReturnRef?'✓ VERIFIED':'⏳ PENDING'}</span>
+                </div>
+            </div>
+            <p style="margin-top:8px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p>
+        </div>` : `
+        <div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;">
+            <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">KRA eTIMS ${noteLabel}</p>
+            <div style="font-size:9px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;">
                     <span>eTIMS Status:</span>
                     <span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span>
                 </div>
@@ -962,48 +967,52 @@ function showVoucher(data) {
         </div>`;
 
     const voucherHTML = (copyLabel, copyClass) => `
-        <div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;">
-            <span class="copy-badge ${copyClass}">${copyLabel}</span>
-            <div style="text-align:center;font-size:14px;font-weight:900;">ELITE HARDWARE LTD</div>
-            <div style="text-align:center;font-size:9px;letter-spacing:2px;margin:2px 0;">EXCHANGE VOUCHER — ${noteLabel}</div>
-            <div style="text-align:center;font-size:8px;color:#888;">PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
-            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+        <div class="receipt-watermark" style="font-family:'Courier New',monospace;font-size:11px;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;">
+            <div class="${copyClass}" style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">${copyLabel}</div>
+
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">${noteLabel}</div>
+                <div style="font-size:8px;color:#666;">KRA PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
+            </div>
 
             <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
             <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:700;">${now}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${data.customerName || '—'}</span></div>
-            ${data.originalReceipt ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>RECEIPT NO:</span><span style="font-weight:700;font-family:'Courier New',monospace;">${data.originalReceipt}</span></div>` : ''}
-            ${data.kraReceiptNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>KRA RECEIPT:</span><span style="font-weight:700;font-family:'Courier New',monospace;">${data.kraReceiptNo}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;">
+                <span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${data.customerName || '—'}</span>
+            </div>
+            ${data.originalReceipt ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>RECEIPT NO:</span><span style="font-weight:900;">${data.originalReceipt}</span></div>` : ''}
+            ${data.kraReceiptNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>KRA RECEIPT:</span><span style="font-weight:900;word-break:break-all;text-align:right;max-width:55%;font-size:9px;">${data.kraReceiptNo}</span></div>` : ''}
             ${data.etimsNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>eTIMS NO:</span><span style="font-weight:900;color:#16a34a;">${data.etimsNo}</span></div>` : ''}
-            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>REASON:</span><span style="font-weight:700;text-transform:uppercase;">${reason}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>REASON:</span><span style="font-weight:900;text-transform:uppercase;">${reason}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:900;text-transform:uppercase;">${servedBy}</span></div>
 
             <div style="border-top:1px dashed #999;margin:6px 0;"></div>
 
-            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:4px;">
                 <thead><tr style="border-bottom:2px solid #000;">
-                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Item</th>
-                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:40px;">Qty</th>
-                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:60px;">Action</th>
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Description</th>
+                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:36px;">Qty</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:58px;">Action</th>
                 </tr></thead>
                 <tbody>
                     <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:6px 0;font-weight:700;text-transform:uppercase;">${data.returnedItemName || '—'}</td>
-                        <td style="padding:6px 0;text-align:center;font-weight:700;">${data.returnedQty}</td>
-                        <td style="padding:6px 0;text-align:right;font-size:9px;color:#dc2626;font-weight:900;">RETURNED</td>
+                        <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${data.returnedItemName || '—'}</td>
+                        <td style="padding:4px 2px;text-align:center;font-weight:700;">${data.returnedQty}</td>
+                        <td style="padding:4px 2px;text-align:right;font-size:9px;color:#dc2626;font-weight:900;">RETURNED</td>
                     </tr>
                     <tr>
-                        <td style="padding:6px 0;font-weight:700;text-transform:uppercase;">${data.replacementItemName || '—'}</td>
-                        <td style="padding:6px 0;text-align:center;font-weight:700;">${data.replacementQty}</td>
-                        <td style="padding:6px 0;text-align:right;font-size:9px;color:#16a34a;font-weight:900;">ISSUED</td>
+                        <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${data.replacementItemName || '—'}</td>
+                        <td style="padding:4px 2px;text-align:center;font-weight:700;">${data.replacementQty}</td>
+                        <td style="padding:4px 2px;text-align:right;font-size:9px;color:#16a34a;font-weight:900;">ISSUED</td>
                     </tr>
                 </tbody>
             </table>
-            
+
             ${kraBlock}
 
-            <div style="border-top:1px solid #000;padding-top:10px;margin-top:6px;">
-                <p style="margin:10px 0;font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
+            <div style="border-top:1px solid #000;padding-top:8px;margin-top:6px;">
+                <p style="margin:8px 0;font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
             </div>
             <p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:0.1em;">*** ${copyLabel} ***</p>
         </div>
@@ -1594,9 +1603,10 @@ async function submitExchange() {
             replacementItemName: repItemName,
             replacementQty:      parseInt(document.getElementById('fReplacementQty').value) || 1,
             returnReason:        reason,
-            kraReturnRef:        data.kraReturnRef   || null,
-            kraReturnQrUrl:      data.kraReturnQrUrl || null,
-            etimsSubmitted:      data.etimsSubmitted || false,
+            kraReturnRef:        data.kraReturnRef        || null,
+            kraReturnQrUrl:      data.kraReturnQrUrl      || null,
+            kraReturnQrDataUrl:  data.kraReturnQrDataUrl  || null,
+            etimsSubmitted:      data.etimsSubmitted      || false,
         };
         closeExchangeModal();
         loadReturns();
@@ -1636,6 +1646,7 @@ async function showVoucher(data) {
         servedBy:            data.servedBy            || window.EliteAuth?.name || localStorage.getItem('userName') || 'Staff',
         kraReturnRef:        data.kraReturnRef        || '',
         kraReturnQrUrl:      data.kraReturnQrUrl      || '',
+        kraReturnQrDataUrl:  data.kraReturnQrDataUrl  || '',
         etimsSubmitted:      data.etimsSubmitted      || false,
         date:                data.date                || new Date().toLocaleString(),
     };
@@ -1646,81 +1657,95 @@ async function showVoucher(data) {
     const now        = window._lastCreditNoteData.date;
     const noteLabel  = data.returnReason === 'damaged' || data.returnReason === 'Damaged Goods' ? 'CREDIT NOTE' : 'EXCHANGE VOUCHER';
 
-    // KRA eTIMS block — sleek inline layout matching inventory receipts
-    const kraBlock = data.kraReturnQrUrl ? `
-        <div style="border:1px solid #000; margin-top:10px; padding:8px 6px;">
-            <div style="text-align:center; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">KRA eTIMS ${noteLabel}</div>
-            <div style="text-align:center; margin:8px 0;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}" style="width:120px;height:120px;image-rendering:pixelated;margin:0 auto;display:block;" alt="KRA QR"/>
+    // KRA eTIMS block — uses server-generated base64 QR (works fully offline, no api.qrserver.com)
+    const _qrSrc2 = window._lastCreditNoteData.kraReturnQrDataUrl
+        || (data.kraReturnQrUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.kraReturnQrUrl)}` : null);
+
+    const kraBlock = _qrSrc2 ? `
+        <div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;">
+            <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">KRA eTIMS ${noteLabel}</p>
+            <div style="display:flex;justify-content:center;margin:6px 0;">
+                <img src="${_qrSrc2}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA QR"/>
             </div>
-            <div style="font-size:8px;font-style:italic;color:#888;margin-bottom:4px;text-align:center;">✓ Live eTIMS QR</div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span></div>
-            ${data.kraReturnRef ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>KRA REF:</span><span style="font-weight:900;">${data.kraReturnRef}</span></div>` : ''}
-            <div style="text-align:center;font-size:8px;font-weight:700;margin-top:6px;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</div>
+            <div style="font-size:9px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
+                </div>
+                ${data.kraReturnRef ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA REF:</span><span style="font-weight:900;word-break:break-all;text-align:right;">${data.kraReturnRef}</span>
+                </div>` : ''}
+                <div style="display:flex;justify-content:space-between;padding:4px 0;">
+                    <span>eTIMS Status:</span>
+                    <span style="font-weight:900;color:${data.kraReturnRef?'green':'#E8640A'};">${data.kraReturnRef?'✓ VERIFIED':'⏳ PENDING'}</span>
+                </div>
+            </div>
+            <p style="margin-top:8px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p>
         </div>` : `
-        <div style="border:1px solid #000; margin-top:10px; padding:8px 6px;">
-            <div style="text-align:center; font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase;">KRA eTIMS ${noteLabel}</div>
-            <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:2px 0; font-size:11px;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span></div>
-            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>eTIMS Status:</span><span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span></div>
+        <div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;font-family:'Courier New',monospace;">
+            <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;text-align:center;">KRA eTIMS ${noteLabel}</p>
+            <div style="font-size:9px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;">
+                    <span>eTIMS Status:</span>
+                    <span style="font-weight:900;color:#E8640A;">${data.etimsSubmitted ? 'SUBMITTED ✓' : 'PENDING'}</span>
+                </div>
+            </div>
         </div>`;
 
     const voucherHTML = (copyLabel, copyClass) => `
-    <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:12px 10px;background:#fff;color:#000;border-top:3px solid #ccc;border-bottom:3px solid #ccc;margin: 0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.2);">
-        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:22px; font-weight:900; color:rgba(0,0,0,0.055); letter-spacing:0.18em; white-space:nowrap; pointer-events:none; z-index:0;">ELITE HARDWARE</div>
-        
-        <div style="position:relative; z-index:1;">
-            <div class="${copyClass}" style="text-align:center; border:1px dashed #999; padding:3px; margin-bottom:8px; font-size:9px; font-weight:900; letter-spacing:0.2em; text-transform:uppercase;">${copyLabel}</div>
-            
-            <div style="text-align:center; font-size:14px; font-weight:900; letter-spacing:1px; text-transform:uppercase;">ELITE HARDWARE LTD</div>
-            <div style="text-align:center; font-size:9px; letter-spacing:2px; margin:2px 0; text-transform:uppercase;">${noteLabel}</div>
-            <div style="text-align:center; font-size:8px; color:#666;">PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
-            
-            <div style="border-top:1px dashed #999; margin:6px 0;"></div>
+    <div class="receipt-watermark" style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.055);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
 
-            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
-            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>DATE:</span><span style="font-weight:900;">${now}</span></div>
-            
-            <div style="display:flex; justify-content:space-between; padding:3px 2px; margin:2px 0; border-top:1px solid #ddd; border-bottom:1px solid #ddd; background:#f5f5f5; font-size:11px;">
-                <span>CUSTOMER:</span><span style="font-weight:900; text-transform:uppercase;">${data.customerName || '—'}</span>
+        <div style="position:relative;z-index:1;">
+            <div class="${copyClass}" style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">${copyLabel}</div>
+
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">${noteLabel}</div>
+                <div style="font-size:8px;color:#666;">KRA PIN: ${BUSINESS_PIN||'PENDING'} &nbsp;|&nbsp; NO CASH VALUE</div>
             </div>
-            
-            ${data.originalReceipt ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>RECEIPT NO:</span><span style="font-weight:900;">${data.originalReceipt}</span></div>` : ''}
-            ${data.kraReceiptNo ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>KRA RECEIPT:</span><span style="font-weight:900;">${data.kraReceiptNo}</span></div>` : ''}
-            ${data.etimsNo ? `<div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>eTIMS NO:</span><span style="font-weight:900; color:#16a34a;">${data.etimsNo}</span></div>` : ''}
-            
-            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>REASON:</span><span style="font-weight:900; text-transform:uppercase;">${reason}</span></div>
-            <div style="display:flex; justify-content:space-between; padding:2px 0; font-size:11px;"><span>SERVED BY:</span><span style="font-weight:900; text-transform:uppercase;">${servedBy}</span></div>
 
-            <div style="border-top:1px dashed #999; margin:6px 0;"></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>VOUCHER NO:</span><span style="font-weight:900;">${refNo}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:900;">${now}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;">
+                <span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${data.customerName || '—'}</span>
+            </div>
+            ${data.originalReceipt ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>RECEIPT NO:</span><span style="font-weight:900;">${data.originalReceipt}</span></div>` : ''}
+            ${data.kraReceiptNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>KRA RECEIPT:</span><span style="font-weight:900;word-break:break-all;text-align:right;max-width:55%;font-size:9px;">${data.kraReceiptNo}</span></div>` : ''}
+            ${data.etimsNo ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>eTIMS NO:</span><span style="font-weight:900;color:#16a34a;">${data.etimsNo}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>REASON:</span><span style="font-weight:900;text-transform:uppercase;">${reason}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:900;text-transform:uppercase;">${servedBy}</span></div>
 
-            <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px;">
-                <thead>
-                    <tr>
-                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:left;">Description</th>
-                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:center;">Qty</th>
-                        <th style="border-bottom:2px solid #000; padding:3px 2px; font-size:9px; text-transform:uppercase; color:#555; text-align:right;">Action</th>
-                    </tr>
-                </thead>
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:4px;">
+                <thead><tr style="border-bottom:2px solid #000;">
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Description</th>
+                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:36px;">Qty</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:58px;">Action</th>
+                </tr></thead>
                 <tbody>
-                    <tr>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; font-weight:900; text-transform:uppercase;">${data.returnedItemName || '—'}</td>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:center;">${data.returnedQty}</td>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:right; color:#dc2626; font-weight:900;">RETURNED</td>
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${data.returnedItemName || '—'}</td>
+                        <td style="padding:4px 2px;text-align:center;font-weight:700;">${data.returnedQty}</td>
+                        <td style="padding:4px 2px;text-align:right;font-size:9px;color:#dc2626;font-weight:900;">RETURNED</td>
                     </tr>
                     <tr>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; font-weight:900; text-transform:uppercase;">${data.replacementItemName || '—'}</td>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:center;">${data.replacementQty}</td>
-                        <td style="padding:3px 2px; border-bottom:1px solid #eee; text-align:right; color:#16a34a; font-weight:900;">ISSUED</td>
+                        <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${data.replacementItemName || '—'}</td>
+                        <td style="padding:4px 2px;text-align:center;font-weight:700;">${data.replacementQty}</td>
+                        <td style="padding:4px 2px;text-align:right;font-size:9px;color:#16a34a;font-weight:900;">ISSUED</td>
                     </tr>
                 </tbody>
             </table>
-            
+
             ${kraBlock}
 
-            <div style="border-top:1px solid #000; padding-top:10px; margin-top:6px; text-align:center;">
-                <p style="margin:10px 0; font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
+            <div style="border-top:1px solid #000;padding-top:8px;margin-top:6px;text-align:center;">
+                <p style="margin:8px 0;font-size:11px;"><b>CUSTOMER SIGN:</b><br>___________________</p>
             </div>
-            <div style="margin-top:8px; border-top:1px dashed #999;"></div>
+            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:8px;letter-spacing:0.1em;">*** ${copyLabel} ***</p>
         </div>
     </div>`;
 
@@ -1798,20 +1823,21 @@ function _browserPrintVoucher() {
     document.body.appendChild(printArea);
 
     // Wait for the QR code image to fully load before printing.
-    // The QR is fetched from api.qrserver.com and may not be ready in 250ms —
-    // same fix as inventory.html to prevent blank QR codes on printed receipts.
+    // If a base64 data URL is embedded (offline mode), the image is already in memory —
+    // skip the load-wait. Only wait if an external URL (api.qrserver.com) is being used.
     const qrImg = printArea.querySelector('img[alt="KRA QR"]');
     const doPrint = () => {
         window.print();
         setTimeout(() => printArea.remove(), 1000);
     };
-    if (qrImg && !qrImg.complete) {
+    const isDataUrl = qrImg && qrImg.src && qrImg.src.startsWith('data:');
+    if (qrImg && !isDataUrl && !qrImg.complete) {
         qrImg.onload  = doPrint;
         qrImg.onerror = doPrint; // print anyway if QR server is unreachable
         // Safety net: print after 5s even if neither event fires
         setTimeout(doPrint, 5000);
     } else {
-        setTimeout(doPrint, 250); // already loaded (or no QR image on this return)
+        setTimeout(doPrint, 150); // data URL already loaded (or no QR image)
     }
 }
 // ══════════════════════════════════════════════════════════════
