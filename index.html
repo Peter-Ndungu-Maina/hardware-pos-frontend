@@ -2404,7 +2404,16 @@ async function submitDebtPayment(e) {
             // Close the modal BEFORE loadDashboard so the re-render can't
             // produce a stale "Confirm" button that fires while we're still locked.
             closeModal('paymentModal');
-            showDebtReceipt(name, amount, method, code, data.receiptNumber || null, data.remainingBalance ?? null);
+           // Inside submitDebtPayment() after receiving data.success:
+        showDebtReceipt(
+            name, 
+            amount, 
+            method, 
+            code, 
+            data.receiptNumber || null, 
+            data.remainingBalance ?? null,
+            data.clearedInvoices // Pass the new detailed array
+        );
             loadDashboard();
         } else {
             alert('Failed: ' + data.message);
@@ -2582,7 +2591,7 @@ async function _openC2BReceiptPopup(data) {
     else   { showPrintToastIdx('⚠️ Pop-up blocked — allow pop-ups for this site', true); }
 }
 
-function showDebtReceipt(customer, amount, method, code, receiptNumber = null, remainingBalance = null) {
+function showDebtReceipt(customer, amount, method, code, receiptNumber = null, remainingBalance = null, clearedItems = []) {
     const date        = new Date().toLocaleString();
     const servedBy    = localStorage.getItem('userName') || 'Staff';
     const methodColor = method === 'M-Pesa' ? '#16a34a' : method === 'Cash' ? '#2563eb' : '#dc2626';
@@ -2606,8 +2615,8 @@ function showDebtReceipt(customer, amount, method, code, receiptNumber = null, r
         receiptNumber: payRef,
         servedBy:      servedBy,
         date:          date,
-        remainingBalance: remainingBalance, // <--- ADD THIS LINE
-        items: [{ itemName: 'Debt Clearance - ' + customer, price: totalAmt, quantity: 1 }]
+        remainingBalance: remainingBalance, 
+        items: clearedItems.length ? clearedItems : [{ itemName: 'Debt Clearance - ' + customer, price: totalAmt, quantity: 1 }]
     };
 
     document.getElementById('debtReceiptContent').innerHTML = `
