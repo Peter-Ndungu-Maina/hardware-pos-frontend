@@ -1109,10 +1109,69 @@ async function handleRestock(id, name) {
 
 function generateGRNSlip(itemName, qty, dn) {
     const now = new Date(), dateStr = now.toLocaleDateString()+' '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('receiptDate').innerHTML = `<div class="text-center border-b border-dashed border-gray-300 pb-4 mb-4 font-mono"><h2 class="font-black text-xl uppercase">GOODS RECEIVED NOTE</h2><p class="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase">ELITE HARDWARE LTD</p></div><div class="space-y-1 mb-6 text-[11px] font-mono"><div class="flex justify-between"><span>DATE:</span><span class="font-bold">${dateStr}</span></div><div class="flex justify-between"><span>DN REF:</span><span class="font-black text-blue-600">${dn}</span></div></div>`;
-    document.getElementById('receiptContent').innerHTML = `<table class="w-full text-left font-mono text-[11px] mb-6"><thead><tr class="border-b-2 border-slate-900 text-slate-400 text-[9px]"><th>ITEM</th><th class="text-right">QTY</th></tr></thead><tbody><tr><td class="py-4 font-black uppercase">${itemName}</td><td class="py-4 text-right font-black text-lg text-blue-600">${qty}</td></tr></tbody></table>`;
-    document.getElementById('receiptTotal').innerHTML = `<div class="bg-blue-600 p-4 rounded-2xl text-center text-white font-black text-xl">${qty} UNITS ADDED</div>`;
-    document.getElementById('receiptButtons').innerHTML = `<button onclick="silentPrintGRN('${itemName}',${qty},'${dn}')" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg">🖨️ PRINT GRN</button><button onclick="closeReceipt()" class="w-full bg-gray-100 py-3 rounded-2xl text-gray-500 font-bold uppercase mt-2">CLOSE</button>`;
+    
+    const grnHTML = `
+    <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.055);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+        <div style="position:relative;z-index:1;">
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">GOODS RECEIVED NOTE</div>
+                <div style="font-size:8px;color:#666;">KRA PIN: A014661185V</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:900;">${dateStr}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DN REF:</span><span style="font-weight:900;color:#2563eb;">${dn}</span></div>
+            
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:4px;">
+                <thead><tr style="border-bottom:2px solid #000;">
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Item</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Qty</th>
+                </tr></thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${itemName}</td>
+                        <td style="padding:4px 2px;text-align:right;font-weight:900;font-size:12px;color:#2563eb;">${qty}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="background:#2563eb;padding:8px;border-radius:8px;text-align:center;color:#fff;font-weight:900;margin-top:10px;font-size:12px;">
+                ${qty} UNITS ADDED
+            </div>
+        </div>
+    </div>`;
+
+    document.getElementById('receiptDate').innerHTML    = '';
+    document.getElementById('receiptTotal').innerHTML   = '';
+    document.getElementById('receiptContent').innerHTML = grnHTML;
+
+    // Dynamically restyle the modal container structure to match Credit Note style
+    const modalArea = document.getElementById('receiptModal');
+    if (modalArea) {
+        modalArea.style.background = 'transparent';
+        modalArea.style.border = 'none';
+        modalArea.style.boxShadow = 'none';
+    }
+    const scrollArea = document.querySelector('#receiptModal > .flex-1');
+    if (scrollArea) {
+        scrollArea.classList.remove('receipt-watermark');
+        scrollArea.style.background = 'rgba(0,0,0,0.75)';
+        scrollArea.style.padding = '20px';
+        scrollArea.style.display = 'flex';
+        scrollArea.style.flexDirection = 'column';
+        scrollArea.style.alignItems = 'center';
+    }
+    const buttonsArea = document.getElementById('receiptButtons');
+    if (buttonsArea) {
+        buttonsArea.style.background = 'transparent';
+        buttonsArea.style.border = 'none';
+        buttonsArea.style.width = '100%';
+        buttonsArea.style.maxWidth = '302px';
+        buttonsArea.style.margin = '0 auto';
+    }
+
+    document.getElementById('receiptButtons').innerHTML = `<button onclick="silentPrintGRN('${itemName}',${qty},'${dn}')" style="width:100%;background:#2563eb;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ PRINT GRN</button><button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>`;
     document.getElementById('receiptModal').classList.remove('hidden');
     document.getElementById('modalOverlay').classList.remove('hidden');
 }
@@ -1546,34 +1605,161 @@ function fetchBusinessInfo() {
 
 async function showMultiReceipt(customer,method,total,items,phone='',code='',receiptNumber=null,invoiceNumber=null,dnNumber=null,kraReceiptNo=null,kraQrUrl=null,controlUnitNumber=null,kraQrDataUrl=null) {
     if (!_businessInfoReady) await fetchBusinessInfo();
-    // Guarantee a local base64 QR — never calls api.qrserver.com at render time.
-    // Server sends kraQrDataUrl for new sales. For reprints, clientGenerateQrDataUrl
-    // uses the local QRCode.js library. Either way the <img src> is always a data: URL.
+
     if (!kraQrDataUrl) {
         const _qrStr = kraQrUrl || ('PIN:'+(BUSINESS_PIN||'PENDING')+'|REF:'+(receiptNumber||invoiceNumber||Date.now())+'|AMT:'+parseFloat(total).toFixed(2)+'|DATE:'+new Date().toLocaleDateString());
         kraQrDataUrl = await clientGenerateQrDataUrl(_qrStr);
     }
-    const date=new Date().toLocaleString(), hardwareName="ELITE HARDWARE LTD";
-    const _mr=(method||'').trim();
+
+    const date = new Date().toLocaleString('en-KE');
+    const _mr = (method||'').trim();
     if(/equity|equitel/i.test(_mr)) method='Equity Mobile Money';
     else if (_mr==='Safaricom'||/^safaricom/i.test(_mr)) method='M-Pesa';
     else if (_mr==='M-Pesa STK (pending reconciliation)') method='M-Pesa';
-    let maskedPhone=phone;
-    if(phone&&phone.length>=10) maskedPhone=phone.substring(0,4)+"xxx"+phone.substring(phone.length-3);
-    let docType="OFFICIAL SALES RECEIPT",mainButtonLabel="PRINT RECEIPT",methodColor="text-blue-600";
-    if(method==='Credit'){docType="OFFICIAL CREDIT INVOICE";mainButtonLabel="PRINT INVOICE";methodColor="text-red-600";}
-    else if(method==='M-Pesa') methodColor="text-emerald-600";
-    else if(method==='Equity Mobile Money') methodColor="text-amber-500";
-    const headerHtml=`<div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;font-family:'Courier New',monospace;"><div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">${hardwareName}</div><div id="receiptDocType" style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">${docType}</div><div style="font-size:8px;color:#666;">KRA PIN: ${BUSINESS_PIN||'PENDING'}</div></div><div style="font-family:'Courier New',monospace;font-size:11px;margin-bottom:8px;">${invoiceNumber?`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #ddd;margin-bottom:4px;"><span style="font-weight:900;">INVOICE NO:</span><span style="font-weight:900;text-transform:uppercase;">${invoiceNumber}</span></div>`:''} ${!invoiceNumber&&receiptNumber?`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #ddd;margin-bottom:4px;"><span style="font-weight:900;">RECEIPT NO:</span><span style="font-weight:900;text-transform:uppercase;">${receiptNumber}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div><div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${window.escHtml(customer)}</span></div>${phone?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>PHONE:</span><span style="font-weight:700;">${window.escHtml(maskedPhone)}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>METHOD:</span><span style="font-weight:900;text-transform:uppercase;">${method}</span></div>${code?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>TRANS ID:</span><span style="font-weight:900;text-transform:uppercase;color:#16a34a;">${code.toUpperCase()}</span></div>`:''}<div style="display:flex;justify-content:space-between;padding:2px 0;border-top:1px solid #ddd;margin-top:4px;padding-top:4px;"><span>SERVED BY:</span><span style="font-weight:900;text-transform:uppercase;">${window.EliteAuth?.name||'Staff'}</span></div></div>`;
-    const itemsHtml=`<table style="width:100%;border-collapse:collapse;font-family:'Courier New',monospace;font-size:10px;margin-bottom:4px;" id="receiptTable"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Description</th><th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:36px;">Qty</th><th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:52px;">Unit</th><th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:58px;">Amount</th></tr></thead><tbody>${items.map(i=>{const ul=i.displayUnit||'';const tl=i.appliedTier==='fundi'?' [F]':i.appliedTier==='wholesale'||i.appliedTier==='wholesale_auto'?' [W]':i.appliedTier==='sub'?` [${ul}]`:'';return `<tr style="border-bottom:1px solid #eee;"><td style="padding:4px 2px;font-weight:900;text-transform:uppercase;font-size:10px;">${window.escHtml(i.itemName)}${tl}</td><td style="padding:4px 2px;text-align:center;font-weight:700;">${i.quantity}${ul?' '+ul:''}</td><td style="padding:4px 2px;text-align:right;">${parseFloat(i.price).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td style="padding:4px 2px;text-align:right;font-weight:900;">${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;}).join('')}</tbody></table>`;
-    const ta=parseFloat(total),va=ta*VAT_RATE/(1+VAT_RATE),ev=ta-va;
-    const totalBlock=`<div id="totalDisplayBlock" style="border-top:2px solid #000;margin-top:10px;padding-top:4px;font-family:'Courier New',monospace;"><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>Subtotal (ex-VAT):</span><span style="font-weight:bold;">KES ${ev.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;color:#000;"><span>VAT (16%):</span><span style="font-weight:bold;">KES ${va.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div><div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:6px;margin-top:4px;"><span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total (incl. VAT)</span><span style="font-size:16px;font-weight:900;">KES ${ta.toLocaleString()}</span></div></div><div style="font-size:9px;text-align:center;font-style:italic;color:#000;font-family:'Courier New',monospace;line-height:1.3;margin:12px 0;"><p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p></div><div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;color:#000;"><p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;">KRA eTIMS RECEIPT</p><div style="display:flex;justify-content:center;margin:10px 0;"><img src="${kraQrDataUrl||''}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA eTIMS QR"/></div><div style="font-size:9px;text-align:left;padding:0 4px;"><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Receipt No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${invoiceNumber||receiptNumber||'N/A'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>Kra Receipt:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${kraReceiptNo||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;"><span>CU No:</span><span style="font-weight:900;text-align:right;word-break:break-all;">${controlUnitNumber||'PENDING'}</span></div><div style="display:flex;justify-content:space-between;padding:4px 0;"><span>eTIMS Status:</span><span style="font-weight:900;color:${kraReceiptNo?'green':'#E8640A'};">${kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span></div></div><p style="margin-top:10px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p></div>`;
+
+    let maskedPhone = phone;
+    if(phone && phone.length>=10) maskedPhone = phone.substring(0,4)+"xxx"+phone.substring(phone.length-3);
+
+    let docType = "OFFICIAL SALES RECEIPT", mainButtonLabel = "PRINT RECEIPT";
+    if(method === 'Credit'){ docType = "OFFICIAL CREDIT INVOICE"; mainButtonLabel = "PRINT INVOICE"; }
+
+    const ta=parseFloat(total), va=ta*VAT_RATE/(1+VAT_RATE), ev=ta-va;
+
+    const kraBlock = kraQrDataUrl ? `
+        <div style="border-top:1px dashed #000;margin-top:10px;padding-top:8px;text-align:center;font-family:'Courier New',monospace;">
+            <p style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">KRA eTIMS RECEIPT</p>
+            <div style="display:flex;justify-content:center;margin:6px 0;">
+                <img src="${kraQrDataUrl}" style="width:110px;height:110px;image-rendering:pixelated;display:block;margin:0 auto;" alt="KRA QR"/>
+            </div>
+            <div style="font-size:9px;text-align:left;padding:0 4px;">
+                <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA PIN:</span><span style="font-weight:900;">${BUSINESS_PIN||'PENDING'}</span>
+                </div>
+                ${kraReceiptNo ? `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #ddd;">
+                    <span>KRA REF:</span><span style="font-weight:900;word-break:break-all;text-align:right;font-size:8px;">${kraReceiptNo}</span>
+                </div>` : ''}
+                <div style="display:flex;justify-content:space-between;padding:4px 0;">
+                    <span>eTIMS Status:</span>
+                    <span style="font-weight:900;color:${kraReceiptNo?'green':'#E8640A'};">${kraReceiptNo?'✓ VERIFIED':'⏳ PENDING'}</span>
+                </div>
+            </div>
+            <p style="margin-top:8px;font-size:8px;font-weight:bold;text-transform:uppercase;text-align:center;border-top:1px solid #000;padding-top:4px;">Verify at etims.kra.go.ke</p>
+        </div>` : '';
+
+    const receiptHTML = (copyLabel, copyClass) => `
+    <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.055);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+
+        <div style="position:relative;z-index:1;">
+            ${copyLabel ? `<div class="${copyClass}" style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">${copyLabel}</div>` : ''}
+
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">${docType}</div>
+                <div style="font-size:8px;color:#666;">KRA PIN: ${BUSINESS_PIN||'PENDING'}</div>
+            </div>
+
+            ${invoiceNumber ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>INVOICE NO:</span><span style="font-weight:900;text-transform:uppercase;">${invoiceNumber}</span></div>` : ''}
+            ${!invoiceNumber && receiptNumber ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>RECEIPT NO:</span><span style="font-weight:900;text-transform:uppercase;">${receiptNumber}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:900;">${date}</span></div>
+            <div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;">
+                <span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${window.escHtml(customer)}</span>
+            </div>
+            ${maskedPhone ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>PHONE:</span><span style="font-weight:900;">${window.escHtml(maskedPhone)}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>METHOD:</span><span style="font-weight:900;text-transform:uppercase;">${method}</span></div>
+            ${code ? `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>TRANS ID:</span><span style="font-weight:900;text-transform:uppercase;color:#16a34a;">${code.toUpperCase()}</span></div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:900;text-transform:uppercase;">${window.EliteAuth?.name||'Staff'}</span></div>
+
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:4px;">
+                <thead><tr style="border-bottom:2px solid #000;">
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Item</th>
+                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Qty</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Price</th>
+                    <th style="text-align:right;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Total</th>
+                </tr></thead>
+                <tbody>
+                    ${items.map(i => {
+                        const ul=i.displayUnit||'';
+                        const tl=i.appliedTier==='fundi'?' [F]':i.appliedTier==='wholesale'||i.appliedTier==='wholesale_auto'?' [W]':i.appliedTier==='sub'?` [${ul}]`:'';
+                        return `<tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:4px 2px;font-weight:900;text-transform:uppercase;">${window.escHtml(i.itemName)}${tl}</td>
+                            <td style="padding:4px 2px;text-align:center;font-weight:700;">${i.quantity}${ul?' '+ul:''}</td>
+                            <td style="padding:4px 2px;text-align:right;">${parseFloat(i.price).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                            <td style="padding:4px 2px;text-align:right;font-weight:900;">${(i.price*i.quantity).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>
+
+            <div style="border-top:2px solid #000;margin-top:10px;padding-top:4px;">
+                <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span>Subtotal (ex-VAT):</span><span style="font-weight:bold;">KES ${ev.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:10px;padding:2px 0;"><span>VAT (16%):</span><span style="font-weight:bold;">KES ${va.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#000;color:#fff;padding:6px;margin-top:4px;">
+                    <span style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">Total (incl. VAT)</span>
+                    <span style="font-size:16px;font-weight:900;">KES ${ta.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                </div>
+            </div>
+
+            <div style="font-size:9px;text-align:center;font-style:italic;margin:12px 0;">
+                <p>Goods received in good condition.<br>Thank you for choosing Elite Hardware.</p>
+            </div>
+
+            ${kraBlock}
+
+            ${copyLabel ? `<p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;letter-spacing:0.1em;">*** ${copyLabel} ***</p>` : ''}
+        </div>
+    </div>`;
+
     window._currentReceiptNumber=receiptNumber; window._currentInvoiceNumber=invoiceNumber; window._currentDnNumber=dnNumber;
     window._lastReceiptData={ customer,method,total,items,phone,code,receiptNumber,invoiceNumber,dnNumber,kraReceiptNo,kraQrUrl,kraQrDataUrl,controlUnitNumber,servedBy:window.EliteAuth?.name||'Staff',date:new Date().toLocaleString() };
-    document.getElementById('receiptDate').innerHTML=headerHtml;
-    document.getElementById('receiptContent').innerHTML=itemsHtml;
-    document.getElementById('receiptTotal').innerHTML=totalBlock;
-    document.getElementById('receiptButtons').innerHTML=`<button type="button" onclick="printTwoCopies();" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ ${mainButtonLabel} (2 COPIES)</button><button type="button" onclick="printDeliveryNote();" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">PRINT DELIVERY NOTE</button><button type="button" onclick="closeReceipt();" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>`;
+
+    // 1. Wipe old split layout
+    document.getElementById('receiptDate').innerHTML    = '';
+    document.getElementById('receiptTotal').innerHTML   = '';
+    
+    // 2. Inject new unified layout
+    document.getElementById('receiptContent').innerHTML = receiptHTML('', '');
+
+    // 3. Store full 2-copy HTML globally for browser fallback print
+    window._receiptPrintHTML =
+        receiptHTML('★ CUSTOMER COPY ★', 'color:#000;border-color:#000;') +
+        '<div class="print-copy-break" style="page-break-after:always;"></div>' +
+        receiptHTML('★ SHOP COPY ★', 'color:#555;border-color:#aaa;');
+
+    // 4. Transform modal background styling dynamically to match Credit Note style
+    const modalArea = document.getElementById('receiptModal');
+    if (modalArea) {
+        modalArea.style.background = 'transparent';
+        modalArea.style.border = 'none';
+        modalArea.style.boxShadow = 'none';
+    }
+    const scrollArea = document.querySelector('#receiptModal > .flex-1');
+    if (scrollArea) {
+        scrollArea.classList.remove('receipt-watermark');
+        scrollArea.style.background = 'rgba(0,0,0,0.75)';
+        scrollArea.style.padding = '20px';
+        scrollArea.style.display = 'flex';
+        scrollArea.style.flexDirection = 'column';
+        scrollArea.style.alignItems = 'center';
+    }
+    const buttonsArea = document.getElementById('receiptButtons');
+    if (buttonsArea) {
+        buttonsArea.style.background = 'transparent';
+        buttonsArea.style.border = 'none';
+        buttonsArea.style.width = '100%';
+        buttonsArea.style.maxWidth = '302px';
+        buttonsArea.style.margin = '0 auto';
+    }
+    
+    // 5. Update Buttons
+    document.getElementById('receiptButtons').innerHTML=`
+        <button type="button" onclick="printTwoCopies();" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ ${mainButtonLabel} (2 COPIES)</button>
+        <button type="button" onclick="printDeliveryNote();" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">PRINT DELIVERY NOTE</button>
+        <button type="button" onclick="closeReceipt();" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
+    `;
+
     document.getElementById('receiptModal').classList.remove('hidden');
     document.getElementById('modalOverlay').classList.remove('hidden');
 }
@@ -1589,28 +1775,73 @@ function _browserPrintFallback(data,onlyDN=false,printAll=false){
     const customer=d.customer||'',phone=d.phone||'',servedBy=d.servedBy||(window.EliteAuth&&window.EliteAuth.name)||'Staff',date=d.date||new Date().toLocaleString();
     const maskedPhone=phone&&phone.length>=10?phone.slice(0,4)+'xxx'+phone.slice(-3):phone;
     const items=Array.isArray(d.items)?d.items:[];
-    const header=document.getElementById('receiptDate').innerHTML;
-    const content=document.getElementById('receiptContent').innerHTML;
-    const total=document.getElementById('receiptTotal').innerHTML;
+
     const dnRows=items.map(i=>`<tr style="border-bottom:1px solid #eee;"><td style="padding:5px 2px;font-weight:700;text-transform:uppercase;">${(i.itemName||'').substring(0,30)}</td><td style="padding:5px 2px;text-align:center;font-weight:700;">${i.quantity||1}</td></tr>`).join('');
-    const makeInvoiceCopy=(label,cls)=>`<div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:10px;color:#000;background:#fff;width:80mm;margin:0 auto;page-break-after:always;"><span class="copy-badge ${cls}">${label}</span>${header}${content}${total}<p style="text-align:center;font-size:9px;font-weight:900;margin-top:10px;">*** ${label} — INVOICE ***</p></div>`;
-    const makeDnCopy=(label,cls)=>`<div class="receipt-watermark" style="font-family:'Courier New',monospace;padding:20px 24px;color:#000;background:#fff;max-width:700px;margin:0 auto;page-break-after:always;"><span class="copy-badge ${cls}">${label}</span><div style="text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:12px;"><h1 style="font-size:15px;font-weight:900;margin:0;letter-spacing:.15em;">ELITE HARDWARE LTD</h1><p style="font-size:10px;font-weight:700;margin:4px 0;letter-spacing:.2em;">OFFICIAL DELIVERY NOTE</p></div><div style="font-size:11px;margin-bottom:10px;line-height:1.9;"><div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:5px;"><span style="font-weight:900;">DN NO:</span><span style="font-weight:900;">${dnNumber}</span></div>${invoiceNumber?`<div style="display:flex;justify-content:space-between;"><span>INVOICE REF:</span><span style="font-weight:700;">${invoiceNumber}</span></div>`:''}<div style="display:flex;justify-content:space-between;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div>${customer?`<div style="display:flex;justify-content:space-between;border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 0;margin:4px 0;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${customer}</span></div>`:''} ${maskedPhone?`<div style="display:flex;justify-content:space-between;"><span>PHONE:</span><span style="font-weight:700;">${maskedPhone}</span></div>`:''}<div style="display:flex;justify-content:space-between;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div></div><table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:14px;"><thead><tr style="border-bottom:2px solid #000;"><th style="text-align:left;padding:4px 0;text-transform:uppercase;font-size:9px;">Description</th><th style="text-align:center;padding:4px 0;text-transform:uppercase;font-size:9px;width:40px;">Qty</th></tr></thead><tbody>${dnRows}</tbody></table><div style="border-top:1px solid #000;padding-top:12px;font-size:11px;margin-top:8px;"><p style="margin:14px 0;"><b>LOADED BY:</b> &nbsp;&nbsp;&nbsp;&nbsp;___________________________</p><p style="margin:14px 0;"><b>RECEIVED BY:</b> &nbsp;&nbsp;___________________________</p><p style="margin:14px 0;"><b>DATE:</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;___________________________</p></div><p style="text-align:center;font-size:9px;font-weight:900;margin-top:16px;">*** ${label} — DELIVERY NOTE ***</p></div>`;
+
+    const makeDnCopy=(label,cls)=>`
+    <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto;page-break-after:always;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.055);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+        <div style="position:relative;z-index:1;">
+            <div style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;${cls}">${label}</div>
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
+                <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
+                <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:2px 0;">OFFICIAL DELIVERY NOTE</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span style="font-weight:900;">DN NO:</span><span style="font-weight:900;">${dnNumber}</span></div>
+            ${invoiceNumber?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>INVOICE REF:</span><span style="font-weight:700;">${invoiceNumber}</span></div>`:''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>DATE:</span><span style="font-weight:700;">${date}</span></div>
+            ${customer?`<div style="display:flex;justify-content:space-between;padding:3px 2px;margin:4px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;background:#f5f5f5;"><span>CUSTOMER:</span><span style="font-weight:900;text-transform:uppercase;">${customer}</span></div>`:''}
+            ${maskedPhone?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>PHONE:</span><span style="font-weight:700;">${maskedPhone}</span></div>`:''}
+            <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>SERVED BY:</span><span style="font-weight:700;text-transform:uppercase;">${servedBy}</span></div>
+
+            <div style="border-top:1px dashed #999;margin:6px 0;"></div>
+
+            <table style="width:100%;border-collapse:collapse;font-size:10px;margin-bottom:14px;">
+                <thead><tr style="border-bottom:2px solid #000;">
+                    <th style="text-align:left;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;">Description</th>
+                    <th style="text-align:center;padding:3px 2px;font-size:9px;text-transform:uppercase;color:#555;width:40px;">Qty</th>
+                </tr></thead>
+                <tbody>${dnRows}</tbody>
+            </table>
+
+            <div style="border-top:1px solid #000;padding-top:12px;font-size:11px;margin-top:8px;">
+                <p style="margin:14px 0;"><b>LOADED BY:</b> &nbsp;&nbsp;&nbsp;&nbsp;__________________</p>
+                <p style="margin:14px 0;"><b>RECEIVED BY:</b> &nbsp;&nbsp;__________________</p>
+                <p style="margin:14px 0;"><b>DATE:</b> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;__________________</p>
+            </div>
+            <p style="text-align:center;font-size:9px;font-weight:900;margin-top:16px;">*** ${label} ***</p>
+        </div>
+    </div>`;
+
     let html='';
-    if(printAll){html+=makeInvoiceCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeInvoiceCopy('★ SHOP COPY ★','copy-badge-shop');html+=makeDnCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeDnCopy('★ SHOP COPY ★','copy-badge-shop');}
-    else if(onlyDN){html+=makeDnCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeDnCopy('★ SHOP COPY ★','copy-badge-shop');}
-    else{html+=makeInvoiceCopy('★ CUSTOMER COPY ★','copy-badge-customer');html+=makeInvoiceCopy('★ SHOP COPY ★','copy-badge-shop');}
-    const pa=document.createElement('div'); pa.id='tempPrintArea'; if(onlyDN) pa.classList.add('dn-print');
-    const ps=onlyDN?'A4':'80mm auto';
-    pa.innerHTML=html+`<style>@media print{@page{size:${ps};margin:2mm;}.receipt-watermark::before{content:'ELITE HARDWARE';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.07);letter-spacing:0.18em;text-transform:uppercase;white-space:nowrap;pointer-events:none;font-family:'Courier New',monospace;}.receipt-watermark{position:relative;}.receipt-watermark>*{position:relative;z-index:1;}.copy-badge{display:block!important;text-align:center;font-family:'Courier New',monospace;font-size:8px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;border:1px dashed #999;padding:3px 6px;margin-bottom:6px;}.copy-badge-customer{color:#000;border-color:#000;}.copy-badge-shop{color:#555;border-color:#aaa;}}</style>`;
+    const invHtml = window._receiptPrintHTML || ''; 
+
+    if(printAll){
+        html += invHtml;
+        html += makeDnCopy('★ CUSTOMER COPY ★', 'color:#000;border-color:#000;');
+        html += makeDnCopy('★ SHOP COPY ★', 'color:#555;border-color:#aaa;');
+    } else if(onlyDN){
+        html += makeDnCopy('★ CUSTOMER COPY ★', 'color:#000;border-color:#000;');
+        html += makeDnCopy('★ SHOP COPY ★', 'color:#555;border-color:#aaa;');
+    } else {
+        html += invHtml;
+    }
+
+    const pa=document.createElement('div'); pa.id='tempPrintArea';
+    pa.innerHTML=html+`
+    <style>
+        @media print {
+            @page { size: 80mm auto; margin: 2mm 1mm; }
+            #tempPrintArea > div { width: 100% !important; max-width: 100% !important; box-shadow: none !important; margin: 0 !important; }
+        }
+    </style>`;
     document.body.appendChild(pa);
-    const qrImg=pa.querySelector('img[alt="KRA eTIMS QR"]');
+    const qrImg=pa.querySelector('img[alt="KRA QR"]');
     const doPrint=()=>{ window.print(); setTimeout(()=>pa.remove(),1000); };
-    // data: URLs are already in memory — skip the network load wait entirely.
-    const isQrDataUrl=qrImg&&qrImg.src&&qrImg.src.startsWith('data:');
-    if(qrImg&&!isQrDataUrl&&!qrImg.complete){qrImg.onload=doPrint;qrImg.onerror=doPrint;setTimeout(doPrint,5000);}
+    const isDataUrl=qrImg&&qrImg.src&&qrImg.src.startsWith('data:');
+    if(qrImg&&!isDataUrl&&!qrImg.complete){qrImg.onload=doPrint;qrImg.onerror=doPrint;setTimeout(doPrint,5000);}
     else setTimeout(doPrint,150);
 }
-
 async function clientGenerateQrDataUrl(text){
     return new Promise(resolve=>{
         try{
