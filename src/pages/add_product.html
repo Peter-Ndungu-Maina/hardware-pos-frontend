@@ -322,8 +322,8 @@
 // ══════════════════════════════════════════════════════
 //  BULK IMPORT
 // ══════════════════════════════════════════════════════
-const BULK_COLS = ['itemName','category','unit','costPrice','sellingPrice','stockQty','deliveryNote','barcode','bulkUnit','subUnit','subUnitQty','subUnitPrice'];
-const BULK_HEADERS = ['Item Name','Category','Unit','Buying Price','Selling Price','Qty','Delivery Note','Barcode','Bulk Unit','Sub Unit','Sub Unit Qty','Sub Unit Price'];
+const BULK_COLS = ['itemName','category','unit','costPrice','sellingPrice','stockQty','deliveryNote','barcode','bulkUnit','subUnit','subUnitQty','subUnitPrice','fundiPrice','wholesalePrice','wholesaleMinQty'];
+const BULK_HEADERS = ['Item Name','Category','Unit','Buying Price','Selling Price','Qty','Delivery Note','Barcode','Bulk Unit','Sub Unit','Sub Unit Qty','Sub Unit Price','Fundi Price','Wholesale Price','Min Wholesale Qty'];
 let bulkData = [];
 
 // Drag and drop
@@ -392,7 +392,10 @@ const csvHeaderMap = {
     'bulk unit':'bulkUnit','bulkunit':'bulkUnit',
     'sub unit':'subUnit','subunit':'subUnit',
     'sub unit qty':'subUnitQty','subunitqty':'subUnitQty','qty per unit':'subUnitQty','qtyperuit':'subUnitQty',
-    'sub unit price':'subUnitPrice','subunitprice':'subUnitPrice','piece price':'subUnitPrice'
+    'sub unit price':'subUnitPrice','subunitprice':'subUnitPrice','piece price':'subUnitPrice',
+    'fundi price':'fundiPrice','fundiprice':'fundiPrice','fundi':'fundiPrice',
+    'wholesale price':'wholesalePrice','wholesaleprice':'wholesalePrice','wholesale':'wholesalePrice',
+    'min wholesale qty':'wholesaleMinQty','minwholesaleqty':'wholesaleMinQty','wholesale min qty':'wholesaleMinQty','min qty':'wholesaleMinQty','minqty':'wholesaleMinQty',
 };
 
 // And update headerMap just below it:
@@ -450,7 +453,18 @@ const headerMap = {
                     'qty per unit':   'subUnitQty',
                     'sub unit price': 'subUnitPrice',
                     'subunitprice':   'subUnitPrice',
-                    'piece price':    'subUnitPrice'
+                    'piece price':    'subUnitPrice',
+                    'fundi price':    'fundiPrice',
+                    'fundiprice':     'fundiPrice',
+                    'fundi':          'fundiPrice',
+                    'wholesale price':'wholesalePrice',
+                    'wholesaleprice': 'wholesalePrice',
+                    'wholesale':      'wholesalePrice',
+                    'min wholesale qty':'wholesaleMinQty',
+                    'minwholesaleqty':  'wholesaleMinQty',
+                    'wholesale min qty':'wholesaleMinQty',
+                    'min qty':          'wholesaleMinQty',
+                    'minqty':           'wholesaleMinQty',
                 };
 
                 rows = raw.map(r => {
