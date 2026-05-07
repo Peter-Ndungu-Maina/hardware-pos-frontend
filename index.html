@@ -63,7 +63,7 @@
         body.light .bg-white, body.light .chart-card, body.light .kpi-card { background: var(--surface) !important; }
         body.light .bg-gray-50, body.light .bg-slate-50, body.light .bg-slate-100 { background: var(--bg) !important; }
         body.light .bg-slate-900:not(#sidebar):not([style]) { background: var(--green) !important; color: #fff !important; }
-        body.light #main, body.light #loginScreen { background: var(--bg) !important; }
+        body.light #main, body.light #loginScreen, body.light #loginFormPanel { background: var(--bg) !important; }
         
         /* Text Override */
         body.light .text-slate-900, body.light .text-slate-800 { color: var(--text) !important; }
@@ -315,141 +315,366 @@
 <div id="main">
 
     <!-- LOGIN SCREEN -->
-    <div id="loginScreen" style="min-height:100vh;display:flex;align-items:stretch;">
+    <!-- ── LOGIN SCREEN ─────────────────────────────────────────────────────── -->
+    <style>
+        /* ── Login layout ── */
+        #loginScreen { min-height:100vh; display:flex; align-items:stretch; font-family:var(--sans); }
 
-        <!-- LEFT PANEL — full-height image -->
-        <div style="display:none;flex:1;background:linear-gradient(135deg,#0a1628 0%,#1a3a6b 40%,#1565c0 70%,#1976d2 100%);position:relative;overflow:hidden;" id="loginImagePanel">
-            <!-- Layered mountain silhouettes to mimic the reference -->
-            <svg style="position:absolute;bottom:0;left:0;width:100%;height:100%;" viewBox="0 0 800 600" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#42a5f5"/>
-                        <stop offset="60%" stop-color="#1565c0"/>
-                        <stop offset="100%" stop-color="#0d1b3e"/>
-                    </linearGradient>
-                </defs>
-                <rect width="800" height="600" fill="url(#sky)"/>
-                <!-- Far mountains -->
-                <polygon points="0,350 100,200 200,280 320,160 440,240 560,140 680,220 800,180 800,600 0,600" fill="rgba(10,30,80,0.5)"/>
-                <!-- Mid mountains -->
-                <polygon points="0,420 80,300 160,360 280,240 380,310 480,200 580,280 680,230 800,280 800,600 0,600" fill="rgba(10,22,60,0.65)"/>
-                <!-- Near mountains -->
-                <polygon points="0,500 120,380 220,430 340,320 460,400 560,330 680,390 800,350 800,600 0,600" fill="rgba(8,18,45,0.8)"/>
-                <!-- Clouds -->
-                <ellipse cx="150" cy="120" rx="80" ry="25" fill="rgba(255,255,255,0.25)"/>
-                <ellipse cx="200" cy="105" rx="60" ry="20" fill="rgba(255,255,255,0.3)"/>
-                <ellipse cx="580" cy="90" rx="70" ry="22" fill="rgba(255,255,255,0.2)"/>
-                <ellipse cx="630" cy="78" rx="50" ry="18" fill="rgba(255,255,255,0.28)"/>
-                <ellipse cx="400" cy="160" rx="55" ry="18" fill="rgba(255,255,255,0.15)"/>
-            </svg>
-            <!-- Brand overlay -->
-            <div style="position:absolute;bottom:48px;left:40px;right:40px;">
-                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                    <div style="width:42px;height:42px;background:#e53935;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 16px rgba(229,57,53,0.4);">🏗️</div>
-                    <span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:0.5px;">Elite Hardware <span style="color:#64b5f6;">POS</span></span>
+        /* LEFT — image panel */
+        #loginImagePanel {
+            display:none; flex:1; position:relative; overflow:hidden;
+            background:#0d2654;
+        }
+        #loginImagePanel img.hw-bg {
+            position:absolute; inset:0; width:100%; height:100%;
+            object-fit:cover; object-position:center;
+            filter:brightness(0.55) saturate(0.9);
+        }
+        /* Deep blue tint over photo — matches reference exactly */
+        #loginImagePanel::after {
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(160deg, rgba(8,30,80,0.55) 0%, rgba(13,55,140,0.45) 50%, rgba(10,40,100,0.6) 100%);
+            pointer-events:none;
+        }
+        .login-panel-content {
+            position:relative; z-index:2;
+            display:flex; flex-direction:column; justify-content:flex-end;
+            height:100%; padding:52px 48px;
+        }
+        .login-panel-headline {
+            font-size:clamp(28px,3.2vw,44px); font-weight:900; color:#fff;
+            line-height:1.1; letter-spacing:-0.5px; margin-bottom:28px;
+        }
+        .login-panel-headline span { display:block; }
+        .login-panel-feature {
+            display:flex; align-items:center; gap:14px; margin-bottom:16px;
+        }
+        .login-panel-feature-icon {
+            width:40px; height:40px; border-radius:50%;
+            border:2px solid rgba(255,255,255,0.4);
+            display:flex; align-items:center; justify-content:center;
+            font-size:17px; flex-shrink:0; background:rgba(255,255,255,0.08);
+        }
+        .login-panel-feature-text {
+            font-size:15px; font-weight:700; color:#fff; letter-spacing:0.1px;
+        }
+        .login-panel-tagline {
+            margin-top:28px; font-size:13px; color:rgba(255,255,255,0.65);
+            line-height:1.7; max-width:380px;
+        }
+        /* Decorative diamond — bottom right corner like reference */
+        .login-diamond {
+            position:absolute; bottom:32px; right:32px; z-index:2;
+            width:36px; height:36px;
+            background:rgba(255,255,255,0.18);
+            transform:rotate(45deg);
+            border:1.5px solid rgba(255,255,255,0.35);
+        }
+
+        /* RIGHT — form panel */
+        #loginFormPanel {
+            width:100%; max-width:500px; margin:0 auto;
+            display:flex; flex-direction:column;
+            align-items:center; justify-content:center;
+            padding:48px 40px;
+            background:var(--bg);
+            position:relative;
+        }
+        .login-logo-row {
+            display:flex; align-items:center; gap:10px; margin-bottom:5px;
+        }
+        .login-logo-icon {
+            font-size:22px; line-height:1;
+        }
+        .login-logo-name {
+            font-size:17px; font-weight:900; color:var(--text);
+            letter-spacing:0.2px;
+        }
+        .login-logo-name em { font-style:normal; color:#1565c0; }
+        body.light .login-logo-name em { color:#1565c0; }
+
+        .login-form-box { width:100%; max-width:400px; }
+
+        .login-title {
+            font-size:36px; font-weight:900; color:var(--text);
+            letter-spacing:-1px; margin:28px 0 6px;
+        }
+        .login-subtitle {
+            font-size:13px; color:var(--muted); margin-bottom:30px;
+        }
+
+        /* Field labels — UPPERCASE bold like reference */
+        .lf-label {
+            display:block; font-size:10px; font-weight:800;
+            text-transform:uppercase; letter-spacing:1.5px;
+            color:var(--text); margin-bottom:7px;
+            font-family:var(--mono);
+        }
+        /* Inputs — rectangular with rounded corners like reference */
+        .lf-input {
+            width:100%; padding:13px 16px;
+            border-radius:10px;
+            background:var(--surface2);
+            border:1.5px solid var(--border);
+            color:var(--text); font-size:14px; font-weight:500;
+            outline:none; box-sizing:border-box;
+            transition:border-color 0.18s, box-shadow 0.18s;
+            font-family:var(--sans);
+        }
+        .lf-input:focus {
+            border-color:#1565c0;
+            box-shadow:0 0 0 3px rgba(21,101,192,0.12);
+        }
+        body.light .lf-input {
+            background:#fff;
+            border-color:rgba(15,23,42,0.18);
+        }
+        body.light .lf-input:focus {
+            border-color:#1565c0;
+            box-shadow:0 0 0 3px rgba(21,101,192,0.08);
+        }
+        /* PIN input — large dots */
+        .lf-input-pin {
+            font-size:22px; letter-spacing:10px; font-weight:700;
+        }
+        /* Remember me row */
+        .lf-remember-row {
+            display:flex; align-items:center; justify-content:space-between;
+            margin:14px 0 22px;
+        }
+        .lf-remember-label {
+            display:flex; align-items:center; gap:8px;
+            font-size:13px; color:var(--muted); cursor:pointer;
+        }
+        .lf-remember-label input[type=checkbox] {
+            width:15px; height:15px; accent-color:#1565c0; cursor:pointer;
+        }
+        .lf-forgot {
+            font-size:13px; font-weight:600; color:#1565c0;
+            background:none; border:none; cursor:pointer;
+            text-decoration:none; padding:0;
+        }
+        .lf-forgot:hover { text-decoration:underline; }
+
+        /* Sign In button — red like reference */
+        #loginBtn {
+            width:100%; padding:15px;
+            border-radius:10px;
+            background:#c0392b;
+            color:#fff; font-weight:800; font-size:13px;
+            text-transform:uppercase; letter-spacing:2px;
+            cursor:pointer; border:none;
+            box-shadow:0 4px 16px rgba(192,57,43,0.32);
+            transition:background 0.15s, transform 0.1s, box-shadow 0.15s;
+        }
+        #loginBtn:hover {
+            background:#e74c3c;
+            box-shadow:0 6px 22px rgba(192,57,43,0.42);
+        }
+        #loginBtn:active { transform:scale(0.985); }
+
+        /* Pilot link */
+        .lf-pilot {
+            text-align:center; margin-top:20px;
+            font-size:13px; color:var(--muted);
+        }
+        .lf-pilot a, .lf-pilot button {
+            color:#1565c0; font-weight:700;
+            background:none; border:none; cursor:pointer; font-size:13px;
+            text-decoration:none; padding:0;
+        }
+        .lf-pilot a:hover, .lf-pilot button:hover { text-decoration:underline; }
+
+        /* ── MFA panels ── */
+        .mfa-card {
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:14px; padding:22px 20px;
+            margin-bottom:16px; text-align:center;
+        }
+        .mfa-card-icon { font-size:30px; margin-bottom:10px; }
+        .mfa-card-title {
+            font-size:15px; font-weight:900; color:var(--text);
+            margin-bottom:6px;
+        }
+        .mfa-card-desc {
+            font-size:11px; color:var(--muted); line-height:1.6;
+        }
+        .lf-otp {
+            width:100%; padding:15px 18px;
+            border-radius:10px;
+            background:var(--surface2);
+            border:2px solid var(--green);
+            color:var(--green); font-weight:900;
+            font-size:28px; letter-spacing:14px;
+            text-align:center; outline:none;
+            box-sizing:border-box;
+            transition:box-shadow 0.18s;
+            font-family:var(--mono);
+        }
+        .lf-otp:focus {
+            box-shadow:0 0 0 3px rgba(16,185,129,0.18);
+        }
+
+        /* Theme toggle */
+        .lf-theme-btn {
+            display:flex; align-items:center; gap:6px;
+            padding:7px 16px; border-radius:20px;
+            border:1px solid var(--border);
+            background:var(--surface2); color:var(--muted);
+            font-size:10px; font-weight:700; cursor:pointer;
+            text-transform:uppercase; letter-spacing:1px;
+            font-family:var(--mono);
+        }
+
+        /* Error banner */
+        #loginError {
+            display:none;
+            background:var(--red-dim);
+            border:1px solid rgba(239,68,68,0.35);
+            border-radius:10px; padding:10px 14px;
+            margin-bottom:16px; font-size:12px;
+            color:var(--red); font-weight:600;
+        }
+
+        /* Responsive: show left panel on desktop */
+        @media(min-width:768px){
+            #loginImagePanel { display:flex !important; flex-direction:column; }
+            #loginScreen { justify-content:stretch; }
+            #loginFormPanel { max-width:520px; }
+        }
+        @media(min-width:1200px){
+            #loginFormPanel { max-width:560px; padding:60px 60px; }
+        }
+    </style>
+
+    <div id="loginScreen">
+
+        <!-- ── LEFT PANEL — hardware store photo with blue overlay ── -->
+        <div id="loginImagePanel">
+            <!-- Real hardware store photo supplied by user -->
+            <img class="hw-bg" src="Gemini_Generated_Image_iv87xbiv87xbiv87.png" alt="Elite Hardware Store" />
+
+            <div class="login-panel-content">
+                <!-- Big headline like reference -->
+                <div class="login-panel-headline">
+                    <span>YOUR COMPLETE</span>
+                    <span>HARDWARE</span>
+                    <span>SOLUTION</span>
                 </div>
-                <p style="color:rgba(255,255,255,0.6);font-size:13px;line-height:1.6;">Kenya's most complete hardware store POS. KRA eTIMS compliant. M-Pesa integrated. Built in Kiambu.</p>
+
+                <!-- Three feature rows — exactly like reference -->
+                <div class="login-panel-feature">
+                    <div class="login-panel-feature-icon">🖌️</div>
+                    <span class="login-panel-feature-text">Inventory Control</span>
+                </div>
+                <div class="login-panel-feature">
+                    <div class="login-panel-feature-icon">⚡</div>
+                    <span class="login-panel-feature-text">M-Pesa Reconciliation</span>
+                </div>
+                <div class="login-panel-feature">
+                    <div class="login-panel-feature-icon">🔧</div>
+                    <span class="login-panel-feature-text">Builder Debt Tracking</span>
+                </div>
+
+                <p class="login-panel-tagline">Plan ahead and save stress. Elite Hardware POS is the partner trusted throughout Kenya.</p>
             </div>
+
+            <!-- Decorative diamond corner — visible in reference -->
+            <div class="login-diamond"></div>
         </div>
 
-        <!-- RIGHT PANEL — login form -->
-        <div style="width:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;background:var(--bg);">
+        <!-- ── RIGHT PANEL — login form ── -->
+        <div id="loginFormPanel">
 
-            <!-- Logo (visible on mobile where left panel hides) -->
-            <div style="text-align:center;margin-bottom:36px;">
-                <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;">
-                    <div style="width:38px;height:38px;background:#e53935;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;">🏗️</div>
-                    <span style="font-size:18px;font-weight:900;color:var(--text);">Elite Hardware <span style="color:#1976d2;">POS</span></span>
+            <!-- Logo top-left — matches reference -->
+            <div class="login-form-box">
+                <div class="login-logo-row">
+                    <span class="login-logo-icon">🏗️</span>
+                    <span class="login-logo-name">ELITE HARDWARE <em>POS</em></span>
                 </div>
-                <p style="font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;font-family:var(--mono);">POS Intelligence System</p>
-            </div>
 
-            <div style="width:100%;max-width:380px;">
-                <h2 style="font-size:26px;font-weight:800;color:var(--text);margin-bottom:6px;">Welcome back!</h2>
-                <p style="font-size:13px;color:var(--muted);margin-bottom:28px;">Sign in to your store dashboard</p>
+                <h1 class="login-title">Sign In</h1>
+                <p class="login-subtitle">Access your hardware store control panel.</p>
 
-                <div id="loginError" style="display:none;background:var(--red-dim);border:1px solid rgba(255,77,109,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--red);font-weight:600;"></div>
+                <div id="loginError"></div>
 
-                <div style="display:flex;flex-direction:column;gap:14px;">
-
-                    <!-- PIN + ID inputs -->
-                    <div id="pinInputWrap">
-                        <div style="margin-bottom:14px;">
-                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:7px;font-family:var(--mono);">Employee ID</label>
-                            <input id="loginId" type="text" placeholder="e.g. HW-01"
-                                style="width:100%;padding:13px 18px;border-radius:50px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;outline:none;font-size:14px;box-sizing:border-box;transition:border-color 0.2s;"
-                                onfocus="this.style.borderColor='#1976d2'" onblur="this.style.borderColor='var(--border)'"
-                                onkeydown="if(event.key==='Enter')document.getElementById('loginPin').focus()">
-                        </div>
-                        <div>
-                            <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);display:block;margin-bottom:7px;font-family:var(--mono);">Access PIN</label>
-                            <input id="loginPin" type="password" inputmode="numeric" placeholder="••••" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-bitwarden-watching="false"
-                                style="width:100%;padding:13px 18px;border-radius:50px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text);font-weight:600;outline:none;font-size:22px;letter-spacing:8px;box-sizing:border-box;transition:border-color 0.2s;"
-                                onfocus="this.style.borderColor='#1976d2'" onblur="this.style.borderColor='var(--border)'"
-                                onkeydown="if(event.key==='Enter')submitLogin()">
-                        </div>
+                <!-- ── Credential inputs ── -->
+                <div id="pinInputWrap">
+                    <div style="margin-bottom:18px;">
+                        <label class="lf-label" for="loginId">Employee ID</label>
+                        <input id="loginId" type="text" placeholder="e.g. HW-01" class="lf-input"
+                            onkeydown="if(event.key==='Enter')document.getElementById('loginPin').focus()"
+                            autocomplete="username">
                     </div>
-
-                    <!-- MFA Setup -->
-                    <div id="mfaSetupWrap" style="display:none;text-align:center;">
-                        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px;">
-                            <div style="font-size:28px;margin-bottom:8px;">🔐</div>
-                            <h3 style="font-size:15px;font-weight:900;color:var(--text);margin-bottom:6px;">Set Up Authenticator</h3>
-                            <p style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Scan this QR code with Google Authenticator or Authy, then enter the 6-digit code below.</p>
-                            <img id="mfaQrImage" src="" style="width:160px;height:160px;margin:0 auto 14px;border-radius:12px;border:4px solid #fff;display:block;" />
-                        </div>
-                        <input id="loginMfaSetup" type="text" inputmode="numeric" maxlength="6" placeholder="000 000"
-                            style="width:100%;padding:14px 18px;border-radius:50px;background:var(--surface2);border:1.5px solid var(--green);color:var(--green);font-weight:900;outline:none;font-size:26px;letter-spacing:12px;text-align:center;box-sizing:border-box;"
+                    <div>
+                        <label class="lf-label" for="loginPin">Access PIN</label>
+                        <input id="loginPin" type="password" inputmode="numeric"
+                            placeholder="••••" autocomplete="new-password"
+                            data-lpignore="true" data-1p-ignore="true" data-bitwarden-watching="false"
+                            class="lf-input lf-input-pin"
                             onkeydown="if(event.key==='Enter')submitLogin()">
                     </div>
 
-                    <!-- MFA Code input -->
-                    <div id="mfaInputWrap" style="display:none;">
-                        <div style="text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;">
-                            <div style="font-size:28px;margin-bottom:6px;">📱</div>
-                            <p style="font-size:12px;color:var(--muted);line-height:1.5;">Open your Authenticator app and enter the 6-digit code for <strong style="color:var(--text);">Elite Hardware POS</strong></p>
-                        </div>
-                        <label style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);display:block;margin-bottom:7px;font-family:var(--mono);">Authenticator Code</label>
-                        <input id="loginMfa" type="text" inputmode="numeric" maxlength="6" placeholder="000 000"
-                            style="width:100%;padding:14px 18px;border-radius:50px;background:var(--surface2);border:1.5px solid var(--green);color:var(--green);font-weight:900;outline:none;font-size:26px;letter-spacing:12px;text-align:center;box-sizing:border-box;"
-                            onkeydown="if(event.key==='Enter')submitLogin()">
+                    <!-- Remember me + Forgot PIN row — matches reference -->
+                    <div class="lf-remember-row">
+                        <label class="lf-remember-label">
+                            <input type="checkbox" id="rememberMe">
+                            Remember Me
+                        </label>
+                        <button class="lf-forgot" onclick="openPinResetRequest()">Forgot Password?</button>
                     </div>
-
-                    <!-- Sign In button -->
-                    <button id="loginBtn" onclick="submitLogin()"
-                        style="width:100%;padding:15px;border-radius:50px;background:#1565c0;color:#fff;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:2px;cursor:pointer;border:none;margin-top:6px;box-shadow:0 4px 18px rgba(21,101,192,0.35);transition:background 0.2s,transform 0.1s;"
-                        onmouseover="this.style.background='#1976d2'" onmouseout="this.style.background='#1565c0'"
-                        onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
-                        Sign In
-                    </button>
-
                 </div>
 
-                <!-- Forgot PIN -->
-                <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);">
-                    Forgot your PIN?
-                    <button onclick="openPinResetRequest()" style="background:none;border:none;color:#1976d2;font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;padding:0 2px;">Request Reset</button>
+                <!-- ── MFA Setup (first-time scan) ── -->
+                <div id="mfaSetupWrap" style="display:none;">
+                    <div class="mfa-card">
+                        <div class="mfa-card-icon">🔐</div>
+                        <div class="mfa-card-title">Set Up Authenticator</div>
+                        <p class="mfa-card-desc">Scan this QR code with Google Authenticator or Authy, then enter the 6-digit code below.</p>
+                        <img id="mfaQrImage" src="" alt="MFA QR Code"
+                            style="width:164px;height:164px;margin:14px auto 0;border-radius:12px;border:4px solid #fff;display:block;" />
+                    </div>
+                    <label class="lf-label" style="color:var(--green);">Authenticator Code</label>
+                    <input id="loginMfaSetup" type="text" inputmode="numeric" maxlength="6"
+                        placeholder="000 000" class="lf-otp"
+                        onkeydown="if(event.key==='Enter')submitLogin()">
+                    <div style="margin-top:12px;"></div>
+                </div>
+
+                <!-- ── MFA Code input (returning user) ── -->
+                <div id="mfaInputWrap" style="display:none;">
+                    <div class="mfa-card">
+                        <div class="mfa-card-icon">📱</div>
+                        <div class="mfa-card-title">Two-Factor Authentication</div>
+                        <p class="mfa-card-desc">Open your Authenticator app and enter the 6-digit code for <strong style="color:var(--text);">Elite Hardware POS</strong></p>
+                    </div>
+                    <label class="lf-label" style="color:var(--green);">Authenticator Code</label>
+                    <input id="loginMfa" type="text" inputmode="numeric" maxlength="6"
+                        placeholder="000 000" class="lf-otp"
+                        onkeydown="if(event.key==='Enter')submitLogin()">
+                    <div style="margin-top:12px;"></div>
+                </div>
+
+                <!-- ── Sign In button ── -->
+                <button id="loginBtn" onclick="submitLogin()">SIGN IN</button>
+
+                <!-- Pilot link -->
+                <p class="lf-pilot" style="margin-top:18px;">
+                    Don't have an account? <button onclick="openPinResetRequest()">Start your free pilot.</button>
                 </p>
 
                 <!-- Theme toggle -->
-                <div style="display:flex;justify-content:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
-                    <button onclick="toggleTheme()" id="loginThemeBtn"
-                        style="display:flex;align-items:center;gap:6px;padding:7px 18px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">
+                <div style="display:flex;justify-content:center;margin-top:28px;padding-top:20px;border-top:1px solid var(--border);">
+                    <button onclick="toggleTheme()" id="loginThemeBtn" class="lf-theme-btn">
                         <span id="loginThemeIcon">☀️</span>
                         <span id="loginThemeLabel">Light Mode</span>
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Show left panel only on larger screens -->
-    <style>
-        @media(min-width:768px){
-            #loginImagePanel { display:flex !important; flex-direction:column; justify-content:flex-end; }
-            #loginScreen { justify-content:stretch; }
-        }
-    </style>
+            </div><!-- /login-form-box -->
+        </div><!-- /loginFormPanel -->
+    </div><!-- /loginScreen -->
 
     <!-- DASHBOARD -->
     <div id="dashContent" style="display:none;">
