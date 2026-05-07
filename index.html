@@ -721,6 +721,8 @@
                 </div>
             </div>
 
+        </div><!-- end scripts grid -->
+
             <div style="margin-top:14px;padding:10px 14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.12);border-radius:8px;">
                 <p style="font-size:14px;color:var(--muted);line-height:1.6;font-family:var(--mono);">
                     💡 All scripts run automatically on their schedule. Use "Run Now" to trigger on demand — results arrive by email;" The Void alert runs hourly and cannot be triggered manually.
@@ -728,7 +730,278 @@
             </div>
         </div>
 
+        <!-- ════════════════════════════════════════════════════════════════
+             KRA INVENTORY SYNC CHECKER (Admin/Manager)
+             Compares local DB inventory vs DigiTax registered items
+        ════════════════════════════════════════════════════════════════ -->
+        <div id="kraInventoryPanel" class="chart-card fade-in no-print" style="animation-delay:.8s;margin:0 20px 20px;display:none;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <div class="chart-title">🔍 KRA Inventory Sync Check</div>
+                    <div class="chart-subtitle" style="margin-bottom:0;">Compare your local inventory against DigiTax registered items — spot missing or unregistered items</div>
+                </div>
+                <button onclick="runInventoryReconcile()" id="kraReconcileBtn"
+                    style="display:flex;align-items:center;gap:8px;padding:10px 20px;border-radius:10px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--green);font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;font-family:var(--mono);">
+                    <span id="kraReconcileBtnIcon">▶</span> Run Sync Check
+                </button>
+            </div>
+
+            <!-- Summary KPI row -->
+            <div id="kraReconcileSummary" style="display:none;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">DB Items</div>
+                    <div id="kri_total_db" style="font-size:22px;font-weight:900;color:var(--text);">—</div>
+                </div>
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">DigiTax Items</div>
+                    <div id="kri_total_dt" style="font-size:22px;font-weight:900;color:var(--text);">—</div>
+                </div>
+                <div style="background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">✓ Matched</div>
+                    <div id="kri_matched" style="font-size:22px;font-weight:900;color:var(--green);">—</div>
+                </div>
+                <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">⚠ Qty Mismatch</div>
+                    <div id="kri_mismatch" style="font-size:22px;font-weight:900;color:#f59e0b;">—</div>
+                </div>
+                <div style="background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">❌ Not in DigiTax</div>
+                    <div id="kri_missing_dt" style="font-size:22px;font-weight:900;color:var(--red);">—</div>
+                </div>
+                <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:var(--purple);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">⚡ Never Registered</div>
+                    <div id="kri_unregistered" style="font-size:22px;font-weight:900;color:var(--purple);">—</div>
+                </div>
+                <div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);border-radius:10px;padding:14px;text-align:center;">
+                    <div style="font-size:10px;font-weight:900;color:#0ea5e9;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">👻 DigiTax Orphans</div>
+                    <div id="kri_orphans" style="font-size:22px;font-weight:900;color:#0ea5e9;">—</div>
+                </div>
+                <div style="border-radius:10px;padding:14px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;" id="kri_health_card">
+                    <div style="font-size:10px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Sync Health</div>
+                    <div id="kri_health" style="font-size:16px;font-weight:900;">—</div>
+                </div>
+            </div>
+
+            <!-- Tab bar -->
+            <div id="kraReconcileTabs" style="display:none;margin-bottom:14px;display:none;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <button onclick="showKriTab('mismatch')"    id="kriTab_mismatch"    class="kri-tab kri-tab-amber"   >⚠ Qty Mismatch</button>
+                    <button onclick="showKriTab('missing_dt')"  id="kriTab_missing_dt"  class="kri-tab kri-tab-red"     >❌ Not in DigiTax</button>
+                    <button onclick="showKriTab('unregistered')" id="kriTab_unregistered" class="kri-tab kri-tab-purple" >⚡ Never Registered</button>
+                    <button onclick="showKriTab('orphans')"     id="kriTab_orphans"     class="kri-tab kri-tab-blue"    >👻 DigiTax Orphans</button>
+                    <button onclick="showKriTab('matched')"     id="kriTab_matched"     class="kri-tab kri-tab-green"   >✓ All Matched</button>
+                </div>
+            </div>
+
+            <!-- Results table -->
+            <div id="kraReconcileTable" style="display:none;overflow-x:auto;border:1px solid var(--border);border-radius:10px;"></div>
+            <div id="kraReconcileMsg" style="padding:40px;text-align:center;color:var(--muted);font-size:13px;font-weight:700;font-family:var(--mono);">
+                Click "Run Sync Check" to compare your inventory against DigiTax.
+            </div>
+            <div id="kraReconcileTs" style="display:none;margin-top:10px;font-size:10px;color:var(--muted);font-family:var(--mono);text-align:right;"></div>
+        </div>
+
 </div><!-- /main -->
+
+<style>
+.kri-tab { padding:7px 14px;border-radius:8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;font-family:var(--mono);border:1px solid; transition:opacity .15s; }
+.kri-tab-amber  { background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.3); color:#f59e0b; }
+.kri-tab-red    { background:rgba(255,77,109,.12);  border-color:rgba(255,77,109,.3);  color:var(--red); }
+.kri-tab-purple { background:rgba(168,85,247,.12); border-color:rgba(168,85,247,.3);  color:var(--purple); }
+.kri-tab-blue   { background:rgba(14,165,233,.12); border-color:rgba(14,165,233,.3);  color:#0ea5e9; }
+.kri-tab-green  { background:rgba(0,229,160,.12);  border-color:rgba(0,229,160,.3);   color:var(--green); }
+.kri-tab.active { opacity:1; box-shadow:0 0 0 2px currentColor; }
+.kri-tab:not(.active) { opacity:.65; }
+</style>
+
+<script>
+// ── KRA Inventory Reconcile ─────────────────────────────────────────────────
+let _kriData = null;
+let _kriTab  = 'mismatch';
+
+async function runInventoryReconcile() {
+    const btn  = document.getElementById('kraReconcileBtn');
+    const icon = document.getElementById('kraReconcileBtnIcon');
+    const msg  = document.getElementById('kraReconcileMsg');
+    btn.disabled = true; icon.textContent = '⏳';
+    msg.style.display = 'block';
+    msg.textContent = 'Fetching inventory from DigiTax… this may take 15–30 seconds for large catalogs.';
+    document.getElementById('kraReconcileSummary').style.display  = 'none';
+    document.getElementById('kraReconcileTabs').style.display     = 'none';
+    document.getElementById('kraReconcileTable').style.display    = 'none';
+    document.getElementById('kraReconcileTs').style.display       = 'none';
+
+    try {
+        const res  = await apiFetch(`${API_BASE}/digitax/inventory-reconcile`);
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            msg.textContent = '❌ ' + (data.message || 'Server error — check DIGITAX_API_KEY configuration.');
+            return;
+        }
+
+        _kriData = data;
+        const s  = data.summary;
+
+        // Fill KPI cards
+        document.getElementById('kri_total_db').textContent    = s.total_db;
+        document.getElementById('kri_total_dt').textContent    = s.total_digitax;
+        document.getElementById('kri_matched').textContent     = s.matched;
+        document.getElementById('kri_mismatch').textContent    = s.stock_mismatch;
+        document.getElementById('kri_missing_dt').textContent  = s.missing_in_digitax;
+        document.getElementById('kri_unregistered').textContent= s.unregistered;
+        document.getElementById('kri_orphans').textContent     = s.orphans_in_digitax;
+
+        const healthCard = document.getElementById('kri_health_card');
+        const healthEl   = document.getElementById('kri_health');
+        const healthMap  = { healthy: ['✅ HEALTHY','rgba(0,229,160,.08)','rgba(0,229,160,.25)','var(--green)'], warning: ['⚠ WARNING','rgba(245,158,11,.08)','rgba(245,158,11,.25)','#f59e0b'], critical: ['🚨 CRITICAL','rgba(255,77,109,.08)','rgba(255,77,109,.25)','var(--red)'] };
+        const [hlabel, hbg, hborder, hcolor] = healthMap[s.sync_health] || healthMap.warning;
+        healthCard.style.background   = hbg;
+        healthCard.style.border       = `1px solid ${hborder}`;
+        healthEl.style.color          = hcolor;
+        healthEl.textContent          = hlabel;
+
+        document.getElementById('kraReconcileSummary').style.display = 'grid';
+        document.getElementById('kraReconcileTabs').style.display    = 'flex';
+        document.getElementById('kraReconcileTs').style.display      = 'block';
+        document.getElementById('kraReconcileTs').textContent        = 'Generated: ' + new Date(data.generated_at).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' });
+
+        msg.style.display = 'none';
+        // Default to first non-zero tab, or mismatch
+        const defaultTab = s.stock_mismatch > 0 ? 'mismatch' : s.missing_in_digitax > 0 ? 'missing_dt' : s.unregistered > 0 ? 'unregistered' : s.orphans_in_digitax > 0 ? 'orphans' : 'matched';
+        showKriTab(defaultTab);
+
+    } catch (err) {
+        msg.textContent = '❌ Network error: ' + err.message;
+    } finally {
+        btn.disabled = false; icon.textContent = '▶';
+    }
+}
+
+function showKriTab(tab) {
+    if (!_kriData) return;
+    _kriTab = tab;
+
+    // Update tab active states
+    ['mismatch','missing_dt','unregistered','orphans','matched'].forEach(t => {
+        const el = document.getElementById(`kriTab_${t}`);
+        if (el) el.classList.toggle('active', t === tab);
+    });
+
+    const tableEl = document.getElementById('kraReconcileTable');
+    tableEl.style.display = 'block';
+
+    const thStyle = `padding:8px 12px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--muted);white-space:nowrap;`;
+    const tdStyle = `padding:9px 12px;font-size:12px;border-bottom:1px solid var(--border);`;
+
+    if (tab === 'mismatch') {
+        const rows = _kriData.stock_mismatch;
+        if (!rows.length) { tableEl.innerHTML = `<div style="padding:30px;text-align:center;color:var(--green);font-weight:900;font-family:var(--mono);">✅ No stock quantity mismatches found.</div>`; return; }
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--surface2);"><tr>
+                <th style="${thStyle}">Item Name</th>
+                <th style="${thStyle}">DB Qty</th>
+                <th style="${thStyle}">DigiTax Qty</th>
+                <th style="${thStyle}">Difference</th>
+                <th style="${thStyle}">DigiTax ID</th>
+            </tr></thead><tbody>
+            ${rows.map(r=>`<tr>
+                <td style="${tdStyle}font-weight:700;">${escHtml(r.item_name)}</td>
+                <td style="${tdStyle}color:var(--green);font-weight:900;">${r.db_qty}</td>
+                <td style="${tdStyle}color:#f59e0b;font-weight:900;">${r.dt_qty}</td>
+                <td style="${tdStyle}color:var(--red);font-weight:900;">Δ ${r.qty_diff}</td>
+                <td style="${tdStyle}font-family:var(--mono);font-size:10px;color:var(--muted);">${escHtml(r.digitax_id||'—')}</td>
+            </tr>`).join('')}
+            </tbody></table>`;
+
+    } else if (tab === 'missing_dt') {
+        const rows = _kriData.missing_in_digitax;
+        if (!rows.length) { tableEl.innerHTML = `<div style="padding:30px;text-align:center;color:var(--green);font-weight:900;font-family:var(--mono);">✅ All registered items found in DigiTax.</div>`; return; }
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--surface2);"><tr>
+                <th style="${thStyle}">Item Name</th>
+                <th style="${thStyle}">Category</th>
+                <th style="${thStyle}">Price</th>
+                <th style="${thStyle}">Stock Qty</th>
+                <th style="${thStyle}">DigiTax ID (stored)</th>
+            </tr></thead><tbody>
+            ${rows.map(r=>`<tr>
+                <td style="${tdStyle}font-weight:700;color:var(--red);">${escHtml(r.item_name)}</td>
+                <td style="${tdStyle}">${escHtml(r.category||'—')}</td>
+                <td style="${tdStyle}">KES ${(r.price||0).toLocaleString()}</td>
+                <td style="${tdStyle}">${r.stock_qty}</td>
+                <td style="${tdStyle}font-family:var(--mono);font-size:10px;color:var(--muted);">${escHtml(r.digitax_item_id||'none')}</td>
+            </tr>`).join('')}
+            </tbody></table>`;
+
+    } else if (tab === 'unregistered') {
+        const rows = _kriData.unregistered;
+        if (!rows.length) { tableEl.innerHTML = `<div style="padding:30px;text-align:center;color:var(--green);font-weight:900;font-family:var(--mono);">✅ All items have been registered with KRA.</div>`; return; }
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--surface2);"><tr>
+                <th style="${thStyle}">Item Name</th>
+                <th style="${thStyle}">Category</th>
+                <th style="${thStyle}">Unit</th>
+                <th style="${thStyle}">Price</th>
+                <th style="${thStyle}">Stock Qty</th>
+                <th style="${thStyle}">Barcode</th>
+            </tr></thead><tbody>
+            ${rows.map(r=>`<tr>
+                <td style="${tdStyle}font-weight:700;color:var(--purple);">${escHtml(r.item_name)}</td>
+                <td style="${tdStyle}">${escHtml(r.category||'—')}</td>
+                <td style="${tdStyle}">${escHtml(r.unit||'—')}</td>
+                <td style="${tdStyle}">KES ${(r.price||0).toLocaleString()}</td>
+                <td style="${tdStyle}">${r.stock_qty}</td>
+                <td style="${tdStyle}font-family:var(--mono);font-size:10px;color:var(--muted);">${escHtml(r.barcode||'—')}</td>
+            </tr>`).join('')}
+            </tbody></table>`;
+
+    } else if (tab === 'orphans') {
+        const rows = _kriData.orphans_in_digitax;
+        if (!rows.length) { tableEl.innerHTML = `<div style="padding:30px;text-align:center;color:var(--green);font-weight:900;font-family:var(--mono);">✅ No orphan items found in DigiTax.</div>`; return; }
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--surface2);"><tr>
+                <th style="${thStyle}">DigiTax Item Name</th>
+                <th style="${thStyle}">DigiTax ID</th>
+                <th style="${thStyle}">DigiTax Qty</th>
+                <th style="${thStyle}">Status</th>
+            </tr></thead><tbody>
+            ${rows.map(r=>`<tr>
+                <td style="${tdStyle}font-weight:700;color:#0ea5e9;">${escHtml(r.item_name||'—')}</td>
+                <td style="${tdStyle}font-family:var(--mono);font-size:10px;color:var(--muted);">${escHtml(r.digitax_item_id||'—')}</td>
+                <td style="${tdStyle}">${r.dt_qty}</td>
+                <td style="${tdStyle}"><span style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:6px;background:${r.dt_status==='active'?'rgba(0,229,160,.1)':'rgba(255,77,109,.1)'};color:${r.dt_status==='active'?'var(--green)':'var(--red)'};">${r.dt_status.toUpperCase()}</span></td>
+            </tr>`).join('')}
+            </tbody></table>`;
+
+    } else if (tab === 'matched') {
+        const rows = _kriData.matched;
+        if (!rows.length) { tableEl.innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted);font-weight:900;font-family:var(--mono);">No matched items.</div>`; return; }
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;">
+            <thead style="background:var(--surface2);"><tr>
+                <th style="${thStyle}">Item Name</th>
+                <th style="${thStyle}">DB Qty</th>
+                <th style="${thStyle}">DigiTax Qty</th>
+                <th style="${thStyle}">Qty OK?</th>
+                <th style="${thStyle}">DigiTax Status</th>
+            </tr></thead><tbody>
+            ${rows.map(r=>`<tr>
+                <td style="${tdStyle}font-weight:700;">${escHtml(r.item_name)}</td>
+                <td style="${tdStyle}">${r.db_qty}</td>
+                <td style="${tdStyle}">${r.dt_qty}</td>
+                <td style="${tdStyle}"><span style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:6px;background:${!r.qty_mismatch?'rgba(0,229,160,.1)':'rgba(245,158,11,.1)'};color:${!r.qty_mismatch?'var(--green)':'#f59e0b'};">${!r.qty_mismatch?'✓ OK':'⚠ DIFF'}</span></td>
+                <td style="${tdStyle}"><span style="font-size:10px;font-weight:900;padding:2px 8px;border-radius:6px;background:${r.dt_status==='active'?'rgba(0,229,160,.1)':'rgba(255,77,109,.1)'};color:${r.dt_status==='active'?'var(--green)':'var(--red)'};">${r.dt_status.toUpperCase()}</span></td>
+            </tr>`).join('')}
+            </tbody></table>`;
+    }
+}
+
+// Expose panel opener for sidebar links
+function openKraInventoryPanel() {
+    document.getElementById('kraInventoryPanel').style.display = 'block';
+    document.getElementById('kraInventoryPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
 
 <script>
     // --- EMERGENCY FALLBACK ---
@@ -3244,6 +3517,25 @@ async function sendDebtStkPush() {
             else b.classList.remove('active');
         });
     };
+
+    window.openKraInventoryPanel = function() {
+        const role = (dashRole || '').toLowerCase();
+        if (role !== 'admin' && role !== 'manager') return;
+        const panel = document.getElementById('kraInventoryPanel');
+        if (!panel) return;
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.querySelectorAll('.nav-link').forEach(b => {
+            if (b.textContent.includes('KRA Sync') || b.textContent.includes('Inventory Sync')) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+    };
+
+    if (window.location.hash === '#kra-inventory') {
+        document.addEventListener('eliteAuthReady', function() {
+            setTimeout(window.openKraInventoryPanel, 400);
+        });
+    }
 
     async function triggerScript(endpoint, statusElId, label) {
         const statusEl = document.getElementById(statusElId);
