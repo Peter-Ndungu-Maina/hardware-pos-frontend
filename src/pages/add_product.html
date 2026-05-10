@@ -584,46 +584,188 @@ function clearBulkFile() {
 async function submitBulkImport() {
     if (!bulkData.length) return;
     const btn = document.getElementById('bulkSubmitBtn');
-    btn.textContent = 'Importing...';
+    const box = document.getElementById('bulkResults');
+
+    btn.textContent = 'Starting Import...';
     btn.disabled    = true;
 
-    // Debug — log first row to console so we can see what's being sent
     console.log('[BULK] Sending', bulkData.length, 'items');
     console.log('[BULK] First row:', JSON.stringify(bulkData[0]));
 
+    // ── Step 1: Kick off the async job ────────────────────────────────────────
+    let jobId, statusUrl;
     try {
-        const res  = await apiFetch(`${API_URL}/inventory/bulk-import`, {
-            method: 'POST',
+        const res = await apiFetch(`${API_URL}/inventory/bulk-import`, {
+            method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: bulkData })
+            body:    JSON.stringify({ items: bulkData })
         });
         const data = await res.json();
-        console.log('[BULK] Server response:', JSON.stringify(data));
-        const box  = document.getElementById('bulkResults');
-        box.style.display = 'block';
+        console.log('[BULK] Job started:', JSON.stringify(data));
 
-        let html = `<div style="padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-bottom:10px;">
-            <div style="font-weight:900;color:#065f46;font-size:13px;">✅ Import Complete</div>
-            <div style="font-size:12px;color:#047857;margin-top:4px;">${data.imported} product(s) imported successfully</div>
-        </div>`;
-
-        if (data.failed > 0) {
-            html += `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
-                <div style="font-weight:900;color:#991b1b;font-size:13px;">⚠️ ${data.failed} item(s) failed</div>
-                <div style="margin-top:8px;">
-                    ${data.results.failed.map(f => `<div style="font-size:11px;color:#dc2626;padding:2px 0;">• ${f.itemName}: ${f.reason}</div>`).join('')}
-                </div>
+        if (!res.ok || !data.jobId) {
+            // Server returned a sync error (validation, auth, etc.)
+            box.style.display = 'block';
+            box.innerHTML = `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
+                <div style="font-weight:900;color:#991b1b;font-size:13px;">❌ Import Failed</div>
+                <div style="font-size:12px;color:#dc2626;margin-top:4px;">${data.message || 'Unknown error. Please try again.'}</div>
             </div>`;
+            btn.textContent = '✓ Import Products';
+            btn.disabled    = false;
+            return;
         }
 
-        box.innerHTML = html;
-        clearBulkFile();
-        loadExistingItems();
+        jobId     = data.jobId;
+        statusUrl = data.statusUrl;
     } catch(err) {
-        alert('Import failed: ' + err.message);
-    } finally {
+        box.style.display = 'block';
+        box.innerHTML = `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
+            <div style="font-weight:900;color:#991b1b;font-size:13px;">❌ Network Error</div>
+            <div style="font-size:12px;color:#dc2626;margin-top:4px;">${err.message}</div>
+        </div>`;
         btn.textContent = '✓ Import Products';
         btn.disabled    = false;
+        return;
+    }
+
+    // ── Step 2: Show progress UI ──────────────────────────────────────────────
+    box.style.display = 'block';
+    box.innerHTML = `
+        <div id="bulkProgressCard" style="padding:20px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <div style="font-weight:900;color:#065f46;font-size:13px;">⏳ Importing & Registering with KRA...</div>
+                <button onclick="cancelBulkImport('${jobId}')"
+                    id="bulkCancelBtn"
+                    style="font-size:10px;color:#dc2626;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+                    ✕ Cancel
+                </button>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="background:#d1fae5;border-radius:999px;height:10px;overflow:hidden;margin-bottom:8px;">
+                <div id="bulkProgressBar"
+                    style="height:100%;width:0%;background:linear-gradient(90deg,#059669,#34d399);border-radius:999px;transition:width 0.4s ease;">
+                </div>
+            </div>
+
+            <!-- Stats row -->
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div id="bulkProgressLabel" style="font-size:11px;color:#047857;font-weight:700;">
+                    Preparing ${bulkData.length} item(s)...
+                </div>
+                <div id="bulkProgressPct" style="font-size:11px;color:#065f46;font-weight:900;">0%</div>
+            </div>
+
+            <!-- Per-item status (scrollable live log) -->
+            <div id="bulkLiveLog"
+                style="margin-top:12px;max-height:140px;overflow-y:auto;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:8px;font-size:10px;font-family:monospace;color:#065f46;line-height:1.7;">
+                <div>▶ Job started — ID: ${jobId}</div>
+            </div>
+        </div>`;
+
+    // ── Step 3: Poll every 3 seconds ─────────────────────────────────────────
+    let lastProcessed = 0;
+    const poll = setInterval(async () => {
+        try {
+            const statusRes = await apiFetch(statusUrl || `${API_URL}/inventory/bulk-import/status/${jobId}`);
+            const job       = await statusRes.json();
+            console.log('[BULK] Poll:', JSON.stringify(job));
+
+            const pct       = job.percent ?? (job.total ? Math.round((job.processed / job.total) * 100) : 0);
+            const processed = job.processed ?? 0;
+            const total     = job.total     ?? bulkData.length;
+
+            // Update progress bar
+            const bar   = document.getElementById('bulkProgressBar');
+            const label = document.getElementById('bulkProgressLabel');
+            const pctEl = document.getElementById('bulkProgressPct');
+            const log   = document.getElementById('bulkLiveLog');
+
+            if (bar)   bar.style.width   = `${pct}%`;
+            if (pctEl) pctEl.textContent = `${pct}%`;
+            if (label) label.textContent = `${processed} / ${total} item(s) processed`;
+
+            // Append new log lines for newly processed items
+            if (log && job.results) {
+                const allDone = [...(job.results.succeeded || []), ...(job.results.failed || [])];
+                const newItems = allDone.slice(lastProcessed);
+                newItems.forEach(item => {
+                    const line = document.createElement('div');
+                    const ok   = item.success !== false && !item.reason;
+                    line.style.color = ok ? '#065f46' : '#dc2626';
+                    line.textContent = `${ok ? '✓' : '✗'} ${item.itemName || item.item_name || 'Item'}${item.reason ? ' — ' + item.reason : ''}`;
+                    log.appendChild(line);
+                    log.scrollTop = log.scrollHeight;
+                });
+                lastProcessed = allDone.length;
+            }
+
+            // ── Job finished ──────────────────────────────────────────────────
+            if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
+                clearInterval(poll);
+                btn.textContent = '✓ Import Products';
+                btn.disabled    = false;
+
+                const imported = job.imported ?? job.results?.succeeded?.length ?? 0;
+                const failed   = job.failed   ?? job.results?.failed?.length    ?? 0;
+
+                let finalHtml = '';
+
+                if (job.status === 'cancelled') {
+                    finalHtml = `<div style="padding:16px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin-bottom:10px;">
+                        <div style="font-weight:900;color:#92400e;font-size:13px;">⏹ Import Cancelled</div>
+                        <div style="font-size:12px;color:#b45309;margin-top:4px;">${imported} item(s) were imported before cancellation.</div>
+                    </div>`;
+                } else if (job.status === 'error') {
+                    finalHtml = `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;margin-bottom:10px;">
+                        <div style="font-weight:900;color:#991b1b;font-size:13px;">❌ Import Error</div>
+                        <div style="font-size:12px;color:#dc2626;margin-top:4px;">${job.message || 'An unexpected error occurred.'}</div>
+                    </div>`;
+                } else {
+                    finalHtml = `<div style="padding:16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-bottom:10px;">
+                        <div style="font-weight:900;color:#065f46;font-size:13px;">✅ Import Complete</div>
+                        <div style="font-size:12px;color:#047857;margin-top:4px;">${imported} product(s) imported & registered with KRA successfully.</div>
+                    </div>`;
+                }
+
+                if (failed > 0 && job.results?.failed?.length) {
+                    finalHtml += `<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;">
+                        <div style="font-weight:900;color:#991b1b;font-size:13px;">⚠️ ${failed} item(s) failed</div>
+                        <div style="margin-top:8px;">
+                            ${job.results.failed.map(f => `<div style="font-size:11px;color:#dc2626;padding:2px 0;">• ${f.itemName || f.item_name}: ${f.reason || 'Unknown error'}</div>`).join('')}
+                        </div>
+                    </div>`;
+                }
+
+                box.innerHTML = finalHtml;
+
+                if (job.status === 'done' && imported > 0) {
+                    clearBulkFile();
+                    loadExistingItems();
+                }
+            }
+
+        } catch(pollErr) {
+            console.warn('[BULK] Poll error:', pollErr.message);
+            // Don't stop polling on a single network hiccup — try again next tick
+        }
+    }, 3000);
+
+    // Safety: stop polling after 30 minutes regardless
+    setTimeout(() => {
+        clearInterval(poll);
+        btn.textContent = '✓ Import Products';
+        btn.disabled    = false;
+    }, 30 * 60 * 1000);
+}
+
+async function cancelBulkImport(jobId) {
+    const cancelBtn = document.getElementById('bulkCancelBtn');
+    if (cancelBtn) { cancelBtn.textContent = 'Cancelling...'; cancelBtn.disabled = true; }
+    try {
+        await apiFetch(`${API_URL}/inventory/bulk-import/${jobId}/cancel`, { method: 'POST' });
+    } catch(e) {
+        console.warn('[BULK] Cancel request failed:', e.message);
     }
 }
 
