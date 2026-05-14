@@ -1450,7 +1450,12 @@ function clearStkState() {
     const s = document.getElementById('stkStatus'); s.classList.add('hidden'); s.textContent='';
     document.getElementById('cartMpesaCode').value='';
     const btn = document.getElementById('stkPushBtn');
-    if (btn) { btn.disabled=false; btn.textContent='📲 Send M-Pesa Prompt'; btn.onclick=sendStkPush; }
+    if (btn) { 
+        btn.disabled = false; 
+        const method = document.getElementById('cartMethod')?.value;
+        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt'; 
+        btn.onclick = sendStkPush; 
+    }
 }
 
 function handleStkResult(pd,status,btn) {
@@ -1503,7 +1508,12 @@ async function sendStkPush() {
             } catch(e){}
         },3000);
         setTimeout(()=>{ if(!stkResolved){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(245,158,11,0.15)';status.style.color='#fbbf24';status.textContent='⏰ Expired — resend or collect cash.'; btn.disabled=false;btn.textContent=`📲 Resend ${method}`;btn.onclick=sendStkPush; } },60000);
-    } catch(e){ status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Error: '+e.message; btn.disabled=false;btn.textContent=`📲 Send ${method}`; }
+    } catch(e){ 
+        status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';
+        status.textContent='❌ Error: ' + (e.message || 'Connection timed out'); 
+        btn.disabled=false;
+        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt'; 
+    }
 }
 
 // ── RECENT SALES ─────────────────────────────────────────────────────────
