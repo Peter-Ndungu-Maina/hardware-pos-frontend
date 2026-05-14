@@ -777,7 +777,25 @@ async function processC2BInventoryTask() {
     for (const incoming of task.items) {
         const stockRow = indexed[String(incoming.itemId)];
         if (!stockRow) continue;
-        mappedItems.push({ itemId: stockRow.id, itemName: stockRow.item_name, price: parseFloat(stockRow.price||incoming.price||0), quantity: Math.max(1,parseInt(incoming.quantity||1)) });
+
+        const isSub   = incoming.sellUnit === 'sub' && !!(stockRow.sub_unit && stockRow.sub_unit_qty && stockRow.sub_unit_price);
+        const price   = isSub
+            ? parseFloat(stockRow.sub_unit_price || incoming.price || 0)
+            : parseFloat(stockRow.price          || incoming.price || 0);
+
+        // Stock is tracked in bulk units. sub-unit sales are stored as fractional bulk.
+        // e.g. 3 pieces from a box of 12 → stockDeductionQty = 3/12 = 0.25 boxes.
+        // inventory.html checkout route already handles fractional deduction via sellUnit.
+        mappedItems.push({
+            itemId:       stockRow.id,
+            itemName:     stockRow.item_name,
+            price,
+            quantity:     Math.max(1, parseInt(incoming.quantity || 1)),
+            sellUnit:     isSub ? 'sub' : 'bulk',
+            unitLabel:    isSub ? (stockRow.sub_unit || '') : (stockRow.bulk_unit || stockRow.unit || ''),
+            sub_unit_qty: isSub ? parseFloat(stockRow.sub_unit_qty || 1) : null,
+            displayUnit:  isSub ? (stockRow.sub_unit || '') : (stockRow.bulk_unit || stockRow.unit || '')
+        });
     }
     if (!mappedItems.length) return;
     let resolvedPhone = task.phone||'', resolvedCode = task.mpesaCode||'';
