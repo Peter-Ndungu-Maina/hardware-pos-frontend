@@ -2949,7 +2949,7 @@ function renderDebtorLedger() {
             <td style="padding:11px 12px;font-size:10px;color:var(--muted);font-family:var(--mono);">${escHtml(d.item_name)||'—'}</td>
             <td style="padding:11px 12px;font-size:13px;font-weight:900;font-family:var(--mono);color:var(--red);text-align:right;">KES ${bal.toLocaleString()}</td>
             <td style="padding:11px 12px;text-align:center;" class="no-print">
-                <button onclick="openPaymentModal('${d.id}', this.dataset.name, ${bal})" data-name="${escHtml((d.customer_name||'').replace(/"/g,'&quot;'))}" style="padding:5px 12px;border-radius:7px;background:var(--green);color:#000;font-weight:900;font-size:9px;text-transform:uppercase;cursor:pointer;border:none;font-family:var(--mono);">Collect</button>
+                <button onclick="openPaymentModal('${d.id}', this.dataset.name, ${bal}, '${(d.customer_phone||'').replace(/'/g,'')}')" data-name="${escHtml((d.customer_name||'').replace(/"/g,'&quot;'))}" style="padding:5px 12px;border-radius:7px;background:var(--green);color:#000;font-weight:900;font-size:9px;text-transform:uppercase;cursor:pointer;border:none;font-family:var(--mono);">Collect</button>
             </td>
         </tr>`;
     }).join('');
@@ -2966,8 +2966,10 @@ function changePage(dir) {
 
 // ── DEBT PAYMENT ──────────────────────────────────────
 let activeSaleId = null;
-function openPaymentModal(saleId, name, balance) {
+let activeSalePhone = '';
+function openPaymentModal(saleId, name, balance, phone = '') {
     activeSaleId = saleId;
+    activeSalePhone = phone || '';
     // Always reset submission guard and button state when opening the modal.
     // This prevents the button from being stuck on "Processing..." if a previous
     // request completed (or failed) while the modal was closed.
@@ -3055,7 +3057,8 @@ async function submitDebtPayment(e) {
             code, 
             data.receiptNumber || null, 
             data.remainingBalance ?? null,
-            data.clearedInvoices // Pass the new detailed array
+            data.clearedInvoices, // Pass the new detailed array
+            activeSalePhone       // ← customer phone for WA button
         );
             loadDashboard();
         } else {
