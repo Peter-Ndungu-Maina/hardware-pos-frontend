@@ -141,13 +141,20 @@
             .no-print { display: none !important; }
             body * { visibility: hidden; }
             #debtReceiptModal, #debtReceiptModal * { visibility: visible !important; }
+            #goodsReceiptModal, #goodsReceiptModal * { visibility: visible !important; }
             #debtReceiptModal {
                 position: fixed !important; inset: 0 !important;
                 background: white !important; display: flex !important;
                 align-items: flex-start !important; justify-content: center !important;
                 padding: 0 !important;
             }
-            #debtReceiptModal > div {
+            #goodsReceiptModal {
+                position: fixed !important; inset: 0 !important;
+                background: white !important; display: flex !important;
+                align-items: flex-start !important; justify-content: center !important;
+                padding: 0 !important;
+            }
+            #debtReceiptModal > div, #goodsReceiptModal > div {
                 width: 80mm !important; max-width: 80mm !important;
                 padding: 8px !important; border-radius: 0 !important;
                 box-shadow: none !important; overflow: visible !important;
@@ -204,7 +211,26 @@
         <div id="debtReceiptContent"></div>
         <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;" class="no-print">
             <button onclick="printDebtSilent()" style="width:100%;background:#0a0f1e;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">🖨️ Print Receipt (2 Copies)</button>
+            <div style="display:flex;gap:8px;">
+                <button onclick="saveDebtReceiptPDF()" style="flex:1;background:#2563eb;color:#fff;padding:11px;border-radius:12px;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">📄 Save PDF</button>
+                <button onclick="whatsappDebtReceiptModal()" style="flex:1;background:#16a34a;color:#fff;padding:11px;border-radius:12px;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">📲 Send WA</button>
+            </div>
             <button onclick="closeModal('debtReceiptModal')" style="background:none;border:none;color:#64748b;font-weight:700;cursor:pointer;padding:6px;">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- GOODS PURCHASE RECEIPT MODAL (C2B goods payments) -->
+<div id="goodsReceiptModal" class="modal-overlay" style="display:none;z-index:500;">
+    <div style="background:#fff;color:#111;padding:28px;border-radius:20px;width:100%;max-width:360px;font-family:var(--mono);">
+        <div id="goodsReceiptContent"></div>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;" class="no-print">
+            <button onclick="printGoodsReceiptSilent()" style="width:100%;background:#0a0f1e;color:#fff;padding:13px;border-radius:12px;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">🖨️ Print Receipt (2 Copies)</button>
+            <div style="display:flex;gap:8px;">
+                <button onclick="saveGoodsReceiptPDF()" style="flex:1;background:#2563eb;color:#fff;padding:11px;border-radius:12px;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">📄 Save PDF</button>
+                <button onclick="whatsappGoodsReceiptModal()" style="flex:1;background:#16a34a;color:#fff;padding:11px;border-radius:12px;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:none;">📲 Send WA</button>
+            </div>
+            <button onclick="closeModal('goodsReceiptModal')" style="background:none;border:none;color:#64748b;font-weight:700;cursor:pointer;padding:6px;">Close</button>
         </div>
     </div>
 </div>
@@ -1593,45 +1619,286 @@ function changeC2BPage(dir) {
 
 // ── REPRINT & WHATSAPP FUNCTIONS ─────────────────────────────────────────────
 
+// ── Detect whether a c2b receipt_data is goods or debt ───────────────────────
+// Goods: receipt_data is an array of cart items   [{itemName,price,quantity,…}]
+// Debt:  receipt_data is an object                {customer,total,method,code,…}
+function _isGoodsReceiptData(r) {
+    return Array.isArray(r);
+}
+
 function reprintC2BReceipt(id) {
     const p = _c2bPaymentMap[id];
     if (!p || !p.receipt_data) return alert("No receipt data available for this payment.");
-    
+
     const r = typeof p.receipt_data === 'string' ? JSON.parse(p.receipt_data) : p.receipt_data;
-    
-    // NEW: Pass r.remainingBalance instead of null
-    showDebtReceipt(r.customer, r.total, r.method, r.code, r.receiptNumber, r.remainingBalance);
+
+    if (_isGoodsReceiptData(r)) {
+        // Goods purchase — show goods receipt
+        showGoodsReceipt(p, r);
+    } else {
+        // Debt clearance — show debt receipt (guard against undefined fields)
+        showDebtReceipt(
+            r.customer  || p.customer_name || '—',
+            r.total     || r.amount        || parseFloat(p.amount_applied || p.amount || 0),
+            r.method    || 'M-Pesa',
+            r.code      || p.mpesa_code    || '',
+            r.receiptNumber || p.receipt_number || null,
+            r.remainingBalance ?? null,
+            [],
+            p.phone || ''
+        );
+    }
 }
 
 function whatsappC2BReceipt(id) {
     const p = _c2bPaymentMap[id];
     if (!p || !p.receipt_data) return alert("No receipt data available.");
-    
+
     const r = typeof p.receipt_data === 'string' ? JSON.parse(p.receipt_data) : p.receipt_data;
     const phoneNum = (p.phone || '').replace(/^0/, '254').replace(/\D/g, '');
-    
     if (!phoneNum) return alert("No phone number recorded to send WhatsApp.");
 
+    if (_isGoodsReceiptData(r)) {
+        // Goods WA message
+        const total = r.reduce((s, i) => s + (parseFloat(i.price||0) * parseFloat(i.quantity||1)), 0);
+        const lines = r.map(i => `  • ${i.quantity}x ${i.itemName} — KES ${(parseFloat(i.price||0)*parseFloat(i.quantity||1)).toLocaleString()}`);
+        const waText = [
+            `*ELITE HARDWARE LTD*`,
+            `*GOODS PURCHASE RECEIPT*`,
+            `Receipt No: ${p.receipt_number || '—'}`,
+            `Date: ${new Date(p.created_at || Date.now()).toLocaleString('en-KE')}`,
+            `Customer: ${p.customer_name || '—'}`,
+            `Method: M-Pesa (Till) ✓`,
+            `Trans ID: ${p.mpesa_code || '—'}`,
+            ``,
+            `*Items Purchased:*`,
+            ...lines,
+            ``,
+            `*TOTAL PAID: KES ${total.toLocaleString()}*`,
+            ``,
+            `Thank you for shopping with us! 🛒`
+        ].join('\n');
+        window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(waText)}`, '_blank');
+    } else {
+        // Debt clearance WA message
+        const customer = r.customer || p.customer_name || '—';
+        const total    = parseFloat(r.total || r.amount || p.amount_applied || p.amount || 0);
+        const remain   = r.remainingBalance ?? null;
+        const waText = [
+            `*ELITE HARDWARE LTD*`,
+            `*DEBT CLEARANCE RECEIPT*`,
+            `Receipt No: ${r.receiptNumber || p.receipt_number || '—'}`,
+            `Date: ${r.date || new Date(p.created_at||Date.now()).toLocaleString('en-KE')}`,
+            `Customer: ${customer}`,
+            `Method: M-Pesa (Till) ✓`,
+            `Trans ID: ${r.code || p.mpesa_code || '—'}`,
+            ``,
+            `*Amount Paid: KES ${total.toLocaleString()}*`,
+            remain !== null ? `*Balance Remaining: KES ${parseFloat(remain).toLocaleString()}*` : null,
+            ``,
+            (!remain || parseFloat(remain) <= 0)
+                ? `Thank you for clearing your account! 🤝`
+                : `Thank you for your payment! 🤝`
+        ].filter(Boolean).join('\n');
+        window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(waText)}`, '_blank');
+    }
+}
+
+// ── Show goods purchase receipt modal ────────────────────────────────────────
+function showGoodsReceipt(p, items) {
+    // items = array of {itemName, price, quantity, …}
+    const customer    = p.customer_name || '—';
+    const phone       = p.phone         || '';
+    const code        = p.mpesa_code    || '';
+    const receiptNo   = p.receipt_number || ('PAY-' + Date.now());
+    const date        = new Date(p.created_at || Date.now()).toLocaleString('en-KE');
+    const servedBy    = localStorage.getItem('userName') || 'Staff';
+    const total       = items.reduce((s, i) => s + (parseFloat(i.price||0) * parseFloat(i.quantity||1)), 0);
+    const totalFmt    = total.toLocaleString('en-KE', {minimumFractionDigits:2,maximumFractionDigits:2});
+
+    window._lastGoodsReceiptData = { customer, phone, code, receiptNo, date, servedBy, total, items };
+
+    const itemRows = items.map(i => {
+        const qty  = parseFloat(i.quantity || 1);
+        const price = parseFloat(i.price || 0);
+        const line  = qty * price;
+        return `<tr style="border-bottom:1px solid #eee;">
+            <td style="padding:5px 0;font-size:11px;">${escHtml(i.itemName || i.item_name || '—')}</td>
+            <td style="padding:5px 4px;text-align:center;font-size:10px;color:#555;">${qty}</td>
+            <td style="padding:5px 0;text-align:right;font-size:10px;color:#555;">${price.toLocaleString()}</td>
+            <td style="padding:5px 0;text-align:right;font-size:11px;font-weight:700;">${line.toLocaleString()}</td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('goodsReceiptContent').innerHTML = `
+        <div style="font-family:'Courier New',monospace;color:#000;background:#fff;width:100%;box-sizing:border-box;">
+            <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:10px;margin-bottom:10px;">
+                <div style="font-size:15px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;">ELITE HARDWARE LTD</div>
+                <div style="font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:3px 0;">GOODS PURCHASE RECEIPT</div>
+                <div style="font-size:8px;color:#666;margin-top:2px;">PIN: ${typeof BUSINESS_PIN !== 'undefined' ? BUSINESS_PIN : ''} &nbsp;|&nbsp; M-PESA TILL PAYMENT</div>
+            </div>
+            <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:10px;">
+                <tr style="border-bottom:2px solid #000;">
+                    <td style="padding:4px 4px 4px 0;font-weight:900;width:44%;">RECEIPT NO:</td>
+                    <td style="padding:4px 0;font-weight:900;text-align:right;">${receiptNo}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 4px 4px 0;color:#555;">DATE:</td>
+                    <td style="padding:4px 0;font-weight:700;text-align:right;font-size:10px;">${date}</td>
+                </tr>
+                <tr style="border-top:1px dashed #ccc;border-bottom:1px dashed #ccc;">
+                    <td style="padding:5px 4px 5px 0;color:#555;">CUSTOMER:</td>
+                    <td style="padding:5px 0;font-weight:900;text-align:right;text-transform:uppercase;">${escHtml(customer)}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 4px 4px 0;color:#555;">METHOD:</td>
+                    <td style="padding:4px 0;font-weight:900;text-align:right;color:#16a34a;">M-PESA (TILL)</td>
+                </tr>
+                ${code ? `<tr>
+                    <td style="padding:4px 4px 4px 0;color:#555;">TRANS ID:</td>
+                    <td style="padding:4px 0;font-weight:700;text-align:right;color:#2563eb;">${escHtml(code)}</td>
+                </tr>` : ''}
+                <tr style="border-top:1px dashed #ccc;">
+                    <td style="padding:4px 4px 4px 0;color:#555;">SERVED BY:</td>
+                    <td style="padding:4px 0;font-weight:900;text-align:right;text-transform:uppercase;">${escHtml(servedBy)}</td>
+                </tr>
+            </table>
+            <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:10px;">
+                <thead>
+                    <tr style="border-bottom:2px solid #000;font-size:9px;text-transform:uppercase;color:#555;">
+                        <th style="text-align:left;padding:4px 0;">Item</th>
+                        <th style="text-align:center;padding:4px 4px;">Qty</th>
+                        <th style="text-align:right;padding:4px 4px;">Price</th>
+                        <th style="text-align:right;padding:4px 0;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>${itemRows}</tbody>
+            </table>
+            <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:10px;border:1px solid #ddd;">
+                <tr style="background:#0a0f1e;">
+                    <td style="padding:8px 8px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">TOTAL PAID</td>
+                    <td style="padding:8px 8px;text-align:right;font-size:16px;font-weight:900;color:#fff;">KES ${totalFmt}</td>
+                </tr>
+            </table>
+            <div style="font-size:9px;text-align:center;color:#94a3b8;font-style:italic;margin-bottom:10px;">Thank you for your purchase!</div>
+            <div style="border-top:1px dashed #ccc;padding-top:8px;text-align:center;">
+                <div style="font-size:8px;color:#888;font-weight:700;text-transform:uppercase;letter-spacing:1px;">
+                    Goods sold are not returnable without receipt.<br>
+                    Keep this receipt for warranty purposes.
+                </div>
+            </div>
+        </div>`;
+    document.getElementById('goodsReceiptModal').style.display = 'flex';
+}
+
+// ── PDF save helpers ──────────────────────────────────────────────────────────
+function saveDebtReceiptPDF() {
+    const el = document.getElementById('debtReceiptContent');
+    if (!el) return;
+    const w = window.open('', '_blank', 'width=420,height=700');
+    if (!w) return alert('Pop-up blocked — please allow pop-ups');
+    w.document.write(`<!DOCTYPE html><html><head><title>Debt Receipt</title>
+        <style>body{margin:0;padding:12px;font-family:'Courier New',monospace;color:#000;background:#fff;}
+        @media print{body{margin:0;}}</style></head><body>`
+        + el.innerHTML
+        + `<script>window.onload=function(){window.print();}<\/script></body></html>`);
+    w.document.close();
+}
+
+function saveGoodsReceiptPDF() {
+    const el = document.getElementById('goodsReceiptContent');
+    if (!el) return;
+    const w = window.open('', '_blank', 'width=420,height=700');
+    if (!w) return alert('Pop-up blocked — please allow pop-ups');
+    w.document.write(`<!DOCTYPE html><html><head><title>Goods Receipt</title>
+        <style>body{margin:0;padding:12px;font-family:'Courier New',monospace;color:#000;background:#fff;}
+        @media print{body{margin:0;}}</style></head><body>`
+        + el.innerHTML
+        + `<script>window.onload=function(){window.print();}<\/script></body></html>`);
+    w.document.close();
+}
+
+// ── WA from modal ─────────────────────────────────────────────────────────────
+function whatsappDebtReceiptModal() {
+    const d = window._lastDebtReceiptData;
+    if (!d) return;
+    const phoneNum = (d.phone || '').replace(/^0/, '254').replace(/\D/g, '');
+    const remain   = d.remainingBalance ?? null;
     const waText = [
         `*ELITE HARDWARE LTD*`,
         `*DEBT CLEARANCE RECEIPT*`,
-        `Receipt No: ${r.receiptNumber}`,
-        `Date: ${r.date}`,
-        `Customer: ${r.customer}`,
-        `Method: M-Pesa (Till) ✓`,
-        `Trans ID: ${r.code}`,
+        `Receipt No: ${d.receiptNumber || '—'}`,
+        `Date: ${d.date}`,
+        `Customer: ${d.customer}`,
+        `Method: ${d.method || 'M-Pesa'} ✓`,
+        `Trans ID: ${d.code || '—'}`,
         ``,
-        `*Amount Paid: KES ${parseFloat(r.total).toLocaleString()}*`,
-        r.remainingBalance !== undefined && r.remainingBalance !== null 
-            ? `*Balance Remaining: KES ${parseFloat(r.remainingBalance).toLocaleString()}*` 
-            : null,
+        `*Amount Paid: KES ${parseFloat(d.total||0).toLocaleString()}*`,
+        remain !== null ? `*Balance Remaining: KES ${parseFloat(remain).toLocaleString()}*` : null,
         ``,
-        r.remainingBalance <= 0 || !r.remainingBalance 
-            ? `Thank you for clearing your account! 🤝` 
+        (!remain || parseFloat(remain) <= 0)
+            ? `Thank you for clearing your account! 🤝`
             : `Thank you for your payment! 🤝`
     ].filter(Boolean).join('\n');
+    if (phoneNum) window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(waText)}`, '_blank');
+    else { navigator.clipboard?.writeText(waText); alert('Phone not on file — message copied to clipboard'); }
+}
 
-    window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(waText)}`, '_blank');
+function whatsappGoodsReceiptModal() {
+    const d = window._lastGoodsReceiptData;
+    if (!d) return;
+    const phoneNum = (d.phone || '').replace(/^0/, '254').replace(/\D/g, '');
+    const lines = (d.items||[]).map(i => `  • ${i.quantity}x ${i.itemName||i.item_name||'?'} — KES ${(parseFloat(i.price||0)*parseFloat(i.quantity||1)).toLocaleString()}`);
+    const waText = [
+        `*ELITE HARDWARE LTD*`,
+        `*GOODS PURCHASE RECEIPT*`,
+        `Receipt No: ${d.receiptNo}`,
+        `Date: ${d.date}`,
+        `Customer: ${d.customer}`,
+        `Method: M-Pesa (Till) ✓`,
+        `Trans ID: ${d.code || '—'}`,
+        ``,
+        `*Items Purchased:*`,
+        ...lines,
+        ``,
+        `*TOTAL PAID: KES ${parseFloat(d.total||0).toLocaleString()}*`,
+        ``,
+        `Thank you for shopping with us! 🛒`
+    ].join('\n');
+    if (phoneNum) window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(waText)}`, '_blank');
+    else { navigator.clipboard?.writeText(waText); alert('Phone not on file — message copied to clipboard'); }
+}
+
+function printGoodsReceiptSilent() {
+    const d = window._lastGoodsReceiptData;
+    if (!d) { window.print(); return; }
+    // Try v-printer if available, else browser print
+    if (!window.LIVE_PRINT) {
+        saveGoodsReceiptPDF();
+        return;
+    }
+    const GOODS_PRINT_URL = (window.PRINT_SERVER_URL || 'https://unpicketed-unappliable-rena.ngrok-free.dev/print') + '/receipt';
+    (async () => {
+        try {
+            showPrintToastIdx('🖨️ Sending to printer...', false, true);
+            const res = await fetch(GOODS_PRINT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                body: JSON.stringify({
+                    customer: d.customer, method: 'M-Pesa', total: d.total,
+                    code: d.code, receiptNumber: d.receiptNo, servedBy: d.servedBy,
+                    date: d.date, items: d.items, copies: 2
+                })
+            });
+            if (!res.ok) throw new Error('Print server ' + res.status);
+            const result = await res.json();
+            if (!result.success) throw new Error(result.error || 'Print failed');
+            showPrintToastIdx('✅ Goods receipt saved — 2 copies');
+        } catch(err) {
+            showPrintToastIdx('⚠️ v-printer offline — opening PDF', true);
+            setTimeout(saveGoodsReceiptPDF, 800);
+        }
+    })();
 }
 let _c2bPending = { id: null, type: null };
 let _c2bCart    = []; // { itemId, itemName, price, quantity, stock }
@@ -2892,7 +3159,11 @@ async function _openC2BReceiptPopup(data) {
     else   { showPrintToastIdx('⚠️ Pop-up blocked — allow pop-ups for this site', true); }
 }
 
-function showDebtReceipt(customer, amount, method, code, receiptNumber = null, remainingBalance = null, clearedItems = []) {
+function showDebtReceipt(customer, amount, method, code, receiptNumber = null, remainingBalance = null, clearedItems = [], phone = '') {
+    // Guard undefined/null arguments that come from receipt_data fields
+    customer  = customer  || '—';
+    method    = method    || 'M-Pesa';
+    code      = code      || '';
     const date        = new Date().toLocaleString();
     const servedBy    = localStorage.getItem('userName') || 'Staff';
     const methodColor = method === 'M-Pesa' ? '#16a34a' : method === 'Cash' ? '#2563eb' : '#dc2626';
@@ -2900,7 +3171,7 @@ function showDebtReceipt(customer, amount, method, code, receiptNumber = null, r
     const datePart    = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
     const timePart    = String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
     const payRef      = receiptNumber || ('PAY-' + datePart + '-' + timePart);
-    const totalAmt    = parseFloat(amount);
+    const totalAmt    = parseFloat(amount) || 0;
     const totalFmt    = totalAmt.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2});
     const remainFmt   = remainingBalance !== null
         ? parseFloat(remainingBalance).toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2})
@@ -2908,15 +3179,16 @@ function showDebtReceipt(customer, amount, method, code, receiptNumber = null, r
 
     // FIX: Store data for v-printer — MUST be set before printDebtSilent() is called
     window._lastDebtReceiptData = {
-        customer:      customer,
-        total:         totalAmt,
-        amount:        totalAmt,
-        method:        method,
-        code:          code || '',
-        receiptNumber: payRef,
-        servedBy:      servedBy,
-        date:          date,
-        remainingBalance: remainingBalance, 
+        customer:         customer,
+        total:            totalAmt,
+        amount:           totalAmt,
+        method:           method,
+        code:             code || '',
+        receiptNumber:    payRef,
+        servedBy:         servedBy,
+        date:             date,
+        phone:            phone || '',
+        remainingBalance: remainingBalance,
         items: clearedItems.length ? clearedItems : [{ itemName: 'Debt Clearance - ' + customer, price: totalAmt, quantity: 1 }]
     };
 
