@@ -3733,7 +3733,12 @@ function clearDebtStkState() {
     const s = document.getElementById('payStkStatus'); if(s){s.style.display='none';s.textContent='';}
     document.getElementById('payMpesaCode').value = '';
     const btn = document.getElementById('paySTKBtn');
-    if(btn){btn.disabled=false;btn.textContent='📲 Send M-Pesa Prompt';btn.onclick=sendDebtStkPush;}
+    if(btn){
+        btn.disabled=false;
+        const method = document.getElementById('payMethod')?.value;
+        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
+        btn.onclick=sendDebtStkPush;
+    }
 }
 
 async function sendDebtStkPush() {
