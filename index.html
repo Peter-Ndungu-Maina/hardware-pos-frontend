@@ -1977,74 +1977,130 @@ function c2bSearchItems() {
             const items = Array.isArray(data) ? data : (data.items || []);
             if (!items.length) { resultsBox.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--muted);">No items found</div>'; resultsBox.style.display = 'block'; return; }
             resultsBox.style.display = 'block';
-            // Store items in a map so onclick can look up by id — safe against special chars in item_name
+            // Store items in a map — safe against special chars in item_name
             const _itemSearchMap = {};
-            resultsBox.innerHTML = items.slice(0,8).map(item => {
+            const rows = [];
+            items.slice(0, 8).forEach(item => {
                 _itemSearchMap[item.id] = item;
-                return `
-                <div data-item-id="${item.id}"
-                    style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"
-                    onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+                const hasSub    = !!(item.sub_unit && item.sub_unit_qty && item.sub_unit_price);
+                const bulkUnit  = item.bulk_unit || item.unit || 'unit';
+                const subUnit   = item.sub_unit  || '';
+                const subStock  = hasSub ? (parseFloat(item.stock_quantity||0) * parseFloat(item.sub_unit_qty||1)) : 0;
+
+                // ── Bulk / box row (always shown) ──────────────────────────────
+                rows.push(`
+                <div data-item-id="${item.id}" data-sell-unit="bulk"
+                    style="padding:10px 14px;cursor:pointer;border-bottom:${hasSub?'none':'1px solid var(--border)'};display:flex;justify-content:space-between;align-items:center;background:var(--bg);"
+                    onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background='var(--bg)'">
                     <div>
                         <div style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(item.item_name)}</div>
-                        <div style="font-size:10px;color:var(--muted);">Stock: ${item.stock_quantity}</div>
+                        <div style="font-size:10px;color:var(--muted);">Stock: ${parseFloat(item.stock_quantity||0).toLocaleString()} ${escHtml(bulkUnit)}</div>
                     </div>
-                    <div style="font-family:var(--mono);font-weight:900;color:var(--text);">KES ${parseFloat(item.price).toLocaleString()}</div>
-                </div>`;
-            }).join('');
+                    <div style="text-align:right;">
+                        <div style="font-family:var(--mono);font-weight:900;color:var(--text);">KES ${parseFloat(item.price).toLocaleString()}</div>
+                        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;">per ${escHtml(bulkUnit)}</div>
+                    </div>
+                </div>`);
+
+                // ── Sub-unit / piece row (only for items that have one) ─────────
+                if (hasSub) {
+                    rows.push(`
+                    <div data-item-id="${item.id}" data-sell-unit="sub"
+                        style="padding:8px 14px 10px 22px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(124,58,237,0.04);"
+                        onmouseover="this.style.background='rgba(124,58,237,0.1)'" onmouseout="this.style.background='rgba(124,58,237,0.04)'">
+                        <div>
+                            <div style="font-size:11px;font-weight:700;color:#7c3aed;">⚖️ Sell by ${escHtml(subUnit)}</div>
+                            <div style="font-size:10px;color:var(--muted);">~${subStock.toLocaleString()} ${escHtml(subUnit)} available</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-family:var(--mono);font-weight:900;color:#7c3aed;">KES ${parseFloat(item.sub_unit_price).toLocaleString()}</div>
+                            <div style="font-size:9px;color:#7c3aed;text-transform:uppercase;">per ${escHtml(subUnit)}</div>
+                        </div>
+                    </div>`);
+                }
+            });
+            resultsBox.innerHTML = rows.join('');
+
             // Attach click handlers safely after render — no special char risk
             resultsBox.querySelectorAll('[data-item-id]').forEach(el => {
-                const item = _itemSearchMap[el.dataset.itemId];
-                if (item) el.addEventListener('click', () => c2bAddToCart(item.id, item.item_name, item.price, item.stock_quantity));
+                const item     = _itemSearchMap[el.dataset.itemId];
+                const sellUnit = el.dataset.sellUnit || 'bulk';
+                if (item) el.addEventListener('click', () => c2bAddToCart(item, sellUnit));
             });
         } catch(e) { console.error('Search error'); }
     }, 300);
 }
 
-function c2bAddToCart(itemId, itemName, price, stock) {
-    const payment   = _c2bPaymentMap[_c2bPending?.id] || {};
-    const available = parseFloat(payment.amount_excess > 0 ? payment.amount_excess : payment.amount || 0);
+// ── c2bAddToCart ─────────────────────────────────────────────────────────────
+// Accepts a full inventory item object and sellUnit ('bulk' | 'sub').
+// Tracks subunit metadata so the cart, stock deduction, and receipt are all correct.
+function c2bAddToCart(item, sellUnit = 'bulk') {
+    const isSub     = sellUnit === 'sub' && !!(item.sub_unit && item.sub_unit_qty && item.sub_unit_price);
+    const itemId    = item.id;
+    const itemName  = item.item_name;
+    const price     = isSub ? parseFloat(item.sub_unit_price) : parseFloat(item.price);
+    const unitLabel = isSub ? (item.sub_unit || '') : (item.bulk_unit || item.unit || '');
+
+    // Sub-unit stock available in pieces; bulk stock in boxes
+    const stockInUnit = isSub
+        ? parseFloat(item.stock_quantity || 0) * parseFloat(item.sub_unit_qty || 1)
+        : parseFloat(item.stock_quantity || 0);
+
+    const payment      = _c2bPaymentMap[_c2bPending?.id] || {};
+    const available    = parseFloat(payment.amount_excess > 0 ? payment.amount_excess : payment.amount || 0);
     const currentTotal = _c2bCart.reduce((s, i) => s + i.price * i.quantity, 0);
 
-    // Check if adding one unit of this item would exceed the payment
     if (currentTotal + price > available) {
-        alert(`❌ Cannot add "${itemName}" (KES ${price.toLocaleString()}).\n\nCart total would be KES ${(currentTotal + price).toLocaleString()} but only KES ${available.toLocaleString()} was received.`);
+        alert(`❌ Cannot add "${itemName}" (KES ${price.toLocaleString()} / ${unitLabel || 'unit'}).\n\nCart total would be KES ${(currentTotal + price).toLocaleString()} but only KES ${available.toLocaleString()} was received.`);
         return;
     }
 
-    const existing = _c2bCart.find(i => i.itemId === itemId);
+    // Match on both itemId AND sellUnit — same item can appear twice (once bulk, once piece)
+    const existing = _c2bCart.find(i => i.itemId === itemId && i.sellUnit === sellUnit);
     if (existing) {
-        if (existing.quantity < stock) existing.quantity++;
+        if (existing.quantity < stockInUnit) existing.quantity++;
+        else { alert(`❌ Only ${stockInUnit.toLocaleString()} ${unitLabel} in stock.`); return; }
     } else {
-        _c2bCart.push({ itemId, itemName, price, quantity: 1, stock });
+        _c2bCart.push({
+            itemId,
+            itemName,
+            price,
+            quantity:    1,
+            stock:       stockInUnit,
+            sellUnit,
+            unitLabel,
+            sub_unit_qty: isSub ? parseFloat(item.sub_unit_qty) : null
+        });
     }
-    document.getElementById('c2bItemSearch').value        = '';
-    document.getElementById('c2bSearchResults').style.display = 'none';
+    document.getElementById('c2bItemSearch').value             = '';
+    document.getElementById('c2bSearchResults').style.display  = 'none';
     c2bRenderCart();
 }
 
-function c2bUpdateQty(itemId, delta) {
-    const item = _c2bCart.find(i => i.itemId === itemId);
+function c2bUpdateQty(itemId, sellUnit, delta) {
+    const item = _c2bCart.find(i => i.itemId === itemId && i.sellUnit === sellUnit);
     if (!item) return;
 
     const payment   = _c2bPaymentMap[_c2bPending?.id] || {};
     const available = parseFloat(payment.amount_excess > 0 ? payment.amount_excess : payment.amount || 0);
-    const otherTotal = _c2bCart.filter(i => i.itemId !== itemId).reduce((s, i) => s + i.price * i.quantity, 0);
+    const otherTotal = _c2bCart.filter(i => !(i.itemId === itemId && i.sellUnit === sellUnit)).reduce((s, i) => s + i.price * i.quantity, 0);
     const maxAffordableQty = Math.floor((available - otherTotal) / item.price);
 
-    const newQty = Math.max(1, Math.min(item.stock, maxAffordableQty, item.quantity + delta));
-
-    if (delta > 0 && item.quantity >= maxAffordableQty) {
-        alert(`❌ Cannot add more.\n\nKES ${available.toLocaleString()} was received. Adding another unit would exceed the payment.`);
+    if (delta > 0 && item.quantity >= Math.min(item.stock, maxAffordableQty)) {
+        if (item.quantity >= maxAffordableQty) {
+            alert(`❌ Cannot add more — KES ${available.toLocaleString()} received. Adding another ${item.unitLabel||'unit'} would exceed the payment.`);
+        } else {
+            alert(`❌ Only ${item.stock.toLocaleString()} ${item.unitLabel||'unit'} in stock.`);
+        }
         return;
     }
 
-    item.quantity = newQty;
+    item.quantity = Math.max(1, Math.min(item.stock, maxAffordableQty, item.quantity + delta));
     c2bRenderCart();
 }
 
-function c2bRemoveFromCart(itemId) {
-    _c2bCart = _c2bCart.filter(i => i.itemId !== itemId);
+function c2bRemoveFromCart(itemId, sellUnit) {
+    _c2bCart = _c2bCart.filter(i => !(i.itemId === itemId && i.sellUnit === sellUnit));
     c2bRenderCart();
 }
 
@@ -2057,20 +2113,29 @@ function c2bRenderCart() {
     if (!_c2bCart.length) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
 
-    items.innerHTML = _c2bCart.map(item => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);">
-            <div style="flex:1;">
-                <div style="font-size:12px;font-weight:700;color:var(--text);">${item.itemName}</div>
-                <div style="font-size:11px;color:var(--muted);">KES ${item.price.toLocaleString()} each</div>
+    items.innerHTML = _c2bCart.map(item => {
+        const isSub     = item.sellUnit === 'sub';
+        const unitColor = isSub ? '#7c3aed' : 'var(--text)';
+        const unitBadge = item.unitLabel
+            ? `<span style="font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:${unitColor};background:${isSub?'rgba(124,58,237,0.12)':'var(--surface2)'};padding:1px 5px;border-radius:4px;margin-left:4px;">${escHtml(item.unitLabel)}</span>`
+            : '';
+        // Encode sellUnit safely for inline onclick — it's always 'bulk' or 'sub'
+        const su = item.sellUnit || 'bulk';
+        return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--border);${isSub?'background:rgba(124,58,237,0.03);':''}">
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;flex-wrap:wrap;gap:2px;">${escHtml(item.itemName)}${unitBadge}</div>
+                <div style="font-size:10px;color:var(--muted);">KES ${item.price.toLocaleString()} / ${escHtml(item.unitLabel||'unit')}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <button onclick="c2bUpdateQty(${item.itemId},-1)" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-weight:900;">−</button>
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                <button onclick="c2bUpdateQty(${item.itemId},'${su}',-1)" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-weight:900;">−</button>
                 <span style="font-family:var(--mono);font-weight:700;min-width:20px;text-align:center;">${item.quantity}</span>
-                <button onclick="c2bUpdateQty(${item.itemId},1)" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-weight:900;">+</button>
+                <button onclick="c2bUpdateQty(${item.itemId},'${su}',1)" style="width:24px;height:24px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;font-weight:900;">+</button>
                 <span style="font-family:var(--mono);font-size:12px;font-weight:900;min-width:70px;text-align:right;color:var(--text);">KES ${(item.price * item.quantity).toLocaleString()}</span>
-                <button onclick="c2bRemoveFromCart(${item.itemId})" style="width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;cursor:pointer;font-size:11px;">✕</button>
+                <button onclick="c2bRemoveFromCart(${item.itemId},'${su}')" style="width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;cursor:pointer;font-size:11px;">✕</button>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 
     // Overpayment / underpayment warning
     const payment   = _c2bPaymentMap[_c2bPending.id] || {};
@@ -2185,6 +2250,8 @@ async function submitC2BResolve() {
     }
 
     // ── Snapshot BEFORE any async call — cart clears when modal closes ──────────
+    // Spread copies all fields including sellUnit, sub_unit_qty, unitLabel.
+    // inventory.html processC2BInventoryTask uses these to deduct stock correctly.
     const cartSnapshot = _c2bCart.map(i => ({ ...i }));
     const snapTotal    = cartSnapshot.reduce((s, i) => s + i.price * i.quantity, 0);
 
@@ -2309,12 +2376,16 @@ async function c2bPrintReceipt(customer, phone, mpesaCode, items, receiptNumber,
     <table>
         <thead><tr><th>Description</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Unit</th><th style="text-align:right;">Amount</th></tr></thead>
         <tbody>
-            ${items.map(i => `<tr>
-                <td class="bold upper">${i.itemName}</td>
-                <td style="text-align:center;">${i.quantity}</td>
+            ${items.map(i => {
+                const uLabel = i.unitLabel || i.displayUnit || '';
+                const qtyStr = uLabel ? `${i.quantity} ${uLabel}` : String(i.quantity);
+                return `<tr>
+                <td class="bold upper">${i.itemName}${i.sellUnit==='sub'?' <span style="font-size:8px;color:#7c3aed;font-weight:700;">(LOOSE)</span>':''}</td>
+                <td style="text-align:center;">${qtyStr}</td>
                 <td style="text-align:right;">${fmt(i.price)}</td>
                 <td style="text-align:right;" class="bold">${fmt(i.price * i.quantity)}</td>
-            </tr>`).join('')}
+            </tr>`;
+            }).join('')}
         </tbody>
     </table>
     <div class="divider-solid"></div>
@@ -2429,7 +2500,11 @@ function resendWhatsApp(id) {
         `Receipt No: ${p.receipt_number||r?.receiptNumber||'Pending'}`,
         `Date: ${new Date(p.resolved_at||p.created_at).toLocaleString('en-KE')}`,
         ``, items.length ? `*Items Purchased:*` : null,
-        ...items.map(i=>`• ${i.quantity}x ${i.itemName} @ KES ${(i.price||0).toLocaleString()} = KES ${((i.price||0)*(i.quantity||1)).toLocaleString()}`),
+        ...items.map(i=>{
+            const ul = i.unitLabel || i.displayUnit || '';
+            const qStr = ul ? `${i.quantity} ${ul}` : `${i.quantity}x`;
+            return `• ${qStr} ${i.itemName}${i.sellUnit==='sub'?' (loose)':''} @ KES ${(i.price||0).toLocaleString()} = KES ${((i.price||0)*(i.quantity||1)).toLocaleString()}`;
+        }),
         ``, `*Total: KES ${total.toLocaleString()}*`, `Paid via M-Pesa (Till) ✓`,
         p.mpesa_code ? `M-Pesa Code: ${p.mpesa_code}` : null,
         ``, `Your goods are ready for collection.`, `Thank you for choosing Elite Hardware! 🔨`,
