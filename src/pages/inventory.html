@@ -315,31 +315,85 @@
     .picker-btn-sub  { background: #1a0d37; border: 2px solid #a78bfa; }
 
     /* ─── RECEIPT MODAL ───────────────────────────────────────────────── */
+    /* Full-screen dark overlay, same pattern as voucherModal in returns_audit.html */
     #receiptModal {
-        position: fixed !important; top: 50% !important; left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        background: var(--surface) !important; border: 1px solid var(--border2) !important;
-        color: var(--text) !important;
-        width: min(95vw, 420px) !important; max-height: min(90vh, 700px) !important;
-        overflow: hidden !important; display: flex !important; flex-direction: column !important;
-        z-index: 120 !important; border-radius: 24px !important;
-        box-shadow: 0 25px 60px rgba(0,0,0,0.7) !important;
+        position: fixed !important;
+        inset: 0 !important;
+        top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+        transform: none !important;
+        width: 100% !important; max-width: 100% !important;
+        height: 100% !important; max-height: 100% !important;
+        background: rgba(0,0,0,0.78) !important;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 16px 16px 0 16px !important;
+        z-index: 120 !important;
+        overflow: hidden !important;
     }
     #receiptModal.hidden { display: none !important; }
-    #receiptModal > .flex-1 { overflow-y: auto; flex: 1; min-height: 0; }
-    #receiptModal #receiptButtons { flex-shrink: 0; }
-    #receiptModal h1,#receiptModal h2,#receiptModal h3,
-    #receiptModal p,#receiptModal span,#receiptModal td,#receiptModal th { color: var(--text) !important; }
-    #receiptModal .text-slate-500,#receiptModal .text-gray-500 { color: var(--muted) !important; }
-    #receiptModal #receiptButtons { background: var(--surface2) !important; border-top: 1px solid var(--border) !important; }
-    #receiptModal #totalDisplayBlock { border-top: 2px solid rgba(255,255,255,0.3) !important; }
-    #receiptModal #totalDisplayBlock .bg-black { background: var(--surface2) !important; }
-    #receiptModal .receipt-watermark::before { color: rgba(255,255,255,0.04) !important; }
+
+    /* Scroll area = the white receipt card */
+    #receiptModal > .flex-1 {
+        background: #fff !important;
+        color: #000 !important;
+        border-radius: 16px !important;
+        width: 100% !important; max-width: 360px !important;
+        max-height: calc(90vh - 130px) !important;
+        overflow-y: auto !important;
+        flex: none !important;
+        padding: 0 !important;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.5) !important;
+    }
+
+    /* CRITICAL: block every dark-mode colour override from entering the receipt card.
+       The receipt paper uses inline style="#000" — !important rules in dark mode
+       were overriding those. Scope all overrides OUT of the receipt card. */
+    #receiptModal > .flex-1 *:not([style*="color:#16a34a"]):not([style*="color:green"]):not([style*="color:#E8640A"]):not([style*="color:#fff"]):not([style*="color: #fff"]):not([style*="color:white"]) {
+        color: #000 !important;
+    }
+    #receiptModal > .flex-1 *:not([style*="background:#000"]):not([style*="background: #000"]) {
+        background-color: transparent !important;
+    }
+    /* Keep the black total bar black with white text */
+    #receiptModal > .flex-1 [style*="background:#000"],
+    #receiptModal > .flex-1 [style*="background: #000"] {
+        background-color: #000 !important;
+    }
+    #receiptModal > .flex-1 [style*="background:#000"] *,
+    #receiptModal > .flex-1 [style*="background: #000"] * {
+        color: #fff !important;
+        background-color: transparent !important;
+    }
+    /* Keep green trans IDs and orange eTIMS pending */
+    #receiptModal > .flex-1 [style*="color:#16a34a"] { color: #16a34a !important; }
+    #receiptModal > .flex-1 [style*="color:green"]   { color: #16a34a !important; }
+    #receiptModal > .flex-1 [style*="color:#E8640A"] { color: #E8640A !important; }
+
+    /* Buttons row below the card — always light text on dark overlay */
+    #receiptModal #receiptButtons {
+        flex-shrink: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        width: 100% !important; max-width: 360px !important;
+        padding: 10px 0 16px 0 !important;
+    }
+
     @media print {
-        #receiptModal,#receiptModal *,#tempPrintArea,#tempPrintArea * {
-            background: #fff !important; color: #000 !important; border-color: #000 !important; visibility: visible !important;
+        #receiptModal, #receiptModal *, #tempPrintArea, #tempPrintArea * {
+            background: #fff !important; color: #000 !important;
+            border-color: #000 !important; visibility: visible !important;
         }
-        #receiptModal .bg-black,#receiptModal #totalDisplayBlock .bg-black { background: #000 !important; color: #fff !important; }
+        #receiptModal [style*="background:#000"],
+        #receiptModal [style*="background: #000"] { background: #000 !important; }
+        #receiptModal [style*="background:#000"] *,
+        #receiptModal [style*="background: #000"] * { color: #fff !important; }
     }
 
     /* ─── RECENT SALES TABLE ──────────────────────────────────────────── */
@@ -384,9 +438,7 @@
         .pagination-bar { padding: 12px 14px; }
         #cartSection { margin: 12px !important; padding: 14px !important; }
         .recent-sales-wrap { margin: 0 12px 16px; }
-        #receiptModal { top: auto !important; bottom: 0 !important; left: 0 !important;
-            right: 0 !important; transform: none !important; width: 100% !important;
-            max-width: 100% !important; border-radius: 24px 24px 0 0 !important; max-height: 92vh !important; }
+        /* receiptModal: mobile handled by base inset:0 overlay */
     }
 
     /* inputs/selects global dark */
@@ -1164,32 +1216,13 @@ function generateGRNSlip(itemName, qty, dn) {
     document.getElementById('receiptTotal').innerHTML   = '';
     document.getElementById('receiptContent').innerHTML = grnHTML;
 
-    // Dynamically restyle the modal container structure to match Credit Note style
-    const modalArea = document.getElementById('receiptModal');
-    if (modalArea) {
-        modalArea.style.background = 'transparent';
-        modalArea.style.border = 'none';
-        modalArea.style.boxShadow = 'none';
-    }
-    const scrollArea = document.querySelector('#receiptModal > .flex-1');
-    if (scrollArea) {
-        scrollArea.classList.remove('receipt-watermark');
-        scrollArea.style.background = 'rgba(0,0,0,0.75)';
-        scrollArea.style.padding = '20px';
-        scrollArea.style.display = 'flex';
-        scrollArea.style.flexDirection = 'column';
-        scrollArea.style.alignItems = 'center';
-    }
-    const buttonsArea = document.getElementById('receiptButtons');
-    if (buttonsArea) {
-        buttonsArea.style.background = 'transparent';
-        buttonsArea.style.border = 'none';
-        buttonsArea.style.width = '100%';
-        buttonsArea.style.maxWidth = '302px';
-        buttonsArea.style.margin = '0 auto';
-    }
+    // CSS handles all modal styling — no JS overrides needed
+    const grnScrollArea = document.querySelector('#receiptModal > .flex-1');
+    if (grnScrollArea) grnScrollArea.classList.remove('receipt-watermark');
 
-    document.getElementById('receiptButtons').innerHTML = `<button onclick="silentPrintGRN('${itemName}',${qty},'${dn}')" style="width:100%;background:#2563eb;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ PRINT GRN</button><button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>`;
+    document.getElementById('receiptButtons').innerHTML = `
+        <button onclick="silentPrintGRN('${itemName}',${qty},'${dn}')" style="width:100%;background:#2563eb;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ PRINT GRN</button>
+        <button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);padding:11px;border-radius:12px;color:#fff;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>`;
     document.getElementById('receiptModal').classList.remove('hidden');
     document.getElementById('modalOverlay').classList.remove('hidden');
 }
@@ -1753,36 +1786,15 @@ async function showMultiReceipt(customer,method,total,items,phone='',code='',rec
         '<div class="print-copy-break" style="page-break-after:always;"></div>' +
         receiptHTML('★ SHOP COPY ★', 'color:#555;border-color:#aaa;');
 
-    // 4. Transform modal background styling dynamically to match Credit Note style
-    const modalArea = document.getElementById('receiptModal');
-    if (modalArea) {
-        modalArea.style.background = 'transparent';
-        modalArea.style.border = 'none';
-        modalArea.style.boxShadow = 'none';
-    }
+    // 4. Remove watermark class — CSS handles all modal styling
     const scrollArea = document.querySelector('#receiptModal > .flex-1');
-    if (scrollArea) {
-        scrollArea.classList.remove('receipt-watermark');
-        scrollArea.style.background = 'rgba(0,0,0,0.75)';
-        scrollArea.style.padding = '20px';
-        scrollArea.style.display = 'flex';
-        scrollArea.style.flexDirection = 'column';
-        scrollArea.style.alignItems = 'center';
-    }
-    const buttonsArea = document.getElementById('receiptButtons');
-    if (buttonsArea) {
-        buttonsArea.style.background = 'transparent';
-        buttonsArea.style.border = 'none';
-        buttonsArea.style.width = '100%';
-        buttonsArea.style.maxWidth = '302px';
-        buttonsArea.style.margin = '0 auto';
-    }
-    
-    // 5. Update Buttons
+    if (scrollArea) scrollArea.classList.remove('receipt-watermark');
+
+    // 5. Update Buttons — white text since they sit on the dark overlay
     document.getElementById('receiptButtons').innerHTML=`
         <button type="button" onclick="printTwoCopies();" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;">🖨️ ${mainButtonLabel} (2 COPIES)</button>
-        <button type="button" onclick="printDeliveryNote();" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">PRINT DELIVERY NOTE</button>
-        <button type="button" onclick="closeReceipt();" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border2);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
+        <button type="button" onclick="printDeliveryNote();" style="width:100%;background:#2563eb;color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">PRINT DELIVERY NOTE</button>
+        <button type="button" onclick="closeReceipt();" style="width:100%;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);padding:11px;border-radius:12px;color:#fff;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
     `;
 
     document.getElementById('receiptModal').classList.remove('hidden');
@@ -1964,20 +1976,24 @@ waitForAuthThenLoad();
 <!-- Modals -->
 <div id="printContainer" class="hidden"></div>
 <div id="modalOverlay" class="fixed inset-0 hidden z-[110]" style="background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="closeReceipt()"></div>
-<div id="receiptModal" class="hidden font-mono text-sm" style="box-shadow:0 25px 60px rgba(0,0,0,0.7);">
-    <div class="flex-1 overflow-y-auto p-6 receipt-watermark" style="min-height:0;position:relative;">
-        <div id="receiptDate" class="mb-4"></div>
-        <div id="receiptContent" class="py-2 space-y-1 border-t border-dashed" style="border-color:rgba(255,255,255,0.15);"></div>
-        <div class="border-t border-dashed pt-2 mt-2" style="border-color:rgba(255,255,255,0.15);">
-            <div style="display:flex;justify-content:space-between;font-weight:900;font-size:16px;">
-                <span>TOTAL:</span><span id="receiptTotal"></span>
-            </div>
-        </div>
+<!-- RECEIPT MODAL — full-screen overlay, white card, CSS-controlled only -->
+<div id="receiptModal" class="hidden font-mono text-sm">
+
+    <!-- White receipt card — CSS forces background:#fff; color:#000 on this -->
+    <div class="flex-1" style="overflow-y:auto;">
+        <!-- receiptDate kept as empty anchor so any legacy code writing to it doesn't throw -->
+        <div id="receiptDate" style="display:none;"></div>
+        <!-- showMultiReceipt injects the fully self-contained white receipt div here -->
+        <div id="receiptContent" style="padding:16px;"></div>
+        <!-- receiptTotal kept as empty anchor -->
+        <div id="receiptTotal" style="display:none;"></div>
     </div>
-    <div id="receiptButtons" class="p-4 flex flex-col gap-2 no-print" style="border-top:1px solid rgba(255,255,255,0.08);background:#1c2128;">
+
+    <!-- Buttons sit on the dark overlay — use white text, transparent bg -->
+    <div id="receiptButtons" class="no-print" style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:8px;padding:10px 0 16px 0;">
         <button onclick="printTwoCopies()" style="width:100%;background:#0d1117;color:#fff;padding:14px;border-radius:12px;font-weight:900;font-size:13px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1.5px;">🖨️ PRINT RECEIPT (2 COPIES)</button>
-        <button onclick="printDeliveryNote()" style="width:100%;background:var(--blue);color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">PRINT DELIVERY NOTE</button>
-        <button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:11px;border-radius:12px;color:var(--muted);font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
+        <button onclick="printDeliveryNote()" style="width:100%;background:#2563eb;color:#fff;padding:12px;border-radius:12px;font-weight:700;font-size:11px;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">PRINT DELIVERY NOTE</button>
+        <button onclick="closeReceipt()" style="width:100%;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);padding:11px;border-radius:12px;color:#fff;font-weight:700;font-size:11px;cursor:pointer;text-transform:uppercase;">CLOSE</button>
     </div>
 </div>
 </body>
