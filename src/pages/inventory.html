@@ -33,7 +33,7 @@
         .receipt-watermark::before {
             content: 'ELITE HARDWARE'; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%,-50%) rotate(-35deg); font-size: 22px; font-weight: 900;
-            color: rgba(175, 168, 168, 0.08);letter-spacing: 0.18em; text-transform: uppercase;
+            color: rgba(16,185,129,0.13);letter-spacing: 0.18em; text-transform: uppercase;
             white-space: nowrap; pointer-events: none;
         }
         .receipt-watermark { position: relative !important; }
@@ -323,9 +323,9 @@
         transform: none !important;
         width: 100% !important; max-width: 100% !important;
         height: 100% !important; max-height: 100% !important;
-        background: rgba(0,0,0,0.78) !important;
-        backdrop-filter: blur(4px) !important;
-        -webkit-backdrop-filter: blur(4px) !important;
+        background: rgba(15,23,42,0.18) !important;
+        backdrop-filter: blur(14px) saturate(0.75) !important;
+        -webkit-backdrop-filter: blur(14px) saturate(0.75) !important;
         border: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
@@ -416,7 +416,7 @@
     .receipt-watermark::before {
         content: 'ELITE HARDWARE'; position: absolute; top: 50%; left: 50%;
         transform: translate(-50%,-50%) rotate(-35deg); font-size: 28px; font-weight: 900;
-        color: rgba(175, 168, 168, 0.08); letter-spacing: 0.18em; text-transform: uppercase;
+        color: rgba(16,185,129,0.13); letter-spacing: 0.18em; text-transform: uppercase;
         white-space: nowrap; pointer-events: none; z-index: 0; font-family: 'Courier New', monospace;
     }
     .receipt-watermark > * { position: relative; z-index: 1; }
@@ -1182,7 +1182,7 @@ function generateGRNSlip(itemName, qty, dn) {
     
     const grnHTML = `
     <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.08);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(16,185,129,0.13);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
         <div style="position:relative;z-index:1;">
             <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
                 <div style="font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;">ELITE HARDWARE LTD</div>
@@ -1704,7 +1704,7 @@ async function showMultiReceipt(customer,method,total,items,phone='',code='',rec
 
     const receiptHTML = (copyLabel, copyClass) => `
     <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto 20px auto;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.08);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(16,185,129,0.13);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
 
         <div style="position:relative;z-index:1;">
             ${copyLabel ? `<div class="${copyClass}" style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;">${copyLabel}</div>` : ''}
@@ -1817,7 +1817,7 @@ function _browserPrintFallback(data,onlyDN=false,printAll=false){
 
     const makeDnCopy=(label,cls)=>`
     <div style="font-family:'Courier New',monospace;font-size:11px;width:302px;padding:10px;background:#fff;color:#000;margin:0 auto;page-break-after:always;position:relative;overflow:hidden;">
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(0,0,0,0.08);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:22px;font-weight:900;color:rgba(16,185,129,0.13);letter-spacing:0.18em;white-space:nowrap;pointer-events:none;z-index:0;">ELITE HARDWARE</div>
         <div style="position:relative;z-index:1;">
             <div style="text-align:center;border:1px dashed #999;padding:3px;margin-bottom:8px;font-size:9px;font-weight:900;letter-spacing:0.2em;text-transform:uppercase;${cls}">${label}</div>
             <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:8px;margin-bottom:8px;">
@@ -1975,7 +1975,7 @@ waitForAuthThenLoad();
 
 <!-- Modals -->
 <div id="printContainer" class="hidden"></div>
-<div id="modalOverlay" class="fixed inset-0 hidden z-[110]" style="background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="closeReceipt()"></div>
+<div id="modalOverlay" class="fixed inset-0 hidden z-[110]" style="background:rgba(15,23,42,0.18);backdrop-filter:blur(14px) saturate(0.75);-webkit-backdrop-filter:blur(14px) saturate(0.75);" onclick="closeReceipt()"></div>
 <!-- RECEIPT MODAL — full-screen overlay, white card, CSS-controlled only -->
 <div id="receiptModal" class="hidden font-mono text-sm">
 
