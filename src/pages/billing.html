@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Billing & Subscription | Elite Hardware</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/intasend-checkout-sdk"></script>
     <style>
         /* ── Elite POS Design Tokens (mirrors index.html) ─────────────────── */
         :root {
@@ -390,39 +391,26 @@
                             <div class="pay-context-cycle" id="payModalAmountLabel"></div>
                         </div>
 
+                        <!-- IntaSend pay button — amount/api_ref are updated by quickSelect() -->
                         <div class="flex-col-gap" style="gap:14px;">
-                            <div>
-                                <label class="form-label">M-Pesa Mobile Number</label>
-                                <input type="tel" id="billingPhone" placeholder="e.g. 07XXXXXXXX" maxlength="13">
+                            <div style="font-size:9px;color:var(--muted);font-family:var(--mono);padding:7px 10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">
+                                💱 Prices shown in USD · Payments processed in KES @ ~129 KES/USD
                             </div>
-                            <div>
-                                <label class="form-label">Amount (KES)</label>
-                                <input type="number" id="billingAmount" placeholder="0.00">
+                            <div id="intasendNotice" style="display:none;padding:10px 14px;border-radius:10px;font-size:11px;font-family:var(--mono);font-weight:700;text-align:center;background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.3);">
+                                ⚠ Please select a plan above before paying.
                             </div>
-                            <button id="stkBtn" onclick="sendBillingStk()" class="btn btn-primary btn-full">Initiate STK Push</button>
-                            <div id="stkStatus" class="stk-status"></div>
-                            <input type="text" id="mpesaCodeInput" placeholder="System Generated M-Pesa Code" style="display:none;font-family:var(--mono);text-transform:uppercase;" readonly>
-                        </div>
-
-
-                        <!-- Paybill instructions -->
-                        <div class="paybill-box" style="margin-bottom:18px;">
-                            <div class="section-label" style="margin-bottom:12px;">Lipa na M-Pesa Instructions</div>
-                            <div style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-bottom:12px;padding:7px 10px;background:var(--surface);border-radius:8px;border:1px solid var(--border);">💱 Prices shown in USD · Payments processed in KES @ ~129 KES/USD</div>
-                                <div class="paybill-row">
-                                <span class="paybill-key">Business No.</span>
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <span class="paybill-val" id="paybillNo">600980</span>
-                                    <button class="copy-btn" onclick="copyText('paybillNo')">Copy</button>
-                                </div>
-                            </div>
-                            <div class="paybill-row">
-                                <span class="paybill-key">Account No.</span>
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <span class="paybill-val" id="accountRef" style="font-size:11px;">ELITE_HARDWARE_MAIN</span>
-                                    <button class="copy-btn" onclick="copyText('accountRef')">Copy</button>
-                                </div>
-                            </div>
+                            <!-- IntaSend injects its checkout on click of this button -->
+                            <button
+                                id="intasendPayBtn"
+                                class="intaSendPayButton btn btn-primary btn-full"
+                                data-amount="3000"
+                                data-currency="KES"
+                                data-api_ref="ELITE_HW_MONTHLY"
+                                onclick="return guardIntasendClick(event)"
+                            >
+                                🔒 Pay Now via IntaSend
+                            </button>
+                            <div id="payStatus" class="stk-status"></div>
                         </div>
 
                     </div>
@@ -461,8 +449,6 @@ const API_BASE = window.API_BASE || (location.hostname === 'localhost' ? 'https:
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let _subData     = null;
-let _stkInterval = null;
-let _stkCountdown = null;
 let _selectedPlan = { type: null, amount: null, months: null };
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -690,7 +676,15 @@ function openPayModal(type, amount, months) {
 
 function quickSelect(amount, type, months) {
     _selectedPlan = { type, amount, months };
-    document.getElementById('billingAmount').value = amount;
+
+    // Keep IntaSend button in sync so the correct amount/ref is sent to checkout
+    const btn = document.getElementById('intasendPayBtn');
+    if (btn) {
+        btn.setAttribute('data-amount', amount);
+        btn.setAttribute('data-currency', 'KES');
+        btn.setAttribute('data-api_ref', `ELITE_HW_${type.toUpperCase()}`);
+    }
+    document.getElementById('intasendNotice').style.display = 'none';
 
     const usdMap = { monthly: 23, annual: 279, lifetime: 930, annual_service: 233 };
     const usd = usdMap[type] || Math.round(amount / 129);
@@ -707,141 +701,85 @@ function quickSelect(amount, type, months) {
     contextBox.style.display = 'block';
 
     // Scroll to pay panel
-    document.getElementById('stkBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('intasendPayBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ── STK Push ──────────────────────────────────────────────────────────────────
-let _stkCheckoutId = null;
-let _stkPollCount  = 0;
+// ── IntaSend Payment ───────────────────────────────────────────────────────────
+// Initialise the IntaSend SDK once the page loads.
+// publicAPIKey: replace with your actual publishable key from https://payment.intasend.com
+// Set live: true when going to production.
+let _intasendReady = false;
 
-async function sendBillingStk() {
-    const phone  = document.getElementById('billingPhone').value.trim();
-    const amount = parseFloat(document.getElementById('billingAmount').value);
-
-    if (!phone)     return alert('Please enter a valid M-Pesa mobile number.');
-    if (!amount)    return alert('Amount is required.');
-    if (!_selectedPlan.type) return alert('Please select a licensing plan from the options above.');
-
-    const btn    = document.getElementById('stkBtn');
-    const status = document.getElementById('stkStatus');
-
-    clearStkState();
-    btn.disabled   = true;
-    btn.textContent = '⏳ Processing...';
-    
-    status.style.display = 'block';
-    status.className = 'stk-status stk-pending'; status.style.display = 'block';
-    status.textContent       = `Initiating request to ${phone}...`;
-
-    try {
-        const res  = await apiFetch(`${API_BASE}/mpesa/stk-push`, {
-            method: 'POST',
-            body: JSON.stringify({
-                phone, amount,
-                accountRef: `ELITE_HW_${_selectedPlan.type.toUpperCase()}`,
-                context:    { billingPlan: _selectedPlan.type }
-            })
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-            showStkResult({ status:'failed', resultDesc: data.message });
-            return;
-        }
-
-        _stkCheckoutId = data.checkoutRequestId;
-        btn.textContent = '⌛ Awaiting PIN Entry...';
-
-        // Countdown
-        let secondsLeft = 60;
-        _stkCountdown = setInterval(() => {
-            if (!_stkInterval) { clearInterval(_stkCountdown); return; }
-            status.textContent = `Awaiting customer PIN input on device (${secondsLeft}s)...`;
-            secondsLeft--;
-        }, 1000);
-
-        // Poll payment status
-        _stkPollCount = 0;
-        _stkInterval  = setInterval(async () => {
-            try {
-                const pr  = await apiFetch(`${API_BASE}/mpesa/status/${_stkCheckoutId}`);
-                const pd  = await pr.json();
-                if (pd.status !== 'pending') { showStkResult(pd); return; }
-                _stkPollCount++;
-                if (_stkPollCount >= 18) {
-                    try {
-                        const qr = await apiFetch(`${API_BASE}/mpesa/query/${_stkCheckoutId}`);
-                        const qd = await qr.json();
-                        if (qd.success && qd.status !== 'pending') showStkResult(qd);
-                    } catch(e) {}
-                }
-            } catch(e) {}
-        }, 3000);
-
-        // Hard timeout
-        setTimeout(() => {
-            if (_stkInterval) showStkResult({ status: 'timeout' });
-        }, 60000);
-
-    } catch(e) {
-        status.className = 'stk-status stk-fail'; status.style.display = 'block';
-        status.textContent = 'System Error: ' + e.message;
-        btn.disabled = false;
-        btn.textContent = 'Initiate STK Push';
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.IntaSend) {
+        console.warn('[IntaSend] SDK not loaded. Check your internet connection.');
+        return;
     }
-}
+    new window.IntaSend({
+        publicAPIKey: window.INTASEND_PUBLIC_KEY || 'YOUR_INTASEND_PUBLISHABLE_KEY',
+        live: false // ← set to true in production
+    })
+    .on('COMPLETE', async (result) => {
+        const status = document.getElementById('payStatus');
+        status.className = 'stk-status stk-success';
+        status.style.display = 'block';
+        status.textContent = `✓ Payment complete. Ref: ${result.id || result.tracking_id || 'N/A'}`;
 
-function showStkResult(pd) {
-    clearStkState();
-    const btn    = document.getElementById('stkBtn');
-    const status = document.getElementById('stkStatus');
-    status.style.display = 'block';
+        const btn = document.getElementById('intasendPayBtn');
+        btn.textContent = '✓ Payment Received';
+        btn.className = 'btn btn-ghost btn-full';
+        btn.style.cursor = 'default';
 
-    if (pd.status === 'confirmed') {
-        status.className = 'stk-status stk-success'; status.style.display = 'block';
-        status.textContent = `Transaction Successful. Receipt Code: ${pd.mpesaCode}`;
-        
-        const mpesaInput = document.getElementById('mpesaCodeInput');
-        mpesaInput.value = pd.mpesaCode || '';
-        mpesaInput.style.display = 'block';
-        
-        btn.textContent = '✓ Payment Reconciled';
-        btn.className = 'btn btn-ghost btn-full'; btn.style.cursor = 'default';
+        // Notify backend to confirm & extend subscription
+        try {
+            await apiFetch(`${API_BASE}/intasend/confirm`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    tracking_id: result.tracking_id || result.id,
+                    plan_type:   _selectedPlan.type,
+                    amount_kes:  _selectedPlan.amount,
+                })
+            });
+        } catch(e) { console.warn('[IntaSend] Confirm call failed:', e.message); }
+
         setTimeout(async () => {
             await loadSubscriptionStatus();
             await loadPaymentHistory();
+            // Re-enable button after data refreshes
+            const b = document.getElementById('intasendPayBtn');
+            b.textContent = '🔒 Pay Now via IntaSend';
+            b.className = 'intaSendPayButton btn btn-primary btn-full';
+            b.style.cursor = 'pointer';
         }, 3000);
-    } else if (pd.status === 'cancelled') {
-        status.className = 'stk-status stk-warning'; status.style.display = 'block';
-        status.textContent = 'Transaction aborted by user. Please retry or process manually.';
-        _resetStkBtn(btn, 5000);
-    } else if (pd.status === 'timeout') {
-        status.className = 'stk-status stk-warning'; status.style.display = 'block';
-        status.textContent = 'Request timed out. Please retry or utilize Paybill.';
-        _resetStkBtn(btn, 5000);
-    } else if (pd.status === 'insufficient_funds') {
-        status.className = 'stk-status stk-fail'; status.style.display = 'block';
-        status.textContent = 'Transaction failed: Insufficient funds in account.';
-        _resetStkBtn(btn, 5000);
-    } else {
-        status.className = 'stk-status stk-fail'; status.style.display = 'block';
-        status.textContent = `Error: ${pd.resultDesc || 'Payment processor rejected request'}.`;
-        _resetStkBtn(btn, 5000);
+    })
+    .on('FAILED', (result) => {
+        const status = document.getElementById('payStatus');
+        status.className = 'stk-status stk-fail';
+        status.style.display = 'block';
+        status.textContent = `Payment failed. ${result.message || 'Please retry.'}`;
+        setTimeout(() => { status.style.display = 'none'; }, 6000);
+    })
+    .on('IN-PROGRESS', () => {
+        const status = document.getElementById('payStatus');
+        status.className = 'stk-status stk-pending';
+        status.style.display = 'block';
+        status.textContent = 'Payment in progress — please complete on your device...';
+    });
+
+    _intasendReady = true;
+});
+
+// Guard: show warning if no plan selected before IntaSend checkout opens
+function guardIntasendClick(e) {
+    if (!_selectedPlan.type) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const notice = document.getElementById('intasendNotice');
+        notice.style.display = 'block';
+        setTimeout(() => { notice.style.display = 'none'; }, 4000);
+        return false;
     }
-}
-
-function _resetStkBtn(btn, delay) {
-    btn.textContent = 'Standby (5s)...'; btn.disabled = true;
-    setTimeout(() => { 
-        btn.disabled = false; 
-        btn.textContent = 'Initiate STK Push'; 
-        btn.className = 'btn btn-primary btn-full';
-    }, delay);
-}
-
-function clearStkState() {
-    clearInterval(_stkInterval);  _stkInterval  = null;
-    clearInterval(_stkCountdown); _stkCountdown = null;
+    return true; // allow IntaSend SDK to handle the click
 }
 
 // ── Manual payment confirmation ───────────────────────────────────────────────
