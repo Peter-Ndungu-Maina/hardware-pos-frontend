@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Billing & Subscription | Elite Hardware</title>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/intasend-checkout-sdk"></script>
     <style>
         /* ── Elite POS Design Tokens (mirrors index.html) ─────────────────── */
         :root {
@@ -399,14 +398,11 @@
                             <div id="intasendNotice" style="display:none;padding:10px 14px;border-radius:10px;font-size:11px;font-family:var(--mono);font-weight:700;text-align:center;background:var(--amber-dim);color:var(--amber);border:1px solid rgba(245,158,11,0.3);">
                                 ⚠ Please select a plan above before paying.
                             </div>
-                            <!-- IntaSend injects its checkout on click of this button -->
+                            <!-- Server-side checkout — no SDK needed -->
                             <button
                                 id="intasendPayBtn"
-                                class="intaSendPayButton btn btn-primary btn-full"
-                                data-amount="3000"
-                                data-currency="KES"
-                                data-api_ref="ELITE_HW_MONTHLY"
-                                onclick="return guardIntasendClick(event)"
+                                class="btn btn-primary btn-full"
+                                onclick="launchIntasendCheckout()"
                             >
                                 🔒 Pay Now via IntaSend
                             </button>
@@ -455,6 +451,7 @@ let _selectedPlan = { type: null, amount: null, months: null };
 document.addEventListener('eliteAuthReady', async function () {
     await loadSubscriptionStatus();
     await loadPaymentHistory();
+    await handleIntasendRedirectBack();
 });
 
 // ── Load subscription status ──────────────────────────────────────────────────
@@ -677,14 +674,8 @@ function openPayModal(type, amount, months) {
 function quickSelect(amount, type, months) {
     _selectedPlan = { type, amount, months };
 
-    // Keep IntaSend button in sync so the correct amount/ref is sent to checkout
-    const btn = document.getElementById('intasendPayBtn');
-    if (btn) {
-        btn.setAttribute('data-amount', amount);
-        btn.setAttribute('data-currency', 'KES');
-        btn.setAttribute('data-api_ref', `ELITE_HW_${type.toUpperCase()}`);
-    }
-    document.getElementById('intasendNotice').style.display = 'none';
+    const notice = document.getElementById('intasendNotice');
+    if (notice) notice.style.display = 'none';
 
     const usdMap = { monthly: 23, annual: 279, lifetime: 930, annual_service: 233 };
     const usd = usdMap[type] || Math.round(amount / 129);
@@ -704,82 +695,93 @@ function quickSelect(amount, type, months) {
     document.getElementById('intasendPayBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-// ── IntaSend Payment ───────────────────────────────────────────────────────────
-// Initialise the IntaSend SDK once the page loads.
-// publicAPIKey: replace with your actual publishable key from https://payment.intasend.com
-// Set live: true when going to production.
-let _intasendReady = false;
+// ── IntaSend Payment — server-side checkout (no browser SDK) ─────────────────
+// Checkout is created by POST /api/intasend/create-checkout so API keys stay
+// on the server and currency/api_ref are validated before reaching IntaSend.
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.IntaSend) {
-        console.warn('[IntaSend] SDK not loaded. Check your internet connection.');
+async function launchIntasendCheckout() {
+    const btn    = document.getElementById('intasendPayBtn');
+    const status = document.getElementById('payStatus');
+
+    if (!_selectedPlan.type) {
+        const notice = document.getElementById('intasendNotice');
+        if (notice) { notice.style.display = 'block'; setTimeout(() => { notice.style.display = 'none'; }, 4000); }
         return;
     }
-    new window.IntaSend({
-        publicAPIKey: window.INTASEND_PUBLIC_KEY || 'YOUR_INTASEND_PUBLISHABLE_KEY',
-        live: false // ← set to true in production
-    })
-    .on('COMPLETE', async (result) => {
-        const status = document.getElementById('payStatus');
-        status.className = 'stk-status stk-success';
-        status.style.display = 'block';
-        status.textContent = `✓ Payment complete. Ref: ${result.id || result.tracking_id || 'N/A'}`;
 
-        const btn = document.getElementById('intasendPayBtn');
-        btn.textContent = '✓ Payment Received';
-        btn.className = 'btn btn-ghost btn-full';
-        btn.style.cursor = 'default';
+    btn.disabled     = true;
+    btn.textContent  = '⏳ Creating checkout...';
+    status.className     = 'stk-status stk-pending';
+    status.style.display = 'block';
+    status.textContent   = 'Connecting to IntaSend…';
 
-        // Notify backend to confirm & extend subscription
-        try {
-            await apiFetch(`${API_BASE}/intasend/confirm`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    tracking_id: result.tracking_id || result.id,
-                    plan_type:   _selectedPlan.type,
-                    amount_kes:  _selectedPlan.amount,
-                })
-            });
-        } catch(e) { console.warn('[IntaSend] Confirm call failed:', e.message); }
+    try {
+        const res  = await apiFetch(`${API_BASE}/intasend/create-checkout`, {
+            method: 'POST',
+            body:   JSON.stringify({ plan_type: _selectedPlan.type }),
+        });
+        const data = await res.json();
 
-        setTimeout(async () => {
-            await loadSubscriptionStatus();
-            await loadPaymentHistory();
-            // Re-enable button after data refreshes
-            const b = document.getElementById('intasendPayBtn');
-            b.textContent = '🔒 Pay Now via IntaSend';
-            b.className = 'intaSendPayButton btn btn-primary btn-full';
-            b.style.cursor = 'pointer';
-        }, 3000);
-    })
-    .on('FAILED', (result) => {
-        const status = document.getElementById('payStatus');
-        status.className = 'stk-status stk-fail';
-        status.style.display = 'block';
-        status.textContent = `Payment failed. ${result.message || 'Please retry.'}`;
-        setTimeout(() => { status.style.display = 'none'; }, 6000);
-    })
-    .on('IN-PROGRESS', () => {
-        const status = document.getElementById('payStatus');
-        status.className = 'stk-status stk-pending';
-        status.style.display = 'block';
-        status.textContent = 'Payment in progress — please complete on your device...';
-    });
+        if (!data.success || !data.checkout_url) {
+            status.className   = 'stk-status stk-fail';
+            status.textContent = `Checkout error: ${data.message || 'Check server logs.'}`;
+            btn.disabled    = false;
+            btn.textContent = '🔒 Pay Now via IntaSend';
+            return;
+        }
 
-    _intasendReady = true;
-});
+        window.open(data.checkout_url, '_blank');
+        status.className   = 'stk-status stk-pending';
+        status.textContent = '🔗 Payment page opened in new tab — complete payment there, then click ↻ Force Sync.';
 
-// Guard: show warning if no plan selected before IntaSend checkout opens
-function guardIntasendClick(e) {
-    if (!_selectedPlan.type) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        const notice = document.getElementById('intasendNotice');
-        notice.style.display = 'block';
-        setTimeout(() => { notice.style.display = 'none'; }, 4000);
-        return false;
+        setTimeout(() => {
+            btn.disabled    = false;
+            btn.textContent = '🔒 Pay Now via IntaSend';
+        }, 6000);
+
+    } catch (e) {
+        status.className   = 'stk-status stk-fail';
+        status.textContent = 'System error: ' + e.message;
+        btn.disabled    = false;
+        btn.textContent = '🔒 Pay Now via IntaSend';
     }
-    return true; // allow IntaSend SDK to handle the click
+}
+
+// Handles ?payment=success&plan=monthly redirect back from IntaSend hosted page
+async function handleIntasendRedirectBack() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+    const plan_type = params.get('plan');
+    if (!plan_type) return;
+
+    window.history.replaceState({}, '', window.location.pathname);
+
+    const status = document.getElementById('payStatus');
+    status.className     = 'stk-status stk-pending';
+    status.style.display = 'block';
+    status.textContent   = '⏳ Verifying payment…';
+
+    const AMOUNTS = { monthly: 3000, annual: 36000, lifetime: 120000, annual_service: 30000 };
+    try {
+        const res  = await apiFetch(`${API_BASE}/intasend/confirm`, {
+            method: 'POST',
+            body:   JSON.stringify({
+                tracking_id: `redirect-${Date.now()}`,
+                plan_type,
+                amount_kes:  AMOUNTS[plan_type] || 0,
+            }),
+        });
+        const data = await res.json();
+        status.className   = data.success ? 'stk-status stk-success' : 'stk-status stk-warning';
+        status.textContent = data.success
+            ? `✓ Payment confirmed — ${plan_type} plan activated.`
+            : `Note: ${data.message} (webhook will apply shortly)`;
+        await loadSubscriptionStatus();
+        await loadPaymentHistory();
+    } catch (e) {
+        status.className   = 'stk-status stk-warning';
+        status.textContent = 'Could not auto-confirm — click ↻ Force Sync once the payment clears.';
+    }
 }
 
 // ── Manual payment confirmation ───────────────────────────────────────────────
