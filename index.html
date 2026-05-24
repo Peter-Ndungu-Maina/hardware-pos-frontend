@@ -777,6 +777,42 @@
                         ▶ Run Now
                     </button>
                 </div>
+
+                <!-- Script 7: DigiTax Item Registration Check -->
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;color:var(--text);margin-bottom:3px;">🏛️ DigiTax Item Check</div>
+                            <div style="font-size:12px;color:var(--muted);line-height:1.5;">Finds inventory items not yet registered with KRA/DigiTax (from Add Product &amp; Purchase Orders) and registers them. Auto-runs every 6 hours.</div>
+                        </div>
+                    </div>
+                    <!-- Live status bar — loaded on panel open -->
+                    <div id="digitaxItemStatusBar" style="margin-bottom:10px;display:none;">
+                        <div style="display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--muted);margin-bottom:4px;">
+                            <span>KRA Registration Progress</span>
+                            <span id="digitaxItemPct">—</span>
+                        </div>
+                        <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+                            <div id="digitaxItemBar" style="height:100%;background:var(--green);border-radius:3px;width:0%;transition:width .5s;"></div>
+                        </div>
+                        <div style="display:flex;gap:14px;margin-top:6px;font-size:10px;font-family:var(--mono);">
+                            <span>✅ <span id="digitaxRegistered">—</span> registered</span>
+                            <span style="color:var(--red);">⚠ <span id="digitaxUnregistered">—</span> pending</span>
+                            <span style="color:var(--muted);">/ <span id="digitaxTotal">—</span> total</span>
+                        </div>
+                    </div>
+                    <div id="scriptStatus_digitax" style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--muted);margin-bottom:10px;min-height:14px;"></div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="loadDigitaxItemStatus()"
+                            style="flex:1;padding:9px;border-radius:8px;background:rgba(0,229,160,0.07);border:1px solid rgba(0,229,160,0.2);color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;font-family:var(--mono);">
+                            ↻ Check Status
+                        </button>
+                        <button onclick="triggerScript('digitax-item-check','scriptStatus_digitax','DigiTax Item Check')"
+                            style="flex:2;padding:9px;border-radius:8px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.25);color:var(--green);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.8px;cursor:pointer;font-family:var(--mono);">
+                            ▶ Register Pending Items
+                        </button>
+                    </div>
+                </div>
             </div>
 
         </div><!-- end scripts grid -->
@@ -3948,6 +3984,58 @@ async function sendDebtStkPush() {
             setTimeout(window.openScriptsPanel, 400);
         });
     }
+
+
+        // Load DigiTax item registration status into the script card
+        async function loadDigitaxItemStatus() {
+            const bar    = document.getElementById('digitaxItemStatusBar');
+            const pctEl  = document.getElementById('digitaxItemPct');
+            const barEl  = document.getElementById('digitaxItemBar');
+            const regEl  = document.getElementById('digitaxRegistered');
+            const unrEl  = document.getElementById('digitaxUnregistered');
+            const totEl  = document.getElementById('digitaxTotal');
+            const status = document.getElementById('scriptStatus_digitax');
+
+            if (status) { status.textContent = 'Loading status...'; status.style.color = 'var(--muted)'; }
+
+            try {
+                const res  = await authFetch(`${API_BASE}/scripts/digitax-item-status`);
+                const data = await res.json();
+
+                if (!data.success) throw new Error(data.message);
+
+                if (bar) bar.style.display = 'block';
+                if (pctEl) pctEl.textContent = `${data.pct_complete}%`;
+                if (barEl) {
+                    barEl.style.width  = `${data.pct_complete}%`;
+                    barEl.style.background = data.health === 'healthy' ? 'var(--green)' : data.health === 'critical' ? 'var(--red)' : 'var(--amber)';
+                }
+                if (regEl) regEl.textContent = data.registered.toLocaleString();
+                if (unrEl) unrEl.textContent = data.unregistered.toLocaleString();
+                if (totEl) totEl.textContent = data.total.toLocaleString();
+
+                const healthMsg = data.health === 'healthy'
+                    ? '✅ All items registered with KRA'
+                    : data.health === 'critical'
+                    ? `🚨 ${data.unregistered} items NOT registered — click Register Pending Items`
+                    : `⚠ ${data.unregistered} item(s) pending KRA registration`;
+
+                if (status) {
+                    status.textContent   = healthMsg;
+                    status.style.color   = data.health === 'healthy' ? 'var(--green)' : data.health === 'critical' ? 'var(--red)' : 'var(--amber)';
+                }
+            } catch (e) {
+                if (status) { status.textContent = 'Status check failed: ' + e.message; status.style.color = 'var(--red)'; }
+            }
+        }
+
+        // Auto-load status when the scripts panel opens
+        const _origToggleScripts = window.toggleScriptsPanel;
+        window.toggleScriptsPanel = function() {
+            if (typeof _origToggleScripts === 'function') _origToggleScripts();
+            loadDigitaxItemStatus();
+        };
+
 </script>
 <!-- C2B RESOLVE MODAL -->
 <div id="c2bResolveModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;align-items:center;justify-content:center;overflow-y:auto;">
