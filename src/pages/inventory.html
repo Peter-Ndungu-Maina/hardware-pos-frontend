@@ -558,16 +558,15 @@
                     <!-- Payment -->
                     <select id="cartMethod" onchange="toggleCartMpesa()" style="width:100%;padding:12px 14px;border-radius:12px;font-weight:700;font-size:13px;outline:none;cursor:pointer;">
                         <option value="Cash">💵 Cash Sale</option>
-                        <option value="Safaricom">📱 Safaricom M-Pesa</option>
-                        <option value="Equity">💛 Equity Mobile</option>
+                        <option value="Safaricom">📱 Mobile Money</option>
                         <option value="Credit">📋 Credit (Debt)</option>
                     </select>
 
                     <div id="mpesaFields" class="hidden" style="display:none;flex-direction:column;gap:8px;">
                         <input type="text" id="cartMpesaId" placeholder="Phone e.g. 0712345678" style="width:100%;padding:12px 14px;border-radius:12px;font-family:var(--mono);font-weight:700;outline:none;">
-                        <button id="stkPushBtn" onclick="sendStkPush()" class="hidden" style="width:100%;padding:10px;border-radius:12px;background:#16a34a;color:#fff;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer;">📲 Send M-Pesa Prompt</button>
+                        <button id="stkPushBtn" onclick="sendStkPush()" class="hidden" style="width:100%;padding:10px;border-radius:12px;background:#16a34a;color:#fff;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:1px;border:none;cursor:pointer;">📲 Send Mobile Money Prompt</button>
                         <div id="stkStatus" class="hidden" style="padding:10px 14px;border-radius:10px;font-size:11px;font-weight:700;text-align:center;"></div>
-                        <input type="text" id="cartMpesaCode" placeholder="M-Pesa Code (auto or manual)" class="hidden" style="width:100%;padding:12px 14px;border-radius:12px;font-family:var(--mono);font-weight:700;text-transform:uppercase;outline:none;">
+                        <input type="text" id="cartMpesaCode" placeholder="Mobile Money Code (auto or manual)" class="hidden" style="width:100%;padding:12px 14px;border-radius:12px;font-family:var(--mono);font-weight:700;text-transform:uppercase;outline:none;">
                     </div>
                 </div>
 
@@ -1416,7 +1415,7 @@ function toggleCartMpesa() {
     const stkStatus = document.getElementById('stkStatus');
     const inC2B = isC2BCheckoutMode();
     if (!inC2B) clearStkState();
-    if (method === 'Safaricom' || method === 'Equity') {
+    if (method === 'Safaricom') {
         mpesaFields.style.display = 'flex';
         if (inC2B) {
             stkBtn.classList.add('hidden');
@@ -1427,8 +1426,8 @@ function toggleCartMpesa() {
             stkStatus.textContent = '✅ C2B payment already received.';
         } else {
             stkBtn.classList.remove('hidden');
-            stkBtn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
-            stkBtn.style.background = method === 'Equity' ? '#d97706' : '#16a34a';
+            stkBtn.textContent = '📲 Send Mobile Money Prompt';
+            stkBtn.style.background = '#16a34a';
             document.getElementById('cartMpesaId').readOnly = false;
             codeField.readOnly = false; codeField.classList.add('hidden');
         }
@@ -1452,8 +1451,7 @@ function clearStkState() {
     const btn = document.getElementById('stkPushBtn');
     if (btn) { 
         btn.disabled = false; 
-        const method = document.getElementById('cartMethod')?.value;
-        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt'; 
+        btn.textContent = '📲 Send Mobile Money Prompt'; 
         btn.onclick = sendStkPush; 
     }
 }
@@ -1461,7 +1459,7 @@ function clearStkState() {
 function handleStkResult(pd,status,btn) {
     clearInterval(stkPollInterval); stkPollInterval=null; clearInterval(stkCountdownTimer); stkCountdownTimer=null;
     stkResolved=true;
-    const ml = document.getElementById('cartMethod')?.value==='Equity' ? 'Equity' : 'M-Pesa';
+    const ml = 'Mobile Money';
     if (pd.status==='confirmed') {
         document.getElementById('cartMpesaCode').value = pd.mpesaCode||'';
         status.style.background='rgba(16,185,129,0.15)'; status.style.color='#34d399';
@@ -1486,33 +1484,31 @@ async function sendStkPush() {
     const btn=document.getElementById('stkPushBtn'), status=document.getElementById('stkStatus');
     btn.disabled=true; btn.textContent='⏳ Sending...';
     status.classList.remove('hidden'); status.style.background='rgba(59,130,246,0.15)'; status.style.color='#93c5fd';
-    status.textContent=`Sending ${method} Push to ${phone}...`;
+    status.textContent=`Sending Mobile Money Push to ${phone}...`;
     clearInterval(stkPollInterval); stkPollInterval=null; stkPollCount=0; stkResolved=false;
     try {
-        const endpoint = method==='Equity' ? '/jenga/equity-stk-push' : '/mpesa/stk-push';
-        const res = await apiFetch(`${API_URL}${endpoint}`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone, amount:total, accountRef:(customer||'EliteHW').replace(/[^a-zA-Z0-9]/g,'').substring(0,12), customerName:(customer||'Walk in').replace(/[^a-zA-Z0-9 ]/g,'').trim(), context:{} }) });
+        const res = await apiFetch(`${API_URL}/mpesa/stk-push`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone, amount:total, accountRef:(customer||'EliteHW').replace(/[^a-zA-Z0-9]/g,'').substring(0,12), customerName:(customer||'Walk in').replace(/[^a-zA-Z0-9 ]/g,'').trim(), context:{} }) });
         const data = await res.json();
-        if (!data.success) { status.style.background='rgba(248,113,113,0.15)'; status.style.color='#fca5a5'; status.textContent='❌ '+data.message; btn.disabled=false; btn.textContent=`📲 Send ${method} Prompt`; return; }
+        if (!data.success) { status.style.background='rgba(248,113,113,0.15)'; status.style.color='#fca5a5'; status.textContent='❌ '+data.message; btn.disabled=false; btn.textContent='📲 Send Mobile Money Prompt'; return; }
         currentCheckoutId=data.checkoutRequestId; btn.textContent='⏳ Waiting...';
         let secondsLeft=60;
         const updateCD=()=>{ if(stkPollInterval) status.textContent=`📱 Waiting for PIN... (${secondsLeft}s)`; secondsLeft--; };
         updateCD(); stkCountdownTimer=setInterval(()=>{ if(!stkPollInterval){clearInterval(stkCountdownTimer);return;} updateCD(); },1000);
         stkPollInterval=setInterval(async()=>{
             try {
-                const se=method==='Equity'?`/jenga/status/${currentCheckoutId}`:`/mpesa/status/${currentCheckoutId}`;
-                const pr=await apiFetch(`${API_URL}${se}`); const pd=await pr.json();
-                if (!pr.ok||pd.status==='not_found'){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Could not track — enter code manually.'; document.getElementById('cartMpesaCode').classList.remove('hidden'); btn.disabled=false;btn.textContent=`📲 Resend ${method}`;btn.onclick=sendStkPush; return; }
+                const pr=await apiFetch(`${API_URL}/mpesa/status/${currentCheckoutId}`); const pd=await pr.json();
+                if (!pr.ok||pd.status==='not_found'){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Could not track — enter code manually.'; document.getElementById('cartMpesaCode').classList.remove('hidden'); btn.disabled=false;btn.textContent='📲 Resend Mobile Money';btn.onclick=sendStkPush; return; }
                 if (pd.status!=='pending') { handleStkResult(pd,status,btn); return; }
                 stkPollCount++;
-                if (method==='Safaricom'&&stkPollCount>=18){ try{ const qr=await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`); const qd=await qr.json(); if(qd.success&&qd.status!=='pending') handleStkResult(qd,status,btn); }catch(e){} }
+                if (stkPollCount>=18){ try{ const qr=await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`); const qd=await qr.json(); if(qd.success&&qd.status!=='pending') handleStkResult(qd,status,btn); }catch(e){} }
             } catch(e){}
         },3000);
-        setTimeout(()=>{ if(!stkResolved){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(245,158,11,0.15)';status.style.color='#fbbf24';status.textContent='⏰ Expired — resend or collect cash.'; btn.disabled=false;btn.textContent=`📲 Resend ${method}`;btn.onclick=sendStkPush; } },60000);
+        setTimeout(()=>{ if(!stkResolved){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(245,158,11,0.15)';status.style.color='#fbbf24';status.textContent='⏰ Expired — resend or collect cash.'; btn.disabled=false;btn.textContent='📲 Resend Mobile Money';btn.onclick=sendStkPush; } },60000);
     } catch(e){ 
         status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';
         status.textContent='❌ Error: ' + (e.message || 'Connection timed out'); 
         btn.disabled=false;
-        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt'; 
+        btn.textContent = '📲 Send Mobile Money Prompt'; 
     }
 }
 
@@ -1566,8 +1562,8 @@ function _renderRecentSales() {
         const gi=start+idx;
         const itemSummary=s._items.length===1?`${window.escHtml(s._items[0].itemName)} <b>x${s._items[0].quantity}${s._items[0].displayUnit?' '+s._items[0].displayUnit:''}</b>`:s._items.map(i=>`${window.escHtml(i.itemName)} <b>x${i.quantity}${i.displayUnit?' '+i.displayUnit:''}</b>`).join(', ');
         const _rm=(s.is_credit_sale||['Credit','Unpaid','Partial'].includes(s.payment_status))?'Credit':(Array.isArray(s.payments)&&s.payments.length>0&&s.payments[0].payment_method)?s.payments[0].payment_method:(s.mpesa_code||s.mpesaCode||s.mpesa_id?'M-Pesa':'Cash');
-        const method=/equity|equitel/i.test(_rm)?'Equity Mobile':(_rm==='Safaricom'||/^safaricom/i.test(_rm))?'M-Pesa':_rm;
-        const mc=method==='M-Pesa'?'rgba(16,185,129,0.12);color:#34d399':method==='Credit'?'rgba(248,113,113,0.12);color:#f87171':method==='Equity Mobile'?'rgba(245,158,11,0.12);color:#fbbf24':'rgba(59,130,246,0.12);color:#60a5fa';
+        const method=(_rm==='Safaricom'||/^safaricom/i.test(_rm)||_rm==='M-Pesa')?'Mobile Money':_rm;
+        const mc=method==='Mobile Money'?'rgba(16,185,129,0.12);color:#34d399':method==='Credit'?'rgba(248,113,113,0.12);color:#f87171':'rgba(59,130,246,0.12);color:#60a5fa';
         return `<tr><td style="padding:10px 16px;font-family:var(--mono);color:var(--muted);font-size:10px;">${new Date(s.sale_date).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td class="hidden md:table-cell" style="padding:10px 16px;font-weight:900;text-transform:uppercase;font-size:11px;">${window.escHtml(s.customer_name)||'Walk-in'}</td><td class="hidden md:table-cell" style="padding:10px 16px;font-size:11px;color:var(--muted);">${itemSummary}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${mc};padding:3px 9px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;white-space:nowrap;">${method}</span></td><td style="padding:10px 16px;text-align:right;font-weight:900;font-family:var(--mono);font-size:12px;">KES ${s._total.toLocaleString()}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${statusColor};padding:3px 9px;border-radius:6px;font-size:9px;font-weight:900;text-transform:uppercase;">${s.payment_status}</span></td><td style="padding:10px 16px;text-align:center;"><button onclick="printRecentReceipt(${gi})" style="background:rgba(16,185,129,0.1);color:#34d399;border:1px solid rgba(16,185,129,0.25);padding:5px 10px;border-radius:8px;font-size:9px;font-weight:900;cursor:pointer;text-transform:uppercase;">🖨️ Receipt</button></td></tr>`;
     }).join('');
     if (!pgDiv) return;
@@ -1598,9 +1594,7 @@ async function finalizeCartSale() {
     const serverMethod=effectiveMethod==='Safaricom'?'M-Pesa':effectiveMethod;
     if (!customer) return alert("⚠️ CUSTOMER NAME REQUIRED");
     if ((effectiveMethod==="M-Pesa"||effectiveMethod==="Safaricom")&&!phone) return alert("⚠️ Phone number required");
-    if ((effectiveMethod==="M-Pesa"||effectiveMethod==="Safaricom")&&!code) return alert("⚠️ M-Pesa code not confirmed");
-    if (effectiveMethod==="Equity"&&!phone) return alert("⚠️ Phone number required");
-    if (effectiveMethod==="Equity"&&!code) return alert("⚠️ Equity payment not confirmed");
+    if ((effectiveMethod==="M-Pesa"||effectiveMethod==="Safaricom")&&!code) return alert("⚠️ Mobile Money code not confirmed");
     if (effectiveMethod==="Credit"&&!phone) return alert("⚠️ Phone required for credit");
     if (customerPin&&!/^[A-Z][0-9]{9}[A-Z]$/.test(customerPin)) return alert("⚠️ Invalid KRA PIN (e.g. A012345678B)");
 
@@ -1673,9 +1667,7 @@ async function showMultiReceipt(customer,method,total,items,phone='',code='',rec
 
     const date = new Date().toLocaleString('en-KE');
     const _mr = (method||'').trim();
-    if(/equity|equitel/i.test(_mr)) method='Equity Mobile Money';
-    else if (_mr==='Safaricom'||/^safaricom/i.test(_mr)) method='M-Pesa';
-    else if (_mr==='M-Pesa STK (pending reconciliation)') method='M-Pesa';
+    if (_mr==='Safaricom'||/^safaricom/i.test(_mr)||_mr==='M-Pesa'||_mr==='M-Pesa STK (pending reconciliation)') method='Mobile Money';
 
     let maskedPhone = phone;
     if(phone && phone.length>=10) maskedPhone = phone.substring(0,4)+"xxx"+phone.substring(phone.length-3);
