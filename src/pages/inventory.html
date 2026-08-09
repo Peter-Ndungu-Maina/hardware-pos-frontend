@@ -1500,7 +1500,6 @@ async function sendStkPush() {
                 if (!pr.ok||pd.status==='not_found'){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(248,113,113,0.15)';status.style.color='#fca5a5';status.textContent='❌ Could not track — enter code manually.'; document.getElementById('cartMpesaCode').classList.remove('hidden'); btn.disabled=false;btn.textContent='📲 Resend Mobile Money';btn.onclick=sendStkPush; return; }
                 if (pd.status!=='pending') { handleStkResult(pd,status,btn); return; }
                 stkPollCount++;
-                if (stkPollCount>=18){ try{ const qr=await apiFetch(`${API_URL}/mpesa/query/${currentCheckoutId}`); const qd=await qr.json(); if(qd.success&&qd.status!=='pending') handleStkResult(qd,status,btn); }catch(e){} }
             } catch(e){}
         },3000);
         setTimeout(()=>{ if(!stkResolved){ clearInterval(stkPollInterval);stkPollInterval=null;clearInterval(stkCountdownTimer);stkCountdownTimer=null; status.style.background='rgba(245,158,11,0.15)';status.style.color='#fbbf24';status.textContent='⏰ Expired — resend or collect cash.'; btn.disabled=false;btn.textContent='📲 Resend Mobile Money';btn.onclick=sendStkPush; } },60000);
