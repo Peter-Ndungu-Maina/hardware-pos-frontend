@@ -186,8 +186,7 @@
                 <label style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:1px;display:block;margin-bottom:6px;">Method</label>
                 <select id="payMethod" onchange="togglePayDetails()" style="width:100%;padding:13px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-weight:700;outline:none;">
                     <option value="Cash">Cash</option>
-                    <option value="Safaricom">Safaricom M-Pesa</option>
-                    <option value="Equity">Equity Mobile</option>
+                    <option value="Safaricom">M-Pesa (STK Push)</option>
                 </select>
             </div>
             <div id="payMpesaDetails" class="hidden">
@@ -199,7 +198,7 @@
                 
         </div>
         <div style="display:flex;gap:10px;margin-top:20px;">
-            <button onclick="closeModal('paymentModal')" style="flex:1;padding:13px;border-radius:12px;background:var(--surface2);color:var(--text);font-weight:700;cursor:pointer;border:none;">Cancel</button>
+            <button onclick="closeModal('paymentModal');clearDebtStkState();" style="flex:1;padding:13px;border-radius:12px;background:var(--surface2);color:var(--text);font-weight:700;cursor:pointer;border:none;">Cancel</button>
             <button id="confirmPayBtn" onclick="submitDebtPayment(event)" style="flex:1;padding:13px;border-radius:12px;background:var(--green);color:#000;font-weight:900;cursor:pointer;border:none;">Confirm</button>
         </div>
     </div>
@@ -3016,31 +3015,16 @@ function openPaymentModal(saleId, name, balance, phone = '') {
     document.getElementById('payAmount').value = balance;
     document.getElementById('payMethod').value = 'Cash';
     document.getElementById('payMpesaDetails').classList.add('hidden');
-    document.getElementById('payMpesaCode').value = '';
-    document.getElementById('payMpesaPhone').value = '';
-    document.getElementById('payStkStatus').style.display = 'none';
-    document.getElementById('payMpesaCode').style.display = 'none';
-    const pb = document.getElementById('paySTKBtn'); 
-    if(pb){
-        const m = document.getElementById('payMethod')?.value || 'Safaricom';
-        pb.disabled=false;
-        pb.textContent = m === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send M-Pesa Prompt';
-        pb.style.background = m === 'Equity' ? '#d97706' : '#16a34a';
-        pb.onclick=sendDebtStkPush;
-    }
-    if(debtStkInterval){clearInterval(debtStkInterval);debtStkInterval=null;}
+    clearDebtStkState();   // stops any old polling, hides status/code, resets the prompt button
+    const _phoneInput = document.getElementById('payMpesaPhone');
+    _phoneInput.value = (activeSalePhone && !/no phone/i.test(activeSalePhone)) ? activeSalePhone : '';
     document.getElementById('paymentModal').style.display = 'flex';
 }
 function togglePayDetails() {
     const method = document.getElementById('payMethod').value;
-    const isMobile = method === 'Safaricom' || method === 'Equity';
+    const isMobile = method === 'Safaricom';
     document.getElementById('payMpesaDetails').classList.toggle('hidden', !isMobile);
-    
-    const btn = document.getElementById('paySTKBtn');
-    if (btn && isMobile) {
-        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
-        btn.style.background = method === 'Equity' ? '#d97706' : '#16a34a'; // Amber for Equity, Green for Safaricom
-    }
+    if (!isMobile) clearDebtStkState();   // switching back to Cash cancels any pending prompt
 }
 let _debtSubmitting = false; // module-level guard — blocks any re-entry including double-clicks
 async function submitDebtPayment(e) {
@@ -3058,7 +3042,6 @@ async function submitDebtPayment(e) {
 
     if (!amount || amount <= 0) return alert('Enter valid amount');
     if ((method === 'M-Pesa' || method === 'Safaricom') && !code) return alert('⚠️ M-Pesa payment not confirmed yet.\nSend the prompt and wait for customer to pay, or enter the code manually.');
-    if (method === 'Equity' && !code) return alert('⚠️ Equity payment not confirmed yet.\nSend the prompt and wait for customer to pay, or enter the code manually.');
 
     // Capture the saleId NOW at submission time — activeSaleId could change if the
     // user somehow opens another debtor's modal before this request completes.
@@ -3085,6 +3068,7 @@ async function submitDebtPayment(e) {
             // Close the modal BEFORE loadDashboard so the re-render can't
             // produce a stale "Confirm" button that fires while we're still locked.
             closeModal('paymentModal');
+            clearDebtStkState();
            // Inside submitDebtPayment() after receiving data.success:
         showDebtReceipt(
             name, 
@@ -3746,182 +3730,175 @@ if('serviceWorker' in navigator){
     });
 }
 
+// ── DEBT COLLECTION: M-Pesa STK push (IntaSend) ───────────────────────────────
+// Same flow as the inventory cart: POST /mpesa/stk-push → poll /mpesa/status/:id
+// every 3 s → on "confirmed" the debt is cleared automatically via /clear-debt.
 let debtStkInterval  = null;
 let debtCheckoutId   = null;
+let debtStkCountdown = null;
+let debtStkResendTimer = null;
+let debtStkTimeout   = null;
+let debtStkResolved  = false;
 
-function toggleDebtManualCode() {
-    clearDebtStkState();
-    const c = document.getElementById('payMpesaCode');
-    c.style.display = 'block'; c.focus();
-    document.getElementById('paySTKBtn').style.display = 'none';
-    document.getElementById('debtManualBtn').textContent = 'Use STK Push instead';
-    document.getElementById('debtManualBtn').onclick = () => {
-        c.style.display = 'none';
-        document.getElementById('paySTKBtn').style.display = 'block';
-       
-        document.getElementById('debtManualBtn').onclick = toggleDebtManualCode;
-    };
-}
+function _debtBtnLabel() { return '📲 Send M-Pesa Prompt'; }
 
 function clearDebtStkState() {
-    clearInterval(debtStkInterval); debtStkInterval = null; debtCheckoutId = null;
-    clearInterval(debtStkCountdown); debtStkCountdown = null;
-    const s = document.getElementById('payStkStatus'); if(s){s.style.display='none';s.textContent='';}
-    document.getElementById('payMpesaCode').value = '';
+    clearInterval(debtStkInterval);    debtStkInterval = null;
+    clearInterval(debtStkCountdown);   debtStkCountdown = null;
+    clearTimeout(debtStkResendTimer);  debtStkResendTimer = null;
+    clearTimeout(debtStkTimeout);      debtStkTimeout = null;
+    debtCheckoutId = null; debtStkResolved = false;
+    const s = document.getElementById('payStkStatus'); if (s) { s.style.display = 'none'; s.textContent = ''; }
+    const c = document.getElementById('payMpesaCode'); if (c) { c.value = ''; c.style.display = 'none'; }
+    const amt = document.getElementById('payAmount'); if (amt) amt.readOnly = false;
     const btn = document.getElementById('paySTKBtn');
-    if(btn){
-        btn.disabled=false;
-        const method = document.getElementById('payMethod')?.value;
-        btn.textContent = method === 'Equity' ? '📲 Send Equity Prompt' : '📲 Send Safaricom Prompt';
-        btn.onclick=sendDebtStkPush;
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = _debtBtnLabel();
+        btn.style.background = '#16a34a'; btn.style.color = '#fff';
+        btn.onclick = sendDebtStkPush;
     }
+}
+
+function _debtStkSetStatus(kind, text) {
+    const s = document.getElementById('payStkStatus'); if (!s) return;
+    const palette = {
+        info:    ['rgba(59,130,246,0.15)', '#93c5fd'],
+        ok:      ['rgba(0,229,160,0.15)',  '#00e5a0'],
+        warn:    ['rgba(245,158,11,0.15)', '#fcd34d'],
+        error:   ['rgba(239,68,68,0.15)',  '#fca5a5']
+    }[kind] || ['rgba(59,130,246,0.15)', '#93c5fd'];
+    s.style.display = 'block'; s.style.background = palette[0]; s.style.color = palette[1];
+    s.textContent = text;
+}
+
+function _debtStkAllowResend(btn) {
+    btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
+    clearTimeout(debtStkResendTimer);
+    debtStkResendTimer = setTimeout(() => {
+        btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendDebtStkPush;
+    }, 5000);
+}
+
+function handleDebtStkResult(pd, btn) {
+    clearInterval(debtStkInterval);  debtStkInterval = null;
+    clearInterval(debtStkCountdown); debtStkCountdown = null;
+    clearTimeout(debtStkTimeout);    debtStkTimeout = null;
+    debtStkResolved = true;          // blocks the 60 s timeout from overwriting a real result
+
+    if (pd.status === 'confirmed') {
+        const codeEl = document.getElementById('payMpesaCode');
+        codeEl.value = pd.mpesaCode || '';
+        codeEl.style.display = 'block';
+        document.getElementById('payAmount').readOnly = true;   // amount is now locked to what was paid
+        _debtStkSetStatus('ok', '✅ Payment confirmed! Code: ' + (pd.mpesaCode || ''));
+        btn.disabled = false; btn.textContent = '✅ Paid — Clearing debt...';
+        btn.style.background = '#00e5a0'; btn.style.color = '#000';
+        btn.onclick = () => submitDebtPayment();
+        // Record the payment straight away so it can never be lost if the modal is closed.
+        submitDebtPayment();
+        return;
+    }
+    const msgs = {
+        cancelled:          '🚫 Customer cancelled the M-Pesa prompt.',
+        timeout:            '⏰ Prompt expired — customer did not respond in time.',
+        insufficient_funds: '💸 Customer has insufficient balance.',
+        failed:             '❌ ' + (pd.resultDesc || 'Payment failed') + '.'
+    };
+    _debtStkSetStatus(pd.status === 'failed' || pd.status === 'insufficient_funds' ? 'error' : 'warn',
+        (msgs[pd.status] || '❌ Payment failed.') + ' Resend or collect cash.');
+    _debtStkAllowResend(btn);
 }
 
 async function sendDebtStkPush() {
     const phone  = document.getElementById('payMpesaPhone').value.trim();
     const amount = document.getElementById('payAmount').value.trim();
-    const method = document.getElementById('payMethod').value; // 'Safaricom' or 'Equity'
 
     if (!phone)  return alert('⚠️ Enter customer phone number');
-    if (!amount) return alert('⚠️ Enter payment amount');
+    if (!amount || parseFloat(amount) <= 0) return alert('⚠️ Enter payment amount');
 
-    const btn    = document.getElementById('paySTKBtn');
-    const status = document.getElementById('payStkStatus');
+    const btn = document.getElementById('paySTKBtn');
     btn.disabled = true; btn.textContent = '⏳ Sending...';
-    status.style.display = 'block';
-    status.style.background = 'rgba(59,130,246,0.15)'; status.style.color = '#93c5fd';
-    status.textContent = `Sending ${method} Push to ${phone}...`;
+    _debtStkSetStatus('info', `Sending M-Pesa prompt to ${phone}...`);
 
-    clearInterval(debtStkInterval); debtStkInterval = null;
-    let debtPollCount = 0;
-    let debtStkCountdown = null;
-    let debtStkResolved = false;   // set true when a real result arrives — blocks 60s timeout overwrite
-
-    function handleDebtStkResult(pd) {
-        clearInterval(debtStkInterval); debtStkInterval = null;
-        clearInterval(debtStkCountdown); debtStkCountdown = null;
-        debtStkResolved = true;    // prevent the 60s timeout from overwriting this real result
-
-        if (pd.status === 'confirmed') {
-            document.getElementById('payMpesaCode').value = pd.mpesaCode || '';
-            document.getElementById('payMpesaCode').style.display = 'block';
-            status.style.background='rgba(0,229,160,0.15)';status.style.color='#00e5a0';
-            status.textContent = '✅ Payment confirmed! Code: ' + pd.mpesaCode;
-            btn.textContent='✅ Paid'; btn.style.background='#00e5a0'; btn.style.color='#000';
-
-        } else if (pd.status === 'cancelled') {
-            status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
-            status.textContent = `🚫 Customer cancelled the ${method} prompt. Resend or collect cash.`;
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
-
-        } else if (pd.status === 'timeout') {
-            status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
-            status.textContent = '⏰ Prompt expired — customer did not respond in time. Resend or collect cash.';
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
-
-        } else if (pd.status === 'insufficient_funds') {
-            status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
-            status.textContent = '💸 Customer has insufficient balance. Ask them to top up or pay cash.';
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
-
-        } else if (pd.status === 'failed') {
-            const reason = pd.resultDesc || 'Payment failed';
-            status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
-            status.textContent = '❌ ' + reason + '. Try again or collect cash.';
-            btn.textContent = '⏳ Resend in 5s...'; btn.disabled = true;
-            setTimeout(() => { btn.disabled=false; btn.textContent=`📲 Resend ${method} Prompt`; btn.onclick=sendDebtStkPush; }, 5000);
-        }
-    }
+    // reset any previous attempt's timers
+    clearInterval(debtStkInterval);  debtStkInterval = null;
+    clearInterval(debtStkCountdown); debtStkCountdown = null;
+    clearTimeout(debtStkTimeout);    debtStkTimeout = null;
+    debtStkResolved = false;
 
     try {
-        // accountRef is the account number the customer sees on their Paybill prompt.
         const customerLabel = (document.getElementById('modalCustomerInfo')?.innerText || '')
             .replace('CLEAR DEBT FOR ', '').trim().substring(0, 12) || 'DebtPayment';
-
         const safeCustomerName = customerLabel.replace(/[^a-zA-Z0-9 ]/g, '').trim() || 'Debt Customer';
         const safeAccountRef   = customerLabel.replace(/[^a-zA-Z0-9]/g, '').substring(0, 12) || 'Debt';
 
-        // Equity → always equity-stk-push (server detects Safaricom vs Equitel internally)
-        // Safaricom → Daraja as before
-        let endpoint = '/mpesa/stk-push';
-        if (method === 'Equity') endpoint = '/jenga/equity-stk-push';
-
-        const res  = await authFetch(`${API_BASE}${endpoint}`, {
-            method:'POST', 
-            body: JSON.stringify({ 
-                phone, 
-                amount: parseFloat(amount), 
-                accountRef: safeAccountRef, 
+        const res  = await authFetch(`${API_BASE}/mpesa/stk-push`, {
+            method: 'POST',
+            body: JSON.stringify({
+                phone,
+                amount: parseFloat(amount),
+                accountRef: safeAccountRef,
                 customerName: safeCustomerName,
-                context: { saleId: activeSaleId } 
+                // saleId tells the server this payment is being recorded by the debt modal
+                // (via /clear-debt), so it must not also auto-apply it to the customer's debts.
+                context: { saleId: activeSaleId, source: 'debt_modal' }
             })
         });
-        const data = await res.json();
-        
+        const data = await res.json().catch(() => ({ success: false, message: 'Unexpected server response (HTTP ' + res.status + ')' }));
+
         if (!data.success) {
-            status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
-            status.textContent = '❌ ' + data.message;
-            btn.disabled=false;btn.textContent=`📲 Send ${method} Prompt`;
+            _debtStkSetStatus('error', '❌ ' + (data.message || 'Could not send prompt'));
+            btn.disabled = false; btn.textContent = _debtBtnLabel();
             return;
         }
-        
+
         debtCheckoutId = data.checkoutRequestId;
         btn.textContent = '⏳ Waiting...';
 
-        // Live countdown
         let secondsLeft = 60;
-        const updateCountdown = () => {
-            if (debtStkInterval) status.textContent = `📱 Waiting for PIN... Acct: ${customerLabel} (${secondsLeft}s)`;
-            secondsLeft--;
-        };
-        updateCountdown();
-        debtStkCountdown = setInterval(() => {
-            if (!debtStkInterval) { clearInterval(debtStkCountdown); return; }
-            updateCountdown();
-        }, 1000);
+        const tick = () => { if (debtStkInterval) _debtStkSetStatus('info', `📱 Waiting for PIN... (${Math.max(secondsLeft, 0)}s)`); secondsLeft--; };
 
-        // ── POLLING LOGIC ──
+        // poll every 3 s
         debtStkInterval = setInterval(async () => {
+            if (!debtCheckoutId) return;
             try {
-                const statusEndpoint = method === 'Equity' ? `/jenga/status/${debtCheckoutId}` : `/mpesa/status/${debtCheckoutId}`;
-                const pr = await authFetch(`${API_BASE}${statusEndpoint}`);
+                const pr = await authFetch(`${API_BASE}/mpesa/status/${debtCheckoutId}`);
                 const pd = await pr.json();
-
-                if (pd.status !== 'pending') { 
-                    handleDebtStkResult(pd); 
-                    return; 
+                if (!pr.ok || pd.status === 'not_found') {
+                    clearInterval(debtStkInterval);  debtStkInterval = null;
+                    clearInterval(debtStkCountdown); debtStkCountdown = null;
+                    clearTimeout(debtStkTimeout);    debtStkTimeout = null;
+                    debtStkResolved = true;
+                    _debtStkSetStatus('error', '❌ Could not track the payment — enter the M-Pesa code manually or resend.');
+                    const c = document.getElementById('payMpesaCode'); c.style.display = 'block';
+                    btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendDebtStkPush;
+                    return;
                 }
-
-                debtPollCount++;
-                // Daraja manual query fallback — only for Safaricom
-                if (method === 'Safaricom' && debtPollCount >= 18) {
-                    try {
-                        const qr = await authFetch(`${API_BASE}/mpesa/query/${debtCheckoutId}`);
-                        const qd = await qr.json();
-                        if (qd.success && qd.status !== 'pending') handleDebtStkResult(qd);
-                    } catch(e) { /* keep polling */ }
-                }
-            } catch(e){}
+                if (pd.status !== 'pending') handleDebtStkResult(pd, btn);
+            } catch (e) { /* network blip — keep polling */ }
         }, 3000);
 
-        // Hard timeout — only fires if no real result arrived (debtStkResolved is still false)
-        setTimeout(() => {
+        tick();
+        debtStkCountdown = setInterval(() => {
+            if (!debtStkInterval) { clearInterval(debtStkCountdown); debtStkCountdown = null; return; }
+            tick();
+        }, 1000);
+
+        // hard stop after 60 s if nothing resolved
+        debtStkTimeout = setTimeout(() => {
             if (!debtStkResolved && debtStkInterval) {
-                clearInterval(debtStkInterval); debtStkInterval = null;
+                clearInterval(debtStkInterval);  debtStkInterval = null;
                 clearInterval(debtStkCountdown); debtStkCountdown = null;
-                status.style.background='rgba(245,158,11,0.15)';status.style.color='#fcd34d';
-                status.textContent = '⏰ Prompt expired — customer did not respond. Resend or collect cash.';
-                btn.disabled=false;btn.textContent=`📲 Resend ${method} Prompt`;btn.onclick=sendDebtStkPush;
+                _debtStkSetStatus('warn', '⏰ Expired — customer did not respond. Resend or collect cash.');
+                const c = document.getElementById('payMpesaCode'); c.style.display = 'block';
+                btn.disabled = false; btn.textContent = '📲 Resend M-Pesa Prompt'; btn.onclick = sendDebtStkPush;
             }
         }, 60000);
 
-    } catch(e) {
-        status.style.background='rgba(239,68,68,0.15)';status.style.color='#fca5a5';
-        status.textContent = '❌ Error: ' + e.message;
-        btn.disabled=false;btn.textContent=`📲 Send ${method} Prompt`;
+    } catch (e) {
+        _debtStkSetStatus('error', '❌ Error: ' + (e.message || 'Connection timed out'));
+        btn.disabled = false; btn.textContent = _debtBtnLabel();
     }
 }
     // ── AUTOMATION SCRIPTS PANEL ──────────────────────────────────────────────
