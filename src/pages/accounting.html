@@ -293,6 +293,16 @@
             <!-- Payment summary grid -->
             <div class="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-3 text-xs" id="matchPaymentSummary"></div>
 
+            <!-- AI suggestion: who probably paid? -->
+            <div class="bg-violet-50 border border-violet-200 rounded-2xl p-4">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-xs font-black text-violet-700">✨ Not sure who paid?</p>
+                    <button id="matchSuggestBtn" onclick="suggestMatch()"
+                        class="px-4 py-2 rounded-xl bg-violet-600 text-white font-black text-[10px] uppercase hover:bg-violet-700 transition whitespace-nowrap">Suggest</button>
+                </div>
+                <div id="matchSuggestOut" class="mt-2 flex flex-col gap-2"></div>
+            </div>
+
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">What is this payment for?</p>
 
             <!-- Option A: Link to debtor -->
@@ -707,6 +717,7 @@ function openMatchModal(id) {
         const el = qs(id); if (el) { el.textContent = ''; el.style.color = ''; }
     });
     qs('matchDebtorPhone').value = txn.phone || '';
+    const _so = qs('matchSuggestOut'); if (_so) _so.innerHTML = '';
     qs('matchGoodsNote').value   = '';
     qs('matchIgnoreNote').value  = '';
     set('matchModalTitle', `${fmt(txn.amount)} from ${txn.customer_name || txn.phone || 'Unknown'}`);
@@ -730,6 +741,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = qs('matchModal');
     if (modal) modal.addEventListener('click', e => { if (e.target === modal) closeMatchModal(); });
 });
+
+async function suggestMatch() {
+    if (!_matchTxn) return;
+    const out = qs('matchSuggestOut'), btn = qs('matchSuggestBtn');
+    btn.disabled = true; out.innerHTML = '<p class="text-xs text-slate-400">Checking debtors…</p>';
+    try {
+        const res  = await apiFetch(`${API}/ai/match-payment`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ c2bId: _matchTxn.id }) });
+        const data = await res.json();
+        if (!res.ok || !data.success) { out.innerHTML = `<p class="text-xs text-red-500 font-bold">${escHtml(data.message || 'Could not check.')}</p>`; return; }
+        if (!data.candidates.length) { out.innerHTML = '<p class="text-xs text-slate-500">No debtor looks like a match. If this was a walk-in sale, use “Mark as goods purchase”.</p>'; return; }
+        const col = { high:'#059669', medium:'#d97706', low:'#64748b' };
+        out.innerHTML = data.candidates.map(c => `
+            <div style="background:#fff;border:1px solid #ddd6fe;border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;gap:10px;align-items:center;">
+                <div style="min-width:0;">
+                    <div style="font-weight:800;font-size:12px;">${escHtml(c.name)} <span style="font-size:9px;font-weight:900;color:${col[c.confidence]};text-transform:uppercase;">${escHtml(c.confidence)} match</span></div>
+                    <div style="font-size:10px;color:#64748b;">Owes ${fmt(c.owed)} · ${c.age_days}d old · ${escHtml(c.phone || 'no phone saved')}</div>
+                    <div style="font-size:10px;color:#7c3aed;">${c.reasons.map(escHtml).join(' · ')}</div>
+                </div>
+                <button ${c.phone ? '' : 'disabled'} onclick="useSuggestedDebtor('${escHtml(c.phone)}')" style="padding:6px 12px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-weight:900;font-size:10px;text-transform:uppercase;cursor:pointer;white-space:nowrap;${c.phone ? '' : 'opacity:.4;'}">Use</button>
+            </div>`).join('');
+    } catch (e) { out.innerHTML = '<p class="text-xs text-red-500 font-bold">Server error. Try again.</p>'; }
+    finally { btn.disabled = false; }
+}
+function useSuggestedDebtor(phone) {
+    qs('matchDebtorPhone').value = phone;
+    qs('matchDebtResult').textContent = 'Phone filled in — check it, then press Apply.';
+    qs('matchDebtResult').style.color = '#7c3aed';
+}
 
 async function doMatchDebt() {
     if (!_matchTxn) return;
